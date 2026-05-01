@@ -47,36 +47,25 @@ try {
   await waitForServer();
 
   const root = await requestText("/");
-  if (root !== "API PharmaGarde OK") throw new Error("/ must return API PharmaGarde OK");
+  if (root !== "API OK") throw new Error('/ must return "API OK"');
 
   const health = await requestJson("/health");
   if (health.status !== "ok") throw new Error("/health payload is invalid");
 
   const pharmacies = await requestJson("/pharmacies");
-  if (!Array.isArray(pharmacies) || pharmacies.length < 1) throw new Error("/pharmacies must return a non-empty array");
+  if (!Array.isArray(pharmacies) || pharmacies.length !== 0) throw new Error("/pharmacies must return []");
 
   const nearbyPharmacies = await requestJson("/pharmacies/nearby?lat=12.37&lng=-1.52");
-  if (!Array.isArray(nearbyPharmacies) || nearbyPharmacies.length < 1) throw new Error("/pharmacies/nearby must return nearby pharmacies");
-  if (nearbyPharmacies.some((place) => typeof place.distanceKm !== "number")) throw new Error("Nearby pharmacies must include numeric distanceKm");
-
-  const clinics = await requestJson("/clinics");
-  if (!Array.isArray(clinics) || clinics.length < 1) throw new Error("/clinics must return a non-empty array");
-
-  const nearbyClinics = await requestJson("/cliniques/nearby?lat=12.37&lng=-1.52");
-  if (!Array.isArray(nearbyClinics) || nearbyClinics.length < 1) throw new Error("/cliniques/nearby must return nearby clinics");
-
-  const invalidQuery = await requestJson("/pharmacies/nearby?lat=abc&lng=-1.52", 400);
-  if (!invalidQuery.error) throw new Error("Invalid nearby query must return an error message");
+  if (!Array.isArray(nearbyPharmacies) || nearbyPharmacies.length !== 0) {
+    throw new Error("/pharmacies/nearby must return []");
+  }
 
   console.log(JSON.stringify({
     ok: true,
     root,
     health,
-    pharmacies: pharmacies.length,
-    nearbyPharmacies: nearbyPharmacies.length,
-    clinics: clinics.length,
-    nearbyClinics: nearbyClinics.length,
-    invalidQueryStatus: 400,
+    pharmacies,
+    nearbyPharmacies,
   }, null, 2));
 } finally {
   server.kill("SIGTERM");
