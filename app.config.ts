@@ -36,6 +36,7 @@ const env = {
   scheme: schemeFromBundleId,
   iosBundleId: bundleId,
   androidPackage: bundleId,
+  googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
 };
 
 const config: ExpoConfig = {
@@ -118,6 +119,13 @@ const config: ExpoConfig = {
           buildArchs: ["armeabi-v7a", "arm64-v8a"],
           minSdkVersion: 24,
         },
+      },
+    ],
+    [
+      "react-native-maps",
+      {
+        androidGoogleMapsApiKey: env.googleMapsApiKey,
+        iosGoogleMapsApiKey: env.googleMapsApiKey,
       },
     ],
   ],

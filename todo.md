@@ -12,3 +12,4 @@
 - [x] Persister les favoris localement avec AsyncStorage.
 - [x] Créer le branding et l’icône personnalisée de PharmaGarde BF.
 - [x] Valider TypeScript, tests ou vérifications disponibles, puis sauvegarder un checkpoint final.
+- [x] Intégrer Google Maps API avec clé configurable, carte Web Google et préparation mobile Expo.
