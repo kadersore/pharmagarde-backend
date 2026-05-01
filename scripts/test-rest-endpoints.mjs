@@ -53,11 +53,11 @@ try {
   if (health.status !== "ok") throw new Error("/health payload is invalid");
 
   const pharmacies = await requestJson("/pharmacies");
-  if (!Array.isArray(pharmacies) || pharmacies.length !== 0) throw new Error("/pharmacies must return []");
+  if (!Array.isArray(pharmacies)) throw new Error("/pharmacies must return a JSON array");
 
   const nearbyPharmacies = await requestJson("/pharmacies/nearby?lat=12.37&lng=-1.52");
-  if (!Array.isArray(nearbyPharmacies) || nearbyPharmacies.length !== 0) {
-    throw new Error("/pharmacies/nearby must return []");
+  if (!Array.isArray(nearbyPharmacies)) {
+    throw new Error("/pharmacies/nearby must return a JSON array");
   }
 
   console.log(JSON.stringify({

@@ -9,3 +9,15 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: CACHE_TTL_HOURS
+        value: 24
+      - key: GOOGLE_PLACES_RADIUS_METERS
+        value: 25000
+      - key: GOOGLE_PLACES_MAX_PAGES
+        value: 1
+      - key: GOOGLE_DETAILS_CONCURRENCY
+        value: 3
+      - key: CORS_ORIGIN
+        value: '*'
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false

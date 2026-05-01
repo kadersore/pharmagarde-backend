@@ -5,4 +5,6 @@
 
 - [x] Vérifier si la dernière correction complète du routing Express direct a été poussée sur GitHub.
 
-- [ ] Committer et pousser sur GitHub la correction complète du routing Express direct.
+- [x] Committer et pousser sur GitHub la correction complète du routing Express direct.
+
+- [x] Intégrer l’archive uploadée pharmagarde-backend-render-final.zip dans le dépôt GitHub pharmagarde-backend et pousser la mise à jour sur main.
