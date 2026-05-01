@@ -1,40 +1,39 @@
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Tabs } from "expo-router";
+import { Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HapticTab } from "@/components/haptic-tab";
-import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Platform } from "react-native";
-import { useColors } from "@/hooks/use-colors";
+
+const ACTIVE = "#03C04A";
+const INACTIVE = "#667085";
 
 export default function TabLayout() {
-  const colors = useColors();
   const insets = useSafeAreaInsets();
-  const bottomPadding = Platform.OS === "web" ? 12 : Math.max(insets.bottom, 8);
-  const tabBarHeight = 56 + bottomPadding;
+  const bottomPadding = Platform.OS === "web" ? 10 : Math.max(insets.bottom, 8);
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.tint,
         headerShown: false,
+        tabBarActiveTintColor: ACTIVE,
+        tabBarInactiveTintColor: INACTIVE,
         tabBarButton: HapticTab,
         tabBarStyle: {
-          paddingTop: 8,
+          height: 58 + bottomPadding,
+          paddingTop: 7,
           paddingBottom: bottomPadding,
-          height: tabBarHeight,
-          backgroundColor: colors.background,
-          borderTopColor: colors.border,
-          borderTopWidth: 0.5,
+          backgroundColor: "#FFFFFF",
+          borderTopColor: "#D6EBDD",
+          borderTopWidth: 1,
         },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "700" },
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Home",
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
-      />
+      <Tabs.Screen name="index" options={{ title: "Accueil", tabBarIcon: ({ color }) => <MaterialIcons name="home" size={25} color={color} /> }} />
+      <Tabs.Screen name="cliniques" options={{ title: "Cliniques", tabBarIcon: ({ color }) => <MaterialIcons name="local-hospital" size={24} color={color} /> }} />
+      <Tabs.Screen name="medicaments" options={{ title: "Médicaments", tabBarIcon: ({ color }) => <MaterialIcons name="medication" size={24} color={color} /> }} />
+      <Tabs.Screen name="carte" options={{ title: "Carte", tabBarIcon: ({ color }) => <MaterialIcons name="map" size={24} color={color} /> }} />
     </Tabs>
   );
 }
