@@ -68,19 +68,21 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-  app.get("/", (_req, res) => {
-    res.type("text/plain").send("API OK");
+  const publicRouter = express.Router();
+
+  publicRouter.get("/", (_req, res) => {
+    res.type("text/plain").send("API PharmaGarde OK");
   });
 
-  app.get("/health", (_req, res) => {
+  publicRouter.get("/health", (_req, res) => {
     res.json({ status: "ok" });
   });
 
-  app.get("/pharmacies", (_req, res) => {
+  publicRouter.get("/pharmacies", (_req, res) => {
     res.json(pharmacies);
   });
 
-  app.get("/pharmacies/nearby", (req, res) => {
+  publicRouter.get("/pharmacies/nearby", (req, res) => {
     const parsedQuery = readNearbyQuery(req.query as Record<string, unknown>);
     if (!parsedQuery.ok) {
       res.status(400).json({ error: parsedQuery.error });
@@ -90,11 +92,11 @@ async function startServer() {
     res.json(getNearbyPlaces(pharmacies, parsedQuery.origin, parsedQuery.maxDistanceKm));
   });
 
-  app.get("/clinics", (_req, res) => {
+  publicRouter.get("/clinics", (_req, res) => {
     res.json(clinics);
   });
 
-  app.get("/clinics/nearby", (req, res) => {
+  publicRouter.get("/clinics/nearby", (req, res) => {
     const parsedQuery = readNearbyQuery(req.query as Record<string, unknown>);
     if (!parsedQuery.ok) {
       res.status(400).json({ error: parsedQuery.error });
@@ -104,11 +106,11 @@ async function startServer() {
     res.json(getNearbyPlaces(clinics, parsedQuery.origin, parsedQuery.maxDistanceKm));
   });
 
-  app.get("/cliniques", (_req, res) => {
+  publicRouter.get("/cliniques", (_req, res) => {
     res.json(clinics);
   });
 
-  app.get("/cliniques/nearby", (req, res) => {
+  publicRouter.get("/cliniques/nearby", (req, res) => {
     const parsedQuery = readNearbyQuery(req.query as Record<string, unknown>);
     if (!parsedQuery.ok) {
       res.status(400).json({ error: parsedQuery.error });
@@ -117,6 +119,8 @@ async function startServer() {
 
     res.json(getNearbyPlaces(clinics, parsedQuery.origin, parsedQuery.maxDistanceKm));
   });
+
+  app.use("/", publicRouter);
 
   registerStorageProxy(app);
   registerOAuthRoutes(app);

@@ -29,17 +29,25 @@ async function waitForServer() {
   throw new Error(`Server did not become ready. Output:\n${output}`);
 }
 
-async function requestJson(path, expectedStatus = 200) {
+async function requestText(path, expectedStatus = 200) {
   const response = await fetch(`${baseUrl}${path}`);
   const text = await response.text();
   if (response.status !== expectedStatus) {
     throw new Error(`${path} returned ${response.status}, expected ${expectedStatus}. Body: ${text}`);
   }
+  return text;
+}
+
+async function requestJson(path, expectedStatus = 200) {
+  const text = await requestText(path, expectedStatus);
   return text ? JSON.parse(text) : undefined;
 }
 
 try {
   await waitForServer();
+
+  const root = await requestText("/");
+  if (root !== "API PharmaGarde OK") throw new Error("/ must return API PharmaGarde OK");
 
   const health = await requestJson("/health");
   if (health.status !== "ok") throw new Error("/health payload is invalid");
@@ -62,6 +70,7 @@ try {
 
   console.log(JSON.stringify({
     ok: true,
+    root,
     health,
     pharmacies: pharmacies.length,
     nearbyPharmacies: nearbyPharmacies.length,
