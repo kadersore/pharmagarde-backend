@@ -94,6 +94,12 @@ const config: ExpoConfig = {
       },
     ],
     [
+      "expo-location",
+      {
+        locationWhenInUsePermission: "Autoriser $(PRODUCT_NAME) à utiliser votre position pour afficher les pharmacies et cliniques proches.",
+      },
+    ],
+    [
       "expo-video",
       {
         supportsBackgroundPlayback: true,

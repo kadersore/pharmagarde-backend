@@ -30,7 +30,7 @@ export default function HomeScreen() {
             <Text style={styles.primaryActionText}>Actualiser</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.secondaryAction} onPress={requestLocation} disabled={refreshingLocation}>
-            <Text style={styles.secondaryActionText}>{refreshingLocation ? "Localisation..." : "Me localiser"}</Text>
+            <Text style={styles.secondaryActionText}>{refreshingLocation ? "Localisation..." : "Activer la localisation"}</Text>
           </TouchableOpacity>
         </View>
       </View>

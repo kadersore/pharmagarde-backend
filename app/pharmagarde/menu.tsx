@@ -55,7 +55,7 @@ export default function MenuScreen() {
             <Text style={styles.primaryText}>Charger les données</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.secondaryButton} onPress={requestLocation}>
-            <Text style={styles.secondaryText}>Me localiser</Text>
+            <Text style={styles.secondaryText}>Activer la localisation</Text>
           </TouchableOpacity>
         </View>
       </View>

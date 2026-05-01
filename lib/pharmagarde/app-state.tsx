@@ -4,6 +4,7 @@ import { PropsWithChildren, createContext, useCallback, useContext, useEffect, u
 import { Platform } from "react-native";
 
 import { fetchClinics, fetchMedicines, fetchPharmacies, normalizeBaseUrl } from "./api";
+import { DEFAULT_LOCATION, getDefaultLocationFallback } from "./location-policy";
 import { CombinedSearchItem, Coordinates, FavoriteItem, HealthPlace, Medicine, favoriteKey } from "./types";
 
 const FAVORITES_KEY = "pharmagarde:favorites:v1";
@@ -70,7 +71,7 @@ function asSearchText(item: FavoriteItem) {
 
 export function PharmaGardeProvider({ children }: PropsWithChildren) {
   const [apiBaseUrl, setApiBaseUrl] = useState(normalizeBaseUrl(INITIAL_API_URL));
-  const [userLocation, setUserLocation] = useState<Coordinates | undefined>(undefined);
+  const [userLocation, setUserLocation] = useState<Coordinates | undefined>(DEFAULT_LOCATION);
   const [locationMessage, setLocationMessage] = useState<string | undefined>(undefined);
   const [pharmacies, setPharmacies] = useState<HealthPlace[]>([]);
   const [clinics, setClinics] = useState<HealthPlace[]>([]);
@@ -107,26 +108,33 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
   const requestLocation = useCallback(async () => {
     setRefreshingLocation(true);
     setLocationMessage(undefined);
+
+    const useDefaultLocation = () => {
+      const fallback = getDefaultLocationFallback();
+      setUserLocation(fallback.location);
+      setLocationMessage(fallback.message);
+    };
+
     try {
       if (Platform.OS === "web" && typeof navigator !== "undefined" && !navigator.geolocation) {
-        setLocationMessage("La géolocalisation n’est pas disponible dans ce navigateur.");
+        useDefaultLocation();
         return;
       }
       const serviceEnabled = Platform.OS === "web" ? true : await Location.hasServicesEnabledAsync();
       if (!serviceEnabled) {
-        setLocationMessage("Activez la localisation du téléphone pour trier les résultats par proximité.");
+        useDefaultLocation();
         return;
       }
       const permission = await Location.requestForegroundPermissionsAsync();
       if (permission.status !== "granted") {
-        setLocationMessage("Permission de localisation refusée. Les appels API resteront possibles sans coordonnées.");
+        useDefaultLocation();
         return;
       }
       const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       setUserLocation({ latitude: current.coords.latitude, longitude: current.coords.longitude });
       setLocationMessage("Position détectée pour les recherches de proximité.");
-    } catch (error) {
-      setLocationMessage(error instanceof Error ? error.message : "Impossible d’obtenir la position actuelle.");
+    } catch {
+      useDefaultLocation();
     } finally {
       setRefreshingLocation(false);
     }
