@@ -6,7 +6,39 @@ import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
+import { clinics, getNearbyPlaces, pharmacies } from "../data/healthPlaces";
 
+function readNumericQueryValue(value: unknown) {
+  const rawValue = Array.isArray(value) ? value[0] : value;
+  if (typeof rawValue === "number" && Number.isFinite(rawValue)) return rawValue;
+  if (typeof rawValue === "string") {
+    const parsedValue = Number(rawValue.replace(",", "."));
+    if (Number.isFinite(parsedValue)) return parsedValue;
+  }
+  return undefined;
+}
+
+function readNearbyQuery(query: Record<string, unknown>) {
+  const lat = readNumericQueryValue(query.lat ?? query.latitude);
+  const lng = readNumericQueryValue(query.lng ?? query.longitude ?? query.lon);
+  const maxDistanceKm = readNumericQueryValue(query.maxDistanceKm ?? query.radiusKm ?? query.distanceKm) ?? 25;
+
+  if (lat === undefined || lng === undefined) {
+    return {
+      ok: false as const,
+      error: "Les paramètres lat et lng sont requis et doivent être numériques.",
+    };
+  }
+
+  if (maxDistanceKm <= 0) {
+    return {
+      ok: false as const,
+      error: "Le rayon de recherche doit être supérieur à 0 km.",
+    };
+  }
+
+  return { ok: true as const, origin: { lat, lng }, maxDistanceKm };
+}
 
 async function startServer() {
   const app = express();
@@ -42,6 +74,48 @@ async function startServer() {
 
   app.get("/health", (_req, res) => {
     res.json({ status: "ok" });
+  });
+
+  app.get("/pharmacies", (_req, res) => {
+    res.json(pharmacies);
+  });
+
+  app.get("/pharmacies/nearby", (req, res) => {
+    const parsedQuery = readNearbyQuery(req.query as Record<string, unknown>);
+    if (!parsedQuery.ok) {
+      res.status(400).json({ error: parsedQuery.error });
+      return;
+    }
+
+    res.json(getNearbyPlaces(pharmacies, parsedQuery.origin, parsedQuery.maxDistanceKm));
+  });
+
+  app.get("/clinics", (_req, res) => {
+    res.json(clinics);
+  });
+
+  app.get("/clinics/nearby", (req, res) => {
+    const parsedQuery = readNearbyQuery(req.query as Record<string, unknown>);
+    if (!parsedQuery.ok) {
+      res.status(400).json({ error: parsedQuery.error });
+      return;
+    }
+
+    res.json(getNearbyPlaces(clinics, parsedQuery.origin, parsedQuery.maxDistanceKm));
+  });
+
+  app.get("/cliniques", (_req, res) => {
+    res.json(clinics);
+  });
+
+  app.get("/cliniques/nearby", (req, res) => {
+    const parsedQuery = readNearbyQuery(req.query as Record<string, unknown>);
+    if (!parsedQuery.ok) {
+      res.status(400).json({ error: parsedQuery.error });
+      return;
+    }
+
+    res.json(getNearbyPlaces(clinics, parsedQuery.origin, parsedQuery.maxDistanceKm));
   });
 
   registerStorageProxy(app);
