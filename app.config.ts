@@ -121,13 +121,9 @@ const config: ExpoConfig = {
         },
       },
     ],
-    [
-      "react-native-maps",
-      {
-        androidGoogleMapsApiKey: env.googleMapsApiKey,
-        iosGoogleMapsApiKey: env.googleMapsApiKey,
-      },
-    ],
+    // NOTE: react-native-maps config plugin removed for Expo Go compatibility.
+    // Google Maps API key is handled via env vars (EXPO_PUBLIC_GOOGLE_MAPS_API_KEY for Web, GOOGLE_MAPS_API_KEY for native builds).
+    // For native Google Maps on iOS/Android, use EAS development build with proper config plugin setup.
   ],
   experiments: {
     typedRoutes: true,
