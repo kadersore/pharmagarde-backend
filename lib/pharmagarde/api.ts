@@ -110,8 +110,9 @@ function getDatasetKind(path: string): "pharmacies" | "clinics" | "medicines" | 
   return null;
 }
 
-function buildCacheKey(baseUrl: string, path: string) {
-  return `${CLIENT_CACHE_PREFIX}${normalizeBaseUrl(baseUrl)}:${path.startsWith("/") ? path : `/${path}`}`;
+function buildCacheKey(baseUrl: string, path: string, coordinates?: Coordinates) {
+  const locationSuffix = coordinates ? `:${coordinates.latitude.toFixed(3)},${coordinates.longitude.toFixed(3)}` : "";
+  return `${CLIENT_CACHE_PREFIX}${normalizeBaseUrl(baseUrl)}:${path.startsWith("/") ? path : `/${path}`}${locationSuffix}`;
 }
 
 async function readCachedPayload(cacheKey: string) {
@@ -164,7 +165,7 @@ async function requestJson(baseUrl: string, path: string, coordinates?: Coordina
   }
 
   const datasetKind = getDatasetKind(path);
-  const cacheKey = datasetKind ? buildCacheKey(cleanBase, path) : null;
+  const cacheKey = datasetKind ? buildCacheKey(cleanBase, path, coordinates) : null;
   if (cacheKey) {
     const cached = await readCachedPayload(cacheKey);
     if (cached) return cached;

@@ -1,10 +1,11 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
-import { PropsWithChildren, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { PropsWithChildren, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Platform } from "react-native";
 
 import { useThemeContext } from "@/lib/theme-provider";
 import { fetchClinics, fetchMedicines, fetchPharmacies, normalizeBaseUrl } from "./api";
+import { filterPlacesByCity, inferCityFromAddressParts, inferNearestKnownCity, normalizeCityName } from "./city-utils";
 import { DEFAULT_LOCATION, getDefaultLocationFallback } from "./location-policy";
 import { LOCAL_ESSENTIAL_MEDICINES, LOCAL_MEDICINES_NOTICE } from "./medicines-data";
 import { AppPreferences, CombinedSearchItem, Coordinates, FavoriteItem, HealthPlace, Medicine, favoriteKey } from "./types";
@@ -105,6 +106,7 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
   const [refreshingLocation, setRefreshingLocation] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [preferences, setPreferences] = useState<AppPreferences>(DEFAULT_PREFERENCES);
+  const lastAutoCityRef = useRef<string | undefined>(undefined);
 
   const isApiConfigured = apiBaseUrl.length > 0;
 
@@ -141,40 +143,69 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
     };
   }, []);
 
+  const persistNextPreferences = useCallback((updater: (current: AppPreferences) => AppPreferences) => {
+    setPreferences((current) => {
+      const next = updater(current);
+      AsyncStorage.setItem(PREFERENCES_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const updateCityFromCoordinates = useCallback(async (coordinates: Coordinates, source: "manual" | "watch" | "fallback" = "manual") => {
+    const fallbackCity = inferNearestKnownCity(coordinates);
+    let detectedCity = fallbackCity;
+
+    try {
+      const addresses = await Location.reverseGeocodeAsync(coordinates);
+      const firstAddress = addresses[0];
+      detectedCity = inferCityFromAddressParts([firstAddress?.city, firstAddress?.district, firstAddress?.subregion, firstAddress?.name, firstAddress?.formattedAddress]) ?? fallbackCity;
+    } catch {
+      detectedCity = fallbackCity;
+    }
+
+    const normalizedCity = normalizeCityName(detectedCity);
+    if (source === "watch" && lastAutoCityRef.current === normalizedCity) return;
+    lastAutoCityRef.current = normalizedCity;
+
+    persistNextPreferences((current) => current.city === normalizedCity ? current : { ...current, city: normalizedCity });
+    setLocationMessage(source === "fallback" ? `Position de référence utilisée pour ${normalizedCity}.` : `Position détectée : affichage des lieux de ${normalizedCity}.`);
+  }, [persistNextPreferences]);
+
   const requestLocation = useCallback(async () => {
     setRefreshingLocation(true);
     setLocationMessage(undefined);
 
-    const useDefaultLocation = () => {
+    const useDefaultLocation = async () => {
       const fallback = getDefaultLocationFallback();
       setUserLocation(fallback.location);
-      setLocationMessage(fallback.message);
+      await updateCityFromCoordinates(fallback.location, "fallback");
     };
 
     try {
       if (Platform.OS === "web" && typeof navigator !== "undefined" && !navigator.geolocation) {
-        useDefaultLocation();
+        await useDefaultLocation();
         return;
       }
       const serviceEnabled = Platform.OS === "web" ? true : await Location.hasServicesEnabledAsync();
       if (!serviceEnabled) {
-        useDefaultLocation();
+        await useDefaultLocation();
         return;
       }
       const permission = await Location.requestForegroundPermissionsAsync();
       if (permission.status !== "granted") {
-        useDefaultLocation();
+        await useDefaultLocation();
         return;
       }
       const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      setUserLocation({ latitude: current.coords.latitude, longitude: current.coords.longitude });
-      setLocationMessage("Position détectée pour les recherches de proximité.");
+      const coordinates = { latitude: current.coords.latitude, longitude: current.coords.longitude };
+      setUserLocation(coordinates);
+      await updateCityFromCoordinates(coordinates, "manual");
     } catch {
-      useDefaultLocation();
+      await useDefaultLocation();
     } finally {
       setRefreshingLocation(false);
     }
-  }, []);
+  }, [updateCityFromCoordinates]);
 
   const refreshData = useCallback(async () => {
     if (!isApiConfigured) {
@@ -196,13 +227,15 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
       fetchMedicines(apiBaseUrl),
     ]);
 
-    if (pharmacyResult.status === "fulfilled") setPharmacies(pharmacyResult.value);
+    const selectedCity = preferences.city;
+
+    if (pharmacyResult.status === "fulfilled") setPharmacies(filterPlacesByCity(pharmacyResult.value, selectedCity));
     else {
       setPharmacies([]);
       nextErrors.pharmacies = pharmacyResult.reason instanceof Error ? pharmacyResult.reason.message : "Erreur de chargement des pharmacies.";
     }
 
-    if (clinicResult.status === "fulfilled") setClinics(clinicResult.value);
+    if (clinicResult.status === "fulfilled") setClinics(filterPlacesByCity(clinicResult.value, selectedCity));
     else {
       setClinics([]);
       nextErrors.clinics = clinicResult.reason instanceof Error ? clinicResult.reason.message : "Erreur de chargement des cliniques.";
@@ -216,11 +249,39 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
 
     setErrors(nextErrors);
     setLoading(false);
-  }, [apiBaseUrl, isApiConfigured, userLocation]);
+  }, [apiBaseUrl, isApiConfigured, preferences.city, userLocation]);
 
   useEffect(() => {
     requestLocation();
   }, [requestLocation]);
+
+  useEffect(() => {
+    let mounted = true;
+    let subscription: Location.LocationSubscription | undefined;
+
+    async function watchLocationChanges() {
+      if (Platform.OS === "web") return;
+      const permission = await Location.getForegroundPermissionsAsync();
+      if (!mounted || permission.status !== "granted") return;
+      const serviceEnabled = await Location.hasServicesEnabledAsync();
+      if (!mounted || !serviceEnabled) return;
+
+      subscription = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.Balanced, distanceInterval: 1200, timeInterval: 120000 },
+        (position) => {
+          const coordinates = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+          setUserLocation(coordinates);
+          updateCityFromCoordinates(coordinates, "watch");
+        },
+      );
+    }
+
+    watchLocationChanges();
+    return () => {
+      mounted = false;
+      subscription?.remove();
+    };
+  }, [updateCityFromCoordinates]);
 
   useEffect(() => {
     refreshData();
@@ -237,12 +298,11 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
   }, []);
 
   const updatePreference = useCallback(async <Key extends keyof AppPreferences>(key: Key, value: AppPreferences[Key]) => {
-    setPreferences((current) => {
-      const next = { ...current, [key]: value };
-      AsyncStorage.setItem(PREFERENCES_KEY, JSON.stringify(next));
-      return next;
+    persistNextPreferences((current) => {
+      const nextValue = key === "city" && typeof value === "string" ? normalizeCityName(value) : value;
+      return { ...current, [key]: nextValue };
     });
-  }, []);
+  }, [persistNextPreferences]);
 
   const toggleFavorite = useCallback(async (item: FavoriteItem) => {
     const key = favoriteKey(item.entityType, item.id);

@@ -1,4 +1,4 @@
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { FlatList, StyleSheet, View } from "react-native";
 
 import { AppChrome, EmptyState, PlaceCard, StatusNotice } from "@/components/pharmagarde/app-ui";
 import { usePharmaGarde } from "@/lib/pharmagarde/app-state";
@@ -8,8 +8,7 @@ export default function ClinicsScreen() {
   const { clinics, errors, refreshData } = usePharmaGarde();
 
   const header = (
-    <View>
-      <Text style={styles.pageTitle}>Cliniques et Centres de soins</Text>
+    <View style={styles.headerNotice}>
       <StatusNotice message={errors.clinics} tone="error" />
     </View>
   );
@@ -30,5 +29,5 @@ export default function ClinicsScreen() {
 
 const styles = StyleSheet.create({
   listContent: { paddingBottom: 28 },
-  pageTitle: { color: "#102016", fontSize: 24, lineHeight: 31, fontWeight: "900", marginHorizontal: 16, marginTop: 18, marginBottom: 10 },
+  headerNotice: { marginTop: 8 },
 });

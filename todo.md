@@ -141,3 +141,12 @@
 - [x] Ajouter un test anti-régression couvrant le menu latéral et l’absence d’import natif instable
 - [x] Valider TypeScript, Vitest et état Expo après correction du crash menu
 - [x] Sauvegarder un checkpoint de livraison après correction du crash menu
+
+- [x] Simplifier l’effet de sélection des éléments sur la page Carte avec uniquement une bordure verte pour les pharmacies et bleue pour les cliniques
+- [x] Simplifier les marqueurs de la carte avec un symbole traditionnel de lieu vert pour les pharmacies et bleu pour les cliniques
+- [x] Supprimer les titres de pages sur l’accueil et la page Cliniques
+- [x] Utiliser la géolocalisation au démarrage pour déterminer la ville utilisateur et filtrer les éléments selon cette ville
+- [x] Mettre à jour automatiquement la ville et les éléments affichés lorsque l’utilisateur change de lieu
+- [x] Faire en sorte que le bouton Ma position sur la carte synchronise automatiquement la ville dans les paramètres et recharge les éléments du lieu détecté
+- [x] Valider TypeScript, Vitest et état Expo après les ajustements carte, titres et géolocalisation
+- [x] Sauvegarder un checkpoint de livraison après les ajustements carte, titres et géolocalisation

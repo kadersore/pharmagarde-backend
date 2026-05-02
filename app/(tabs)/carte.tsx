@@ -63,7 +63,7 @@ function MapPlaceCard({ place, active, favorite, onSelect, onToggleFavorite }: {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`Voir ${place.name}`}
-      style={({ pressed }) => [styles.placeCard, { backgroundColor: active ? palette.softGreen : palette.card, borderColor: active ? accent : palette.border }, pressed ? styles.pressedCard : undefined]}
+      style={({ pressed }) => [styles.placeCard, { backgroundColor: palette.card, borderColor: active ? accent : palette.border, borderWidth: active ? 2 : 1 }, pressed ? styles.pressedCard : undefined]}
       onPress={() => {
         haptic.selection();
         onSelect();
@@ -135,7 +135,7 @@ function MapPlaceCard({ place, active, favorite, onSelect, onToggleFavorite }: {
 export default function CarteScreen() {
   const { height } = useWindowDimensions();
   const palette = usePremiumPalette();
-  const { pharmacies, clinics, userLocation, preferences, loading, errors, favoriteKeys, toggleFavorite, refreshData } = usePharmaGarde();
+  const { pharmacies, clinics, userLocation, preferences, loading, errors, refreshingLocation, favoriteKeys, toggleFavorite, refreshData, requestLocation } = usePharmaGarde();
   const [filter, setFilter] = useState<FilterMode>("all");
   const allPlaces = useMemo(() => [...pharmacies, ...clinics].sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999)), [clinics, pharmacies]);
   const visiblePlaces = useMemo(() => filter === "all" ? allPlaces : allPlaces.filter((place) => place.type === filter), [allPlaces, filter]);
@@ -218,6 +218,19 @@ export default function CarteScreen() {
           </Pressable>
         </View>
 
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Ma position"
+          style={({ pressed }) => [styles.locationButton, { backgroundColor: palette.glass, borderColor: palette.border }, pressed ? styles.pressedScale : undefined]}
+          onPress={() => {
+            haptic.medium();
+            requestLocation();
+          }}
+        >
+          <MaterialIcons name={refreshingLocation ? "sync" : "my-location"} size={18} color={palette.brand} />
+          <Text style={[styles.locationButtonText, { color: palette.text }]}>{refreshingLocation ? "Localisation…" : "Ma position"}</Text>
+        </Pressable>
+
         <Animated.View style={[styles.sheet, { height: sheetHeight, backgroundColor: palette.background, borderColor: palette.border, transform: [{ translateY }] }]}> 
           <View {...panResponder.panHandlers} style={styles.sheetHandleArea}>
             <View style={[styles.sheetHandle, { backgroundColor: palette.border }]} />
@@ -266,6 +279,8 @@ const styles = StyleSheet.create({
   statusOverlay: { position: "absolute", left: 14, right: 14, top: 62, minHeight: 42, borderRadius: 21, borderWidth: 1, paddingHorizontal: 13, flexDirection: "row", alignItems: "center", gap: 9, shadowColor: "#092A13", shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 4 },
   statusDot: { width: 9, height: 9, borderRadius: 5 },
   statusText: { flex: 1, fontSize: 12, lineHeight: 16, fontWeight: "800" },
+  locationButton: { position: "absolute", right: 14, top: 112, minHeight: 40, borderRadius: 20, borderWidth: 1, paddingHorizontal: 13, flexDirection: "row", alignItems: "center", gap: 7, shadowColor: "#092A13", shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 4 },
+  locationButtonText: { fontSize: 12, lineHeight: 16, fontWeight: "900" },
   sheet: { position: "absolute", left: 0, right: 0, bottom: 0, borderTopLeftRadius: 28, borderTopRightRadius: 28, borderWidth: 1, borderBottomWidth: 0, shadowColor: "#041207", shadowOpacity: 0.18, shadowRadius: 24, shadowOffset: { width: 0, height: -7 }, elevation: 22, overflow: "hidden" },
   sheetHandleArea: { paddingTop: 10, paddingHorizontal: 18, paddingBottom: 8 },
   sheetHandle: { width: 48, height: 5, borderRadius: 3, alignSelf: "center", marginBottom: 12 },
@@ -274,7 +289,7 @@ const styles = StyleSheet.create({
   sheetSubtitle: { marginTop: 2, fontSize: 13, lineHeight: 18, fontWeight: "700" },
   expandButton: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center" },
   sheetList: { paddingHorizontal: 14, paddingBottom: 34, gap: 12 },
-  placeCard: { borderWidth: 1, borderRadius: 22, padding: 14, marginBottom: 12, shadowColor: "#092A13", shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
+  placeCard: { borderRadius: 22, padding: 14, marginBottom: 12, shadowColor: "#092A13", shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
   pressedCard: { opacity: 0.92, transform: [{ scale: 0.985 }] },
   pressedScale: { opacity: 0.86, transform: [{ scale: 0.97 }] },
   placeHeader: { flexDirection: "row", alignItems: "center", gap: 12 },

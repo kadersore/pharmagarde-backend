@@ -49,9 +49,7 @@ function getCenter(places: HealthPlace[], userLocation?: Coordinates) {
   return { lat: DEFAULT_CENTER.latitude, lng: DEFAULT_CENTER.longitude };
 }
 
-function markerLabel(place: HealthPlace) {
-  return place.type === "pharmacy" ? "P" : "C";
-}
+const PLACE_PIN_PATH = "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z";
 
 export function PharmaMap({ places, userLocation, mapType = "Standard" }: { places: HealthPlace[]; userLocation?: Coordinates; mapType?: MapPreference }) {
   const mapContainerRef = useRef<any>(null);
@@ -104,14 +102,14 @@ export function PharmaMap({ places, userLocation, mapType = "Standard" }: { plac
             position: { lat: place.latitude, lng: place.longitude },
             map,
             title: place.name,
-            label: { text: markerLabel(place), color: "#FFFFFF", fontWeight: "900" },
             icon: {
-              path: window.google.maps.SymbolPath.CIRCLE,
+              path: PLACE_PIN_PATH,
               fillColor: place.type === "pharmacy" ? GREEN : BLUE,
               fillOpacity: 1,
               strokeColor: "#FFFFFF",
-              strokeWeight: 3,
-              scale: 14,
+              strokeWeight: 2,
+              scale: 1.65,
+              anchor: new window.google.maps.Point(12, 22),
             },
           });
 

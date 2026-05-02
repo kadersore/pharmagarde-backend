@@ -50,7 +50,7 @@ export function PharmaMap({ places, userLocation, mapType = "Standard", selected
         initialRegion={initialRegion}
         mapType={mapType === "Satellite" ? "satellite" : "standard"}
         showsUserLocation={!!userLocation}
-        showsMyLocationButton
+        showsMyLocationButton={false}
         toolbarEnabled={false}
       >
         {visiblePlaces.map((place) => {
@@ -70,11 +70,8 @@ export function PharmaMap({ places, userLocation, mapType = "Standard", selected
                 onSelectPlace?.(place);
               }}
             >
-              <View style={[styles.markerShadow, active ? styles.markerShadowActive : undefined]}>
-                <View style={[styles.marker, { backgroundColor: active ? accent : palette.card, borderColor: accent, transform: [{ scale: active ? 1.14 : 1 }] }]}>
-                  <MaterialIcons name={place.type === "pharmacy" ? "local-pharmacy" : "local-hospital"} size={active ? 21 : 18} color={active ? "#FFFFFF" : accent} />
-                </View>
-                {active ? <View style={[styles.markerTail, { borderTopColor: accent }]} /> : null}
+              <View style={[styles.markerShadow, active ? styles.markerShadowActive : undefined, { transform: [{ scale: active ? 1.12 : 1 }] }]}> 
+                <MaterialIcons name="place" size={active ? 43 : 38} color={accent} />
               </View>
             </Marker>
           );
@@ -101,24 +98,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 5 },
     elevation: 10,
   },
-  marker: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 2,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  markerTail: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 6,
-    borderRightWidth: 6,
-    borderTopWidth: 9,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    marginTop: -2,
-  },
+
   overlay: { position: "absolute", left: 20, right: 20, bottom: 120, borderRadius: 18, padding: 16, borderWidth: 1 },
   overlayTitle: { fontWeight: "900", fontSize: 15, lineHeight: 20 },
   overlayText: { marginTop: 4, fontSize: 13, lineHeight: 18 },
