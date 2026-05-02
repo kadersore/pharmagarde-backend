@@ -231,3 +231,10 @@
 - [x] Ajouter ou adapter les tests backend pour la collecte, le cache, le filtrage par ville et la compatibilité existante
 - [x] Valider TypeScript, Vitest et état serveur après correction backend multi-villes
 - [x] Sauvegarder un checkpoint de livraison pour le backend multi-villes
+
+- [x] Identifier la logique de tri actuelle des listes d’établissements PharmaGarde
+- [x] Afficher les établissements ouverts avant les établissements fermés ou au statut inconnu
+- [x] Trier chaque groupe d’établissements par distance croissante, du plus proche au plus loin
+- [x] Ajouter ou adapter les tests pour vérifier le tri ouvert puis distance
+- [x] Valider TypeScript, Vitest et état serveur après modification du tri
+- [x] Sauvegarder un checkpoint de livraison pour le tri ouvert puis proximité

@@ -8,6 +8,7 @@ import { fetchClinics, fetchMedicines, fetchPharmacies, normalizeBaseUrl } from 
 import { filterPlacesByCity, inferCityFromAddressParts, inferNearestKnownCity, normalizeCityName } from "./city-utils";
 import { DEFAULT_LOCATION, getDefaultLocationFallback } from "./location-policy";
 import { LOCAL_ESSENTIAL_MEDICINES, LOCAL_MEDICINES_NOTICE } from "./medicines-data";
+import { sortPlacesByOpenThenDistance } from "./place-ordering";
 import { AppPreferences, CombinedSearchItem, Coordinates, FavoriteItem, HealthPlace, Medicine, favoriteKey } from "./types";
 
 const FAVORITES_KEY = "pharmagarde:favorites:v1";
@@ -230,13 +231,13 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
 
     const selectedCity = preferences.city;
 
-    if (pharmacyResult.status === "fulfilled") setPharmacies(filterPlacesByCity(pharmacyResult.value, selectedCity));
+    if (pharmacyResult.status === "fulfilled") setPharmacies(sortPlacesByOpenThenDistance(filterPlacesByCity(pharmacyResult.value, selectedCity)));
     else {
       setPharmacies([]);
       nextErrors.pharmacies = pharmacyResult.reason instanceof Error ? pharmacyResult.reason.message : "Erreur de chargement des pharmacies.";
     }
 
-    if (clinicResult.status === "fulfilled") setClinics(filterPlacesByCity(clinicResult.value, selectedCity));
+    if (clinicResult.status === "fulfilled") setClinics(sortPlacesByOpenThenDistance(filterPlacesByCity(clinicResult.value, selectedCity)));
     else {
       setClinics([]);
       nextErrors.clinics = clinicResult.reason instanceof Error ? clinicResult.reason.message : "Erreur de chargement des cliniques.";

@@ -6,6 +6,7 @@ import { Animated, FlatList, Linking, PanResponder, Pressable, StyleSheet, Text,
 import { AppChrome } from "@/components/pharmagarde/app-ui";
 import { PharmaMap } from "@/components/pharmagarde/PharmaMap";
 import { haptic, usePremiumPalette } from "@/lib/pharmagarde/premium-ui";
+import { sortPlacesByOpenThenDistance } from "@/lib/pharmagarde/place-ordering";
 import { usePharmaGarde } from "@/lib/pharmagarde/app-state";
 import { FavoriteItem, HealthPlace, favoriteKey } from "@/lib/pharmagarde/types";
 
@@ -155,7 +156,7 @@ export default function CarteScreen() {
   const palette = usePremiumPalette();
   const { pharmacies, clinics, userLocation, preferences, loading, errors, refreshingLocation, favoriteKeys, toggleFavorite, refreshData, requestLocation } = usePharmaGarde();
   const [filter, setFilter] = useState<FilterMode>("all");
-  const allPlaces = useMemo(() => [...pharmacies, ...clinics].sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999)), [clinics, pharmacies]);
+  const allPlaces = useMemo(() => sortPlacesByOpenThenDistance([...pharmacies, ...clinics]), [clinics, pharmacies]);
   const visiblePlaces = useMemo(() => filter === "all" ? allPlaces : allPlaces.filter((place) => place.type === filter), [allPlaces, filter]);
   const [selectedId, setSelectedId] = useState<string | undefined>(() => visiblePlaces[0] ? keyFor(visiblePlaces[0]) : undefined);
   const [expandedPlaceId, setExpandedPlaceId] = useState<string | undefined>();
