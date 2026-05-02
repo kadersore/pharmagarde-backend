@@ -45,9 +45,9 @@ export function PharmaMap({ places, userLocation, mapType = "Standard" }: { plac
 }
 
 const styles = StyleSheet.create({
-  wrapper: { height: 380, margin: 16, borderRadius: 28, overflow: "hidden", borderWidth: 1, borderColor: "#CBE7D3" },
+  wrapper: { height: 380, margin: 16, borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: "#CBE7D3", shadowColor: "#092A13", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
   map: { flex: 1 },
-  overlay: { position: "absolute", left: 20, right: 20, bottom: 20, borderRadius: 18, padding: 14, backgroundColor: "rgba(255,255,255,0.94)" },
+  overlay: { position: "absolute", left: 20, right: 20, bottom: 20, borderRadius: 10, padding: 14, backgroundColor: "rgba(255,255,255,0.94)" },
   overlayTitle: { color: "#102016", fontWeight: "900", fontSize: 15, lineHeight: 20 },
   overlayText: { color: "#667085", marginTop: 4, fontSize: 13, lineHeight: 18 },
 });

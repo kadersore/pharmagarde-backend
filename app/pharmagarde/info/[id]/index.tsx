@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
   heroIcon: { width: 62, height: 62, borderRadius: 31, backgroundColor: BRAND_GREEN, alignItems: "center", justifyContent: "center", marginBottom: 14 },
   title: { color: "#102016", fontSize: 25, lineHeight: 32, fontWeight: "900" },
   intro: { color: "#475467", fontSize: 15, lineHeight: 23, marginTop: 8 },
-  card: { marginTop: 18, borderRadius: 28, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#D6EBDD", padding: 16, gap: 14 },
+  card: { marginTop: 18, borderRadius: 12, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#D6EBDD", padding: 16, gap: 14, shadowColor: "#092A13", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
   pointRow: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
   pointBullet: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#EAF8EF", alignItems: "center", justifyContent: "center" },
   pointNumber: { color: BRAND_GREEN, fontSize: 13, fontWeight: "900" },

@@ -81,3 +81,12 @@
 - [x] Créer ou relier les écrans Nouvelle Pharmacie, Signaler un problème, pages informations et Abonnement.
 - [x] Ajouter une animation d’ouverture fluide du drawer sans casser la navigation mobile.
 - [x] Valider TypeScript et tests après refactorisation du drawer.
+
+- [x] Refactoriser l’application avec un layout global persistant qui encapsule toutes les pages.
+- [x] Rendre le header global persistant avec menu à gauche, titre centré, favoris et recherche à droite.
+- [x] Rendre le footer global persistant avec navigation Accueil, Cliniques, Médicaments et Cartes sans duplication de code.
+- [x] Modifier le drawer pour limiter sa largeur à environ 75–85% sur mobile.
+- [x] Ajouter un overlay sombre, une fermeture au clic extérieur et une animation fluide d’ouverture/fermeture du drawer.
+- [x] Harmoniser les arrondis des cartes, sections et conteneurs avec un style plus discret et professionnel.
+- [x] Ajouter des ombres légères et transitions douces aux éléments visuels clés.
+- [x] Valider TypeScript, tests et état Expo après la refonte globale UI/UX.

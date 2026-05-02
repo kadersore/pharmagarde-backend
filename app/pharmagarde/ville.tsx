@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
   title: { color: "#102016", fontSize: 25, lineHeight: 32, fontWeight: "900", marginHorizontal: 16 },
   description: { color: "#667085", fontSize: 14, lineHeight: 21, marginHorizontal: 16, marginTop: 6, marginBottom: 14 },
   list: { paddingHorizontal: 16, paddingBottom: 28 },
-  cityRow: { minHeight: 66, borderRadius: 22, borderWidth: 1, borderColor: "#D6EBDD", backgroundColor: "#FFFFFF", paddingHorizontal: 14, marginBottom: 10, flexDirection: "row", alignItems: "center", gap: 12 },
+  cityRow: { minHeight: 66, borderRadius: 12, borderWidth: 1, borderColor: "#D6EBDD", backgroundColor: "#FFFFFF", paddingHorizontal: 14, marginBottom: 10, flexDirection: "row", alignItems: "center", gap: 12, shadowColor: "#092A13", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
   selectedRow: { backgroundColor: "#F0FFF5", borderColor: BRAND_GREEN },
   pressed: { opacity: 0.78, transform: [{ scale: 0.995 }] },
   icon: { width: 42, height: 42, borderRadius: 21, backgroundColor: "#EAF8EF", alignItems: "center", justifyContent: "center" },

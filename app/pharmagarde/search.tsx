@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 28 },
   topRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 14 },
   title: { fontSize: 26, lineHeight: 32, fontWeight: "900", color: "#102016" },
-  closeButton: { minHeight: 40, paddingHorizontal: 16, borderRadius: 20, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#D6EBDD", alignItems: "center", justifyContent: "center" },
+  closeButton: { minHeight: 40, paddingHorizontal: 16, borderRadius: 10, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#D6EBDD", alignItems: "center", justifyContent: "center" },
   closeText: { color: "#03A63F", fontWeight: "900" },
   count: { marginHorizontal: 16, marginTop: 4, marginBottom: 6, color: "#667085", fontSize: 13, lineHeight: 18, fontWeight: "700" },
 });

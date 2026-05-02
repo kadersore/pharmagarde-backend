@@ -40,7 +40,7 @@ export function PharmaMap({ places, userLocation, mapType = "Standard" }: { plac
 }
 
 const styles = StyleSheet.create({
-  wrapper: { height: 360, margin: 16, borderRadius: 28, overflow: "hidden", backgroundColor: "#EAF8EF", borderWidth: 1, borderColor: "#CBE7D3" },
+  wrapper: { height: 360, margin: 16, borderRadius: 12, overflow: "hidden", backgroundColor: "#EAF8EF", borderWidth: 1, borderColor: "#CBE7D3", shadowColor: "#092A13", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
   satelliteOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(17, 64, 38, 0.18)" },
   gridLineHorizontal: { position: "absolute", left: 0, right: 0, top: "50%", height: 1, backgroundColor: "rgba(16,32,22,0.12)" },
   gridLineVertical: { position: "absolute", top: 0, bottom: 0, left: "50%", width: 1, backgroundColor: "rgba(16,32,22,0.12)" },

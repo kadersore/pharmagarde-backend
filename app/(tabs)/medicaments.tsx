@@ -38,12 +38,12 @@ export default function MedicinesScreen() {
 
 const styles = StyleSheet.create({
   listContent: { paddingBottom: 28 },
-  headerCard: { margin: 16, padding: 18, borderRadius: 26, backgroundColor: "#F1F8F3", borderWidth: 1, borderColor: "#D6EBDD" },
+  headerCard: { margin: 16, padding: 18, borderRadius: 12, backgroundColor: "#F1F8F3", borderWidth: 1, borderColor: "#D6EBDD", shadowColor: "#092A13", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
   kicker: { color: "#03A63F", fontSize: 12, lineHeight: 17, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.6 },
   title: { color: "#102016", fontSize: 22, lineHeight: 28, fontWeight: "900", marginTop: 6 },
   description: { color: "#667085", fontSize: 14, lineHeight: 21, marginTop: 8 },
   summaryRow: { flexDirection: "row", gap: 10, marginTop: 14 },
-  summaryChip: { flex: 1, borderRadius: 18, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#D6EBDD", padding: 12 },
+  summaryChip: { flex: 1, borderRadius: 10, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#D6EBDD", padding: 12 },
   summaryValue: { color: "#03A63F", fontSize: 18, lineHeight: 23, fontWeight: "900" },
   summaryLabel: { color: "#667085", fontSize: 12, lineHeight: 16, fontWeight: "700", marginTop: 2 },
 });

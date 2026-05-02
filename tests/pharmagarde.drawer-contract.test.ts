@@ -7,7 +7,7 @@ const readProjectFile = (path: string) => readFileSync(join(root, path), "utf8")
 
 describe("drawer PharmaGarde", () => {
   it("présente les quatre sections demandées et les actions principales", () => {
-    const menu = readProjectFile("app/pharmagarde/menu.tsx");
+    const menu = readProjectFile("components/pharmagarde/menu-content.tsx");
 
     for (const section of ["Références", "Contribution", "Informations", "Services"]) {
       expect(menu).toContain(`title=\"${section}\"`);
@@ -19,7 +19,7 @@ describe("drawer PharmaGarde", () => {
   });
 
   it("relie le drawer aux écrans et préférences nécessaires", () => {
-    const menu = readProjectFile("app/pharmagarde/menu.tsx");
+    const menu = readProjectFile("components/pharmagarde/menu-content.tsx");
     const mapScreen = readProjectFile("app/(tabs)/carte.tsx");
 
     expect(menu).toContain("updatePreference(\"mode\"");
