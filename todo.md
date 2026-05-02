@@ -219,3 +219,15 @@
 - [x] Ajouter ou adapter les tests UI pour vérifier la fermeture automatique de la carte précédemment ouverte
 - [x] Valider TypeScript, Vitest et état Expo après l’accordion exclusif
 - [x] Sauvegarder un checkpoint de livraison pour l’accordion exclusif
+
+- [x] Lire la documentation backend avant modification du serveur PharmaGarde
+- [x] Définir côté backend les 13 villes burkinabè supportées avec leurs coordonnées
+- [x] Étendre la collecte Google Places pour récupérer pharmacies et structures de santé pour chaque ville
+- [x] Stocker et exposer le champ city dans les résultats backend mis en cache
+- [x] Modifier GET /pharmacies?city=... pour filtrer par ville sans casser le comportement existant
+- [x] Modifier GET /healthcare?city=... pour filtrer par ville sans casser le comportement existant
+- [x] Mettre en cache les données multi-villes afin d’éviter les appels Google répétés à chaque requête
+- [x] Ajouter une mise à jour planifiée du cache Google Places multi-villes
+- [x] Ajouter ou adapter les tests backend pour la collecte, le cache, le filtrage par ville et la compatibilité existante
+- [x] Valider TypeScript, Vitest et état serveur après correction backend multi-villes
+- [x] Sauvegarder un checkpoint de livraison pour le backend multi-villes
