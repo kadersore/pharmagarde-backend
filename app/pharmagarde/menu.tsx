@@ -22,8 +22,8 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(16, 32, 22, 0.46)",
   },
   panel: {
-    width: "82%",
-    maxWidth: 392,
+    width: "85%",
+    maxWidth: 412,
     flex: 1,
     backgroundColor: drawerColors.background,
     borderTopRightRadius: 14,

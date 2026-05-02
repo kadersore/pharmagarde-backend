@@ -1,6 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { PropsWithChildren } from "react";
-import { StyleSheet, Text, Pressable, View } from "react-native";
+import { FlatList, Modal, Pressable, StyleSheet, Switch, Text, View } from "react-native";
 
 const BRAND_GREEN = "#03C04A";
 const DARK_GREEN = "#02983B";
@@ -21,7 +21,6 @@ export function DrawerHero({ onClose }: { onClose: () => void }) {
       <View style={styles.heroText}>
         <Text style={styles.kicker}>Menu</Text>
         <Text style={styles.heroTitle}>PharmaGarde BF</Text>
-        <Text style={styles.heroSubtitle}>Préférences, contribution et services</Text>
       </View>
       <Pressable
         accessibilityRole="button"
@@ -30,7 +29,7 @@ export function DrawerHero({ onClose }: { onClose: () => void }) {
         style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
         onPress={onClose}
       >
-        <MaterialIcons name="close" size={21} color={BRAND_GREEN} />
+        <MaterialIcons name="close" size={22} color={BRAND_GREEN} />
       </Pressable>
     </View>
   );
@@ -48,14 +47,12 @@ export function DrawerSection({ title, children }: PropsWithChildren<{ title: st
 export function DrawerActionRow({
   icon,
   title,
-  description,
   value,
   active,
   onPress,
 }: {
   icon: DrawerIconName;
   title: string;
-  description?: string;
   value?: string;
   active?: boolean;
   onPress: () => void;
@@ -71,60 +68,123 @@ export function DrawerActionRow({
       <View style={[styles.rowIcon, active && styles.activeRowIcon]}>
         <MaterialIcons name={icon} size={21} color={active ? "#FFFFFF" : BRAND_GREEN} />
       </View>
-      <View style={styles.rowText}>
-        <Text style={[styles.rowTitle, active && styles.activeRowTitle]}>{title}</Text>
-        {description ? <Text style={styles.rowDescription}>{description}</Text> : null}
-      </View>
-      {value ? <Text style={styles.rowValue}>{value}</Text> : null}
+      <Text style={[styles.rowTitle, active && styles.activeRowTitle]} numberOfLines={1}>{title}</Text>
+      {value ? <Text style={styles.rowValue} numberOfLines={1}>{value}</Text> : null}
       <MaterialIcons name="chevron-right" size={22} color={active ? BRAND_GREEN : MUTED} />
     </Pressable>
   );
 }
 
-export function DrawerChoiceRow<T extends string>({
+export function DrawerSelectRow({
   icon,
   title,
-  description,
-  options,
   value,
-  onChange,
+  onPress,
 }: {
   icon: DrawerIconName;
   title: string;
-  description?: string;
-  options: readonly T[];
-  value: T;
-  onChange: (next: T) => void;
+  value: string;
+  onPress: () => void;
 }) {
   return (
-    <View style={styles.choiceRow}>
-      <View style={styles.choiceHeader}>
-        <View style={styles.rowIcon}>
-          <MaterialIcons name={icon} size={21} color={BRAND_GREEN} />
-        </View>
-        <View style={styles.rowText}>
-          <Text style={styles.rowTitle}>{title}</Text>
-          {description ? <Text style={styles.rowDescription}>{description}</Text> : null}
-        </View>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${title} : ${value}`}
+      android_ripple={{ color: "rgba(3,192,74,0.12)", borderless: false }}
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      onPress={onPress}
+    >
+      <View style={styles.rowIcon}>
+        <MaterialIcons name={icon} size={21} color={BRAND_GREEN} />
       </View>
-      <View style={styles.segmented}>
-        {options.map((option) => {
-          const selected = value === option;
-          return (
-            <Pressable
-              key={option}
-              accessibilityRole="button"
-              accessibilityState={{ selected }}
-              android_ripple={{ color: "rgba(255,255,255,0.25)", borderless: false }}
-              style={({ pressed }) => [styles.segment, selected && styles.activeSegment, pressed && styles.pressed]}
-              onPress={() => onChange(option)}
-            >
-              <Text style={[styles.segmentText, selected && styles.activeSegmentText]}>{option}</Text>
-            </Pressable>
-          );
-        })}
+      <Text style={styles.rowTitle} numberOfLines={1}>{title}</Text>
+      <Text style={styles.rowValue} numberOfLines={1}>{value}</Text>
+      <MaterialIcons name="expand-more" size={22} color={MUTED} />
+    </Pressable>
+  );
+}
+
+export function DrawerSwitchRow({
+  icon,
+  title,
+  value,
+  onValueChange,
+}: {
+  icon: DrawerIconName;
+  title: string;
+  value: boolean;
+  onValueChange: (next: boolean) => void;
+}) {
+  return (
+    <View style={styles.row}>
+      <View style={styles.rowIcon}>
+        <MaterialIcons name={icon} size={21} color={BRAND_GREEN} />
       </View>
+      <Text style={styles.rowTitle} numberOfLines={1}>{title}</Text>
+      <Switch
+        accessibilityRole="switch"
+        accessibilityLabel={title}
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{ false: "#D6EBDD", true: "rgba(3,192,74,0.36)" }}
+        thumbColor={value ? BRAND_GREEN : "#FFFFFF"}
+        ios_backgroundColor="#D6EBDD"
+      />
     </View>
+  );
+}
+
+export function DrawerSelectionModal<T extends string>({
+  visible,
+  title,
+  options,
+  value,
+  onSelect,
+  onClose,
+}: {
+  visible: boolean;
+  title: string;
+  options: readonly T[];
+  value: T;
+  onSelect: (next: T) => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
+      <View style={styles.modalRoot}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Fermer la sélection" style={StyleSheet.absoluteFill} onPress={onClose} />
+        <View style={styles.sheet}>
+          <View style={styles.sheetHandle} />
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>{title}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Fermer" style={({ pressed }) => [styles.sheetClose, pressed && styles.pressed]} onPress={onClose}>
+              <MaterialIcons name="close" size={20} color={MUTED} />
+            </Pressable>
+          </View>
+          <FlatList
+            data={[...options]}
+            keyExtractor={(item) => item}
+            scrollEnabled={options.length > 6}
+            contentContainerStyle={styles.sheetList}
+            renderItem={({ item }) => {
+              const selected = item === value;
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  android_ripple={{ color: "rgba(3,192,74,0.12)", borderless: false }}
+                  style={({ pressed }) => [styles.optionRow, selected && styles.selectedOptionRow, pressed && styles.pressed]}
+                  onPress={() => onSelect(item)}
+                >
+                  <Text style={[styles.optionText, selected && styles.selectedOptionText]}>{item}</Text>
+                  {selected ? <MaterialIcons name="check-circle" size={22} color={BRAND_GREEN} /> : null}
+                </Pressable>
+              );
+            }}
+          />
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -151,34 +211,35 @@ export const drawerColors = {
 };
 
 const styles = StyleSheet.create({
-  hero: { margin: 16, marginBottom: 10, padding: 16, borderRadius: 14, backgroundColor: BRAND_GREEN, flexDirection: "row", alignItems: "center", gap: 12, shadowColor: "#062F16", shadowOpacity: 0.14, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
+  hero: { width: "100%", minHeight: 92, paddingHorizontal: 18, paddingTop: 18, paddingBottom: 16, backgroundColor: BRAND_GREEN, flexDirection: "row", alignItems: "center", gap: 12, shadowColor: "#062F16", shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   heroIcon: { width: 50, height: 50, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.2)", borderWidth: 1, borderColor: "rgba(255,255,255,0.35)" },
-  heroText: { flex: 1 },
+  heroText: { flex: 1, paddingRight: 48 },
   kicker: { color: "#E8FFF0", fontSize: 11, lineHeight: 15, fontWeight: "900", letterSpacing: 0.8, textTransform: "uppercase" },
   heroTitle: { color: "#FFFFFF", fontSize: 23, lineHeight: 29, fontWeight: "900", marginTop: 2 },
-  heroSubtitle: { color: "#E8FFF0", fontSize: 12, lineHeight: 17, fontWeight: "700", marginTop: 3 },
-  closeButton: { width: 42, height: 42, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" },
-  sectionWrap: { marginHorizontal: 16, marginTop: 18 },
-  sectionTitle: { color: FOREGROUND, fontSize: 16, lineHeight: 22, fontWeight: "900", letterSpacing: 0.4, textTransform: "uppercase", marginBottom: 9 },
+  closeButton: { position: "absolute", top: 18, right: 16, width: 42, height: 42, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" },
+  sectionWrap: { marginHorizontal: 16, marginTop: 16 },
+  sectionTitle: { color: FOREGROUND, fontSize: 14, lineHeight: 20, fontWeight: "900", letterSpacing: 0.4, textTransform: "uppercase", marginBottom: 8 },
   sectionCard: { borderRadius: 12, backgroundColor: SURFACE, borderWidth: 1, borderColor: BORDER, overflow: "hidden", shadowColor: "#092A13", shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
-  row: { minHeight: 70, paddingHorizontal: 14, paddingVertical: 11, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: BORDER, backgroundColor: SURFACE },
+  row: { minHeight: 58, paddingHorizontal: 14, paddingVertical: 8, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: BORDER, backgroundColor: SURFACE },
   activeRow: { backgroundColor: "#F0FFF5" },
   pressed: { opacity: 0.78, transform: [{ scale: 0.995 }] },
-  rowIcon: { width: 42, height: 42, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "#EAF8EF" },
+  rowIcon: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "#EAF8EF" },
   activeRowIcon: { backgroundColor: BRAND_GREEN },
-  rowText: { flex: 1 },
-  rowTitle: { color: FOREGROUND, fontSize: 15, lineHeight: 20, fontWeight: "900" },
+  rowTitle: { flex: 1, color: FOREGROUND, fontSize: 15, lineHeight: 20, fontWeight: "900" },
   activeRowTitle: { color: DARK_GREEN },
-  rowDescription: { color: MUTED, fontSize: 12, lineHeight: 17, marginTop: 2, fontWeight: "600" },
-  rowValue: { maxWidth: 92, color: DARK_GREEN, fontSize: 12, lineHeight: 17, fontWeight: "900", textAlign: "right" },
-  choiceRow: { paddingHorizontal: 14, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: BORDER, backgroundColor: SURFACE },
-  choiceHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
-  segmented: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12, marginLeft: 54 },
-  segment: { minHeight: 36, minWidth: 78, paddingHorizontal: 13, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: "#F6FBF8", borderWidth: 1, borderColor: BORDER },
-  activeSegment: { backgroundColor: BRAND_GREEN, borderColor: BRAND_GREEN },
-  segmentText: { color: FOREGROUND, fontSize: 12, lineHeight: 16, fontWeight: "900" },
-  activeSegmentText: { color: "#FFFFFF" },
-  footer: { margin: 16, marginTop: 18, padding: 16, borderRadius: 12, backgroundColor: "#EAF8EF", borderWidth: 1, borderColor: BORDER, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
+  rowValue: { maxWidth: 120, color: DARK_GREEN, fontSize: 12, lineHeight: 17, fontWeight: "900", textAlign: "right" },
+  modalRoot: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(16, 32, 22, 0.38)" },
+  sheet: { maxHeight: "78%", marginHorizontal: 10, marginBottom: 10, borderRadius: 16, backgroundColor: SURFACE, borderWidth: 1, borderColor: BORDER, overflow: "hidden", shadowColor: "#102016", shadowOpacity: 0.18, shadowRadius: 18, shadowOffset: { width: 0, height: -4 }, elevation: 16 },
+  sheetHandle: { alignSelf: "center", width: 42, height: 4, borderRadius: 2, marginTop: 10, marginBottom: 4, backgroundColor: "#D6EBDD" },
+  sheetHeader: { minHeight: 54, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: BORDER },
+  sheetTitle: { color: FOREGROUND, fontSize: 18, lineHeight: 24, fontWeight: "900" },
+  sheetClose: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "#F6FBF8" },
+  sheetList: { padding: 12, gap: 8 },
+  optionRow: { minHeight: 52, borderRadius: 12, borderWidth: 1, borderColor: BORDER, backgroundColor: "#FFFFFF", paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  selectedOptionRow: { backgroundColor: "#F0FFF5", borderColor: BRAND_GREEN },
+  optionText: { flex: 1, color: FOREGROUND, fontSize: 15, lineHeight: 21, fontWeight: "800" },
+  selectedOptionText: { color: DARK_GREEN, fontWeight: "900" },
+  footer: { margin: 16, marginTop: 16, padding: 14, borderRadius: 12, backgroundColor: "#EAF8EF", borderWidth: 1, borderColor: BORDER, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
   footerText: { flex: 1, color: MUTED, fontSize: 12, lineHeight: 17, fontWeight: "700" },
   footerBadge: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 8, backgroundColor: "#FFFFFF" },
   footerBadgeText: { color: DARK_GREEN, fontSize: 12, fontWeight: "900" },

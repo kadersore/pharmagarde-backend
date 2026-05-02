@@ -128,7 +128,7 @@ function DrawerOverlay({ visible, onClose }: { visible: boolean; onClose: () => 
   const { width } = useWindowDimensions();
   const progress = useRef(new Animated.Value(0)).current;
   const [mounted, setMounted] = useState(visible);
-  const drawerWidth = Math.min(Math.max(width * 0.8, 288), 392);
+  const drawerWidth = Math.min(Math.max(width * 0.8 + 20, 308), width * 0.85, 412);
 
   useEffect(() => {
     if (visible) {

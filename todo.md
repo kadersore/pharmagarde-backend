@@ -90,3 +90,11 @@
 - [x] Harmoniser les arrondis des cartes, sections et conteneurs avec un style plus discret et professionnel.
 - [x] Ajouter des ombres légères et transitions douces aux éléments visuels clés.
 - [x] Valider TypeScript, tests et état Expo après la refonte globale UI/UX.
+
+- [x] Supprimer les textes descriptifs sous les liens du drawer et ne garder que l’icône et le titre.
+- [x] Remplacer les choix Ville, Langue et Type de carte du drawer par des popups de sélection fluides avec retour visuel.
+- [x] Remplacer le choix Clair/Sombre du drawer par un switch unique « Mode sombre » persistant et indépendant du thème téléphone.
+- [x] Augmenter la largeur du drawer de 20px sans dépasser environ 85% de l’écran.
+- [x] Modifier le header du drawer en bloc plein collé en haut, sans espace supérieur ni arrondis inférieurs.
+- [x] Déplacer le bouton de fermeture en haut à droite du drawer et le garder accessible.
+- [x] Valider TypeScript, tests et état Expo après correction du drawer.
