@@ -39,3 +39,29 @@
 - [x] Afficher dans Expo le message exact : "Localisation refusée. Résultats basés sur Ouagadougou."
 - [x] Ajouter ou harmoniser dans Expo le bouton "Activer la localisation" pour relancer la demande GPS
 - [x] Valider TypeScript et sauvegarder un checkpoint Expo après alignement
+
+- [x] Identifier précisément le backend PharmaGarde BF à publier sur GitHub
+- [x] Vérifier et exclure tout fichier sensible avant publication publique
+- [x] Préparer le dépôt Git local backend pour GitHub
+- [x] Créer un repository GitHub public et pousser le backend après confirmation
+- [x] Fournir le lien du repository GitHub public
+
+- [x] Publier le backend dans un repository GitHub public nommé `pharmagarde-backend`
+
+- [x] Créer et livrer une archive ZIP propre du backend `pharmagarde-backend`, sans fichiers sensibles ni `node_modules`
+
+- [x] Adapter le backend `pharmagarde-backend` pour Render avec scripts `build` et `start`
+- [x] Générer un dossier `dist` exécutable avec `node dist/index.js`
+- [x] Ajouter les routes GET `/` et GET `/health` au backend
+- [x] Valider localement le build et les endpoints Render du backend
+- [x] Livrer une archive ZIP finale prête pour Render
+
+- [x] Publier le backend prêt pour Render sur un dépôt GitHub public et fournir le lien public
+
+- [ ] Ajouter une route REST publique `GET /pharmacies` retournant les pharmacies en JSON simple
+- [ ] Ajouter une route REST publique `GET /pharmacies/nearby?lat=...&lng=...` retournant les pharmacies proches
+- [ ] Ajouter une route REST publique `GET /clinics` retournant les cliniques en JSON simple
+- [ ] Valider que les routes REST fonctionnent sans tRPC et que le build Render reste opérationnel
+- [ ] Mettre à jour la version backend livrable prête pour Render avec les routes REST
+
+- [x] Envoyer à l’utilisateur la version Expo actuelle de l’application PharmaGarde BF.
