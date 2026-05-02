@@ -13,7 +13,7 @@ describe("pharmagarde API helpers", () => {
     expect(normalizeBaseUrl(null)).toBe("");
   });
 
-  it("envoie les coordonnées à l’API pharmacies et normalise les champs francophones", async () => {
+  it("envoie la ville et les coordonnées à l’API pharmacies puis normalise les champs francophones", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -34,16 +34,21 @@ describe("pharmagarde API helpers", () => {
       }),
     } as Response);
 
-    const pharmacies = await fetchPharmacies("https://api.pharmagarde.bf/", {
-      latitude: 12.37,
-      longitude: -1.52,
-    });
+    const pharmacies = await fetchPharmacies(
+      "https://api.pharmagarde.bf/",
+      {
+        latitude: 12.37,
+        longitude: -1.52,
+      },
+      "Koudougou",
+    );
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const calledUrl = new URL(String(fetchMock.mock.calls[0]?.[0]));
     expect(calledUrl.pathname).toBe("/pharmacies/nearby");
     expect(calledUrl.searchParams.get("lat")).toBe("12.37");
     expect(calledUrl.searchParams.get("lng")).toBe("-1.52");
+    expect(calledUrl.searchParams.get("city")).toBe("Koudougou");
     expect(pharmacies[0]).toMatchObject({
       id: "ph-1",
       type: "pharmacy",
@@ -69,10 +74,13 @@ describe("pharmagarde API helpers", () => {
         }),
       } as Response);
 
-    const clinics = await fetchClinics("https://api.pharmagarde.bf", { latitude: 11.18, longitude: -4.3 });
+    const clinics = await fetchClinics("https://api.pharmagarde.bf", { latitude: 11.18, longitude: -4.3 }, "Bobo-Dioulasso");
     const medicines = await fetchMedicines("https://api.pharmagarde.bf");
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    const clinicsUrl = new URL(String(fetchMock.mock.calls[0]?.[0]));
+    expect(clinicsUrl.pathname).toBe("/cliniques/nearby");
+    expect(clinicsUrl.searchParams.get("city")).toBe("Bobo-Dioulasso");
     expect(clinics[0]).toMatchObject({ id: "cl-1", type: "clinic", name: "Clinique du Centre", city: "Bobo-Dioulasso", rating: 4.7 });
     expect(medicines[0]).toMatchObject({ id: "med-1", type: "medicine", name: "Paracétamol", category: "Antalgique", pharmaceuticalType: "Comprimé" });
   });

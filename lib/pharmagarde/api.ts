@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Coordinates, HealthPlace, Medicine } from "./types";
 
 const DEFAULT_TIMEOUT_MS = 12000;
-const CLIENT_CACHE_PREFIX = "pharmagarde:api-cache:v1:";
+const CLIENT_CACHE_PREFIX = "pharmagarde:api-cache:v2:";
 const CLIENT_CACHE_TTL_MS: Record<"pharmacies" | "clinics" | "medicines", number> = {
   pharmacies: 24 * 60 * 60 * 1000,
   clinics: 7 * 24 * 60 * 60 * 1000,
@@ -111,9 +111,10 @@ function getDatasetKind(path: string): "pharmacies" | "clinics" | "medicines" | 
   return null;
 }
 
-function buildCacheKey(baseUrl: string, path: string, coordinates?: Coordinates) {
+function buildCacheKey(baseUrl: string, path: string, coordinates?: Coordinates, city?: string) {
   const locationSuffix = coordinates ? `:${coordinates.latitude.toFixed(3)},${coordinates.longitude.toFixed(3)}` : "";
-  return `${CLIENT_CACHE_PREFIX}${normalizeBaseUrl(baseUrl)}:${path.startsWith("/") ? path : `/${path}`}${locationSuffix}`;
+  const citySuffix = city?.trim() ? `:city=${city.trim().toLowerCase()}` : "";
+  return `${CLIENT_CACHE_PREFIX}${normalizeBaseUrl(baseUrl)}:${path.startsWith("/") ? path : `/${path}`}${locationSuffix}${citySuffix}`;
 }
 
 async function readCachedPayload(cacheKey: string) {
@@ -159,14 +160,14 @@ async function readStalePayload(cacheKey: string) {
   }
 }
 
-async function requestJson(baseUrl: string, path: string, coordinates?: Coordinates) {
+async function requestJson(baseUrl: string, path: string, coordinates?: Coordinates, city?: string) {
   const cleanBase = normalizeBaseUrl(baseUrl);
   if (!cleanBase) {
     throw new Error("API_BASE_URL_NON_CONFIGUREE");
   }
 
   const datasetKind = getDatasetKind(path);
-  const cacheKey = datasetKind ? buildCacheKey(cleanBase, path, coordinates) : null;
+  const cacheKey = datasetKind ? buildCacheKey(cleanBase, path, coordinates, city) : null;
   if (cacheKey) {
     const cached = await readCachedPayload(cacheKey);
     if (cached) return cached;
@@ -178,6 +179,9 @@ async function requestJson(baseUrl: string, path: string, coordinates?: Coordina
     url.searchParams.set("lng", String(coordinates.longitude));
     url.searchParams.set("latitude", String(coordinates.latitude));
     url.searchParams.set("longitude", String(coordinates.longitude));
+  }
+  if (city?.trim()) {
+    url.searchParams.set("city", city.trim());
   }
 
   const controller = new AbortController();
@@ -206,13 +210,13 @@ async function requestJson(baseUrl: string, path: string, coordinates?: Coordina
   }
 }
 
-export async function fetchPharmacies(baseUrl: string, coordinates?: Coordinates) {
-  const payload = await requestJson(baseUrl, "/pharmacies/nearby", coordinates);
+export async function fetchPharmacies(baseUrl: string, coordinates?: Coordinates, city?: string) {
+  const payload = await requestJson(baseUrl, "/pharmacies/nearby", coordinates, city);
   return asRecords(payload).map((item, index) => normalizePlace(item, "pharmacy", index)).filter((item): item is HealthPlace => item !== null);
 }
 
-export async function fetchClinics(baseUrl: string, coordinates?: Coordinates) {
-  const payload = await requestJson(baseUrl, "/cliniques/nearby", coordinates);
+export async function fetchClinics(baseUrl: string, coordinates?: Coordinates, city?: string) {
+  const payload = await requestJson(baseUrl, "/cliniques/nearby", coordinates, city);
   return asRecords(payload).map((item, index) => normalizePlace(item, "clinic", index)).filter((item): item is HealthPlace => item !== null);
 }
 

@@ -34,6 +34,20 @@ class FakeResponse {
   }
 }
 
+function createRouteMap(registerPharmaGardeCacheRoutes: (app: never) => void) {
+  const routes: RouteMap = {};
+  const app = {
+    get: (routePath: string, handler: RegisteredRoute) => {
+      routes[`GET ${routePath}`] = handler;
+    },
+    post: (routePath: string, handler: RegisteredRoute) => {
+      routes[`POST ${routePath}`] = handler;
+    },
+  };
+  registerPharmaGardeCacheRoutes(app as never);
+  return routes;
+}
+
 describe("cache backend PharmaGarde", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -43,7 +57,7 @@ describe("cache backend PharmaGarde", () => {
     delete process.env.GOOGLE_MAPS_API_KEY;
   });
 
-  it("sert les endpoints publics depuis le cache local sans appeler Google", async () => {
+  it("sert les endpoints publics depuis le cache local par ville sans appeler Google", async () => {
     const cacheDir = await mkdtemp(path.join(tmpdir(), "pharmagarde-cache-"));
     const updatedAt = new Date().toISOString();
     const expiresAt = new Date(Date.now() + 60_000).toISOString();
@@ -51,9 +65,11 @@ describe("cache backend PharmaGarde", () => {
     await writeFile(
       path.join(cacheDir, "pharmacies.json"),
       JSON.stringify({
-        version: 1,
+        version: 2,
         kind: "pharmacies",
-        items: [{ id: "ph-1", type: "pharmacy", name: "Pharmacie Centrale", city: "Ouagadougou", source: "local" }],
+        byCity: {
+          ouagadougou: [{ id: "ph-1", type: "pharmacy", name: "Pharmacie Centrale", city: "Ouagadougou", source: "local" }],
+        },
         updatedAt,
         expiresAt,
         lastRefreshAttemptAt: null,
@@ -64,9 +80,11 @@ describe("cache backend PharmaGarde", () => {
     await writeFile(
       path.join(cacheDir, "healthcare.json"),
       JSON.stringify({
-        version: 1,
+        version: 2,
         kind: "healthcare",
-        items: [{ id: "cl-1", type: "clinic", name: "Clinique du Centre", city: "Ouagadougou", source: "local" }],
+        byCity: {
+          ouagadougou: [{ id: "cl-1", type: "clinic", name: "Clinique du Centre", city: "Ouagadougou", source: "local" }],
+        },
         updatedAt,
         expiresAt,
         lastRefreshAttemptAt: null,
@@ -79,18 +97,7 @@ describe("cache backend PharmaGarde", () => {
     const { initializePharmaGardeCache, registerPharmaGardeCacheRoutes } = await import("../server/pharmagarde-cache");
 
     await initializePharmaGardeCache();
-
-    const routes: RouteMap = {};
-    const app = {
-      get: (routePath: string, handler: RegisteredRoute) => {
-        routes[`GET ${routePath}`] = handler;
-      },
-      post: (routePath: string, handler: RegisteredRoute) => {
-        routes[`POST ${routePath}`] = handler;
-      },
-    };
-
-    registerPharmaGardeCacheRoutes(app as never);
+    const routes = createRouteMap(registerPharmaGardeCacheRoutes as never);
 
     const pharmaciesResponse = new FakeResponse();
     routes["GET /pharmacies"]?.({ header: () => undefined, query: {} }, pharmaciesResponse);
@@ -99,18 +106,18 @@ describe("cache backend PharmaGarde", () => {
     routes["GET /healthcare"]?.({ header: () => undefined, query: {} }, healthcareResponse);
 
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(pharmaciesResponse.headers["X-PharmaGarde-Cache-Source"]).toBe("server-local-cache");
+    expect(pharmaciesResponse.headers["X-PharmaGarde-Cache-Source"]).toBe("server-local-cache-by-city");
     expect(pharmaciesResponse.body).toMatchObject({
       pharmacies: [{ id: "ph-1", name: "Pharmacie Centrale", city: "Ouagadougou" }],
-      meta: { cache: "server-local-cache", kind: "pharmacies", itemCount: 1, totalItemCount: 1, stale: false },
+      meta: { cache: "server-local-cache-by-city", kind: "pharmacies", itemCount: 1, totalItemCount: 1, stale: false },
     });
     expect(healthcareResponse.body).toMatchObject({
       healthcare: [{ id: "cl-1", name: "Clinique du Centre", city: "Ouagadougou" }],
-      meta: { cache: "server-local-cache", kind: "healthcare", itemCount: 1, totalItemCount: 1, stale: false },
+      meta: { cache: "server-local-cache-by-city", kind: "healthcare", itemCount: 1, totalItemCount: 1, stale: false },
     });
   });
 
-  it("filtre les pharmacies et structures de santé par ville sans appeler Google", async () => {
+  it("filtre strictement pharmacies et structures de santé par clé de ville normalisée", async () => {
     const cacheDir = await mkdtemp(path.join(tmpdir(), "pharmagarde-city-cache-"));
     const updatedAt = new Date().toISOString();
     const expiresAt = new Date(Date.now() + 60_000).toISOString();
@@ -118,14 +125,14 @@ describe("cache backend PharmaGarde", () => {
     await writeFile(
       path.join(cacheDir, "pharmacies.json"),
       JSON.stringify({
-        version: 1,
+        version: 2,
         kind: "pharmacies",
-        items: [
-          { id: "ph-ouaga", type: "pharmacy", name: "Pharmacie Ouaga", city: "Ouagadougou", source: "local" },
-          { id: "ph-bobo", type: "pharmacy", name: "Pharmacie Bobo", city: "Bobo-Dioulasso", source: "local" },
-          { id: "ph-kdg", type: "pharmacy", name: "Pharmacie Koudougou", city: "Koudougou", source: "local" },
-          { id: "ph-legacy", type: "pharmacy", name: "Pharmacie Sans Ville", source: "local" },
-        ],
+        byCity: {
+          ouagadougou: [{ id: "ph-ouaga", type: "pharmacy", name: "Pharmacie Ouaga", city: "Ouagadougou", source: "local" }],
+          "bobo-dioulasso": [{ id: "ph-bobo", type: "pharmacy", name: "Pharmacie Bobo", city: "Bobo-Dioulasso", source: "local" }],
+          koudougou: [{ id: "ph-kdg", type: "pharmacy", name: "Pharmacie Koudougou", city: "Koudougou", source: "local" }],
+          kaya: [{ id: "ph-kaya", type: "pharmacy", name: "Pharmacie Kaya", city: "Kaya", source: "local" }],
+        },
         updatedAt,
         expiresAt,
         lastRefreshAttemptAt: null,
@@ -136,12 +143,13 @@ describe("cache backend PharmaGarde", () => {
     await writeFile(
       path.join(cacheDir, "healthcare.json"),
       JSON.stringify({
-        version: 1,
+        version: 2,
         kind: "healthcare",
-        items: [
-          { id: "cl-bobo", type: "clinic", name: "Clinique Bobo", city: "Bobo-Dioulasso", source: "local" },
-          { id: "cl-ziniare", type: "clinic", name: "CSPS Ziniaré", city: "Ziniaré", source: "local" },
-        ],
+        byCity: {
+          "bobo-dioulasso": [{ id: "cl-bobo", type: "clinic", name: "Clinique Bobo", city: "Bobo-Dioulasso", source: "local" }],
+          ziniare: [{ id: "cl-ziniare", type: "clinic", name: "CSPS Ziniaré", city: "Ziniaré", source: "local" }],
+          koudougou: [{ id: "cl-kdg", type: "clinic", name: "CMA Koudougou", city: "Koudougou", source: "local" }],
+        },
         updatedAt,
         expiresAt,
         lastRefreshAttemptAt: null,
@@ -155,20 +163,13 @@ describe("cache backend PharmaGarde", () => {
     const { initializePharmaGardeCache, registerPharmaGardeCacheRoutes } = await import("../server/pharmagarde-cache");
 
     await initializePharmaGardeCache();
+    const routes = createRouteMap(registerPharmaGardeCacheRoutes as never);
 
-    const routes: RouteMap = {};
-    const app = {
-      get: (routePath: string, handler: RegisteredRoute) => {
-        routes[`GET ${routePath}`] = handler;
-      },
-      post: (routePath: string, handler: RegisteredRoute) => {
-        routes[`POST ${routePath}`] = handler;
-      },
-    };
-    registerPharmaGardeCacheRoutes(app as never);
+    const koudougouResponse = new FakeResponse();
+    routes["GET /pharmacies"]?.({ header: () => undefined, query: { city: "kOuDoUgOu" } }, koudougouResponse);
 
-    const pharmacyResponse = new FakeResponse();
-    routes["GET /pharmacies"]?.({ header: () => undefined, query: { city: "kOuDoUgOu" } }, pharmacyResponse);
+    const kayaResponse = new FakeResponse();
+    routes["GET /pharmacies"]?.({ header: () => undefined, query: { city: "Kaya" } }, kayaResponse);
 
     const allPharmaciesResponse = new FakeResponse();
     routes["GET /pharmacies"]?.({ header: () => undefined, query: {} }, allPharmaciesResponse);
@@ -180,30 +181,67 @@ describe("cache backend PharmaGarde", () => {
     routes["GET /healthcare"]?.({ header: () => undefined, query: { city: "Ziniare" } }, healthcareResponse);
 
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(pharmacyResponse.body).toMatchObject({
+    expect(koudougouResponse.body).toMatchObject({
       pharmacies: [{ id: "ph-kdg", city: "Koudougou" }],
-      meta: { city: "Koudougou", itemCount: 1, totalItemCount: 4 },
+      meta: { city: "Koudougou", cityKey: "koudougou", itemCount: 1, totalItemCount: 4 },
     });
-    expect(pharmacyResponse.body).not.toMatchObject({
-      pharmacies: expect.arrayContaining([{ id: "ph-ouaga" }, { id: "ph-bobo" }, { id: "ph-legacy" }]),
+    expect(koudougouResponse.body).not.toMatchObject({
+      pharmacies: expect.arrayContaining([{ id: "ph-ouaga" }, { id: "ph-bobo" }, { id: "ph-kaya" }]),
+    });
+    expect(kayaResponse.body).toMatchObject({
+      pharmacies: [{ id: "ph-kaya", city: "Kaya" }],
+      meta: { city: "Kaya", cityKey: "kaya", itemCount: 1, totalItemCount: 4 },
     });
     expect(allPharmaciesResponse.body).toMatchObject({
       meta: { city: null, itemCount: 4, totalItemCount: 4 },
     });
     expect(unsupportedCityResponse.body).toMatchObject({
       pharmacies: [],
-      meta: { city: "Ville Introuvable", itemCount: 0, totalItemCount: 4 },
+      meta: { city: "Ville Introuvable", cityKey: "ville-introuvable", itemCount: 0, totalItemCount: 4 },
     });
     expect(healthcareResponse.body).toMatchObject({
       healthcare: [{ id: "cl-ziniare", city: "Ziniaré" }],
-      meta: { city: "Ziniaré", itemCount: 1, totalItemCount: 2 },
+      meta: { city: "Ziniaré", cityKey: "ziniare", itemCount: 1, totalItemCount: 3 },
     });
     expect(infoSpy).toHaveBeenCalledWith("[PharmaGardeCache] pharmacies: ville demandée=Koudougou, résultats retournés=1");
     expect(infoSpy).toHaveBeenCalledWith("[PharmaGardeCache] pharmacies: ville demandée=toutes, résultats retournés=4");
     expect(infoSpy).toHaveBeenCalledWith("[PharmaGardeCache] pharmacies: ville demandée=Ville Introuvable, résultats retournés=0");
+    expect(infoSpy).toHaveBeenCalledWith("[PharmaGardeCache] healthcare: ville demandée=Ziniaré, résultats retournés=1");
   });
 
-  it("collecte Google Places pour toutes les villes supportées et écrit le champ city", async () => {
+  it("ignore complètement l’ancien cache plat version 1", async () => {
+    const cacheDir = await mkdtemp(path.join(tmpdir(), "pharmagarde-legacy-cache-"));
+    const updatedAt = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + 60_000).toISOString();
+
+    await writeFile(
+      path.join(cacheDir, "pharmacies.json"),
+      JSON.stringify({
+        version: 1,
+        kind: "pharmacies",
+        items: [{ id: "ph-legacy", type: "pharmacy", name: "Ancienne pharmacie globale", city: "Ouagadougou", source: "local" }],
+        updatedAt,
+        expiresAt,
+        lastRefreshAttemptAt: null,
+      }),
+      "utf8",
+    );
+
+    process.env.PHARMAGARDE_CACHE_DIR = cacheDir;
+    const { initializePharmaGardeCache, registerPharmaGardeCacheRoutes } = await import("../server/pharmagarde-cache");
+
+    await initializePharmaGardeCache();
+    const routes = createRouteMap(registerPharmaGardeCacheRoutes as never);
+    const response = new FakeResponse();
+    routes["GET /pharmacies"]?.({ header: () => undefined, query: { city: "Ouagadougou" } }, response);
+
+    expect(response.body).toMatchObject({
+      pharmacies: [],
+      meta: { cache: "server-local-cache-by-city", city: "Ouagadougou", cityKey: "ouagadougou", itemCount: 0, totalItemCount: 0 },
+    });
+  });
+
+  it("collecte Google Places avec les coordonnées de chaque ville et stocke par clé de ville", async () => {
     const cacheDir = await mkdtemp(path.join(tmpdir(), "pharmagarde-google-cache-"));
     process.env.PHARMAGARDE_CACHE_DIR = cacheDir;
     process.env.GOOGLE_PLACES_API_KEY = "test-key";
@@ -235,9 +273,20 @@ describe("cache backend PharmaGarde", () => {
     expect(pharmaciesResult.ok).toBe(true);
     expect(healthcareResult.ok).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(SUPPORTED_CITIES.length * 3);
-    expect(getCacheState("pharmacies").items).toHaveLength(SUPPORTED_CITIES.length);
-    expect(getCacheState("healthcare").items).toHaveLength(SUPPORTED_CITIES.length * 2);
-    expect(getCacheState("pharmacies").items.map((item) => item.city)).toEqual(SUPPORTED_CITIES.map((city) => city.name));
-    expect(getCacheState("healthcare").items.every((item) => item.city)).toBe(true);
+
+    for (const city of SUPPORTED_CITIES) {
+      const key = city.name
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[’']/g, "")
+        .replace(/[-_]+/g, " ")
+        .replace(/\s+/g, " ")
+        .toLowerCase()
+        .replace(/\s+/g, "-");
+      expect(getCacheState("pharmacies").byCity[key]).toHaveLength(1);
+      expect(getCacheState("pharmacies").byCity[key][0]?.city).toBe(city.name);
+      expect(getCacheState("healthcare").byCity[key]).toHaveLength(2);
+      expect(getCacheState("healthcare").byCity[key].every((item) => item.city === city.name)).toBe(true);
+    }
   });
 });

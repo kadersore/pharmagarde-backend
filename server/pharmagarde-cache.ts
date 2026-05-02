@@ -22,11 +22,12 @@ export type CachedHealthPlace = {
 };
 
 type CacheKind = "pharmacies" | "healthcare";
+type CacheBuckets = Record<string, CachedHealthPlace[]>;
 
 type CacheState = {
-  version: 1;
+  version: 2;
   kind: CacheKind;
-  items: CachedHealthPlace[];
+  byCity: CacheBuckets;
   updatedAt: string | null;
   expiresAt: string | null;
   lastRefreshAttemptAt: string | null;
@@ -79,11 +80,30 @@ const memoryCache: Record<CacheKind, CacheState> = {
 const refreshLocks: Partial<Record<CacheKind, Promise<UpdateResult>>> = {};
 let schedulersStarted = false;
 
+function normalizeCityName(value?: string | null) {
+  return (value ?? "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[’']/g, "")
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+function cityKey(value?: string | null) {
+  return normalizeCityName(value).replace(/\s+/g, "-");
+}
+
+function createEmptyBuckets(): CacheBuckets {
+  return Object.fromEntries(SUPPORTED_CITIES.map((city) => [cityKey(city.name), []]));
+}
+
 function createEmptyState(kind: CacheKind): CacheState {
   return {
-    version: 1,
+    version: 2,
     kind,
-    items: [],
+    byCity: createEmptyBuckets(),
     updatedAt: null,
     expiresAt: null,
     lastRefreshAttemptAt: null,
@@ -127,17 +147,6 @@ function getNumber(record: Record<string, unknown>, keys: string[]) {
   return undefined;
 }
 
-function normalizeCityName(value?: string | null) {
-  return (value ?? "")
-    .trim()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[’']/g, "")
-    .replace(/[-_]+/g, " ")
-    .replace(/\s+/g, " ")
-    .toLowerCase();
-}
-
 function findSupportedCity(value?: string | null) {
   const normalized = normalizeCityName(value);
   if (!normalized) return undefined;
@@ -147,7 +156,7 @@ function findSupportedCity(value?: string | null) {
 type RequestedCityFilter = {
   rawCity?: string;
   supportedCity?: SupportedCity;
-  normalizedCity?: string;
+  key?: string;
 };
 
 function getRequestedCityFilter(req: Request): RequestedCityFilter {
@@ -158,7 +167,7 @@ function getRequestedCityFilter(req: Request): RequestedCityFilter {
   return {
     rawCity,
     supportedCity,
-    normalizedCity: normalizeCityName(supportedCity?.name ?? rawCity),
+    key: cityKey(supportedCity?.name ?? rawCity),
   };
 }
 
@@ -169,9 +178,9 @@ function normalizeGooglePlace(raw: Record<string, unknown>, type: CachedPlaceTyp
   const name = getString(raw, ["name", "nom", "title"]);
   if (!name) return null;
 
-  const citySlug = normalizeCityName(city.name).replace(/\s+/g, "-");
+  const slug = cityKey(city.name);
   return {
-    id: placeId ?? `${citySlug}-${type}-${name.toLowerCase().replace(/[^a-z0-9]+/gi, "-")}-${index}`,
+    id: placeId ?? `${slug}-${type}-${name.toLowerCase().replace(/[^a-z0-9]+/gi, "-")}-${index}`,
     type,
     name,
     address: getString(raw, ["vicinity", "formatted_address", "address", "adresse"]),
@@ -191,13 +200,42 @@ function dedupePlaces(items: CachedHealthPlace[]) {
   const seen = new Set<string>();
   const unique: CachedHealthPlace[] = [];
   for (const item of items) {
-    const cityKey = normalizeCityName(item.city);
-    const key = `${cityKey}:${item.googlePlaceId ?? `${item.type}:${item.name}:${item.latitude ?? ""}:${item.longitude ?? ""}`}`.toLowerCase();
+    const key = `${item.googlePlaceId ?? `${item.type}:${item.name}:${item.latitude ?? ""}:${item.longitude ?? ""}`}`.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
     unique.push(item);
   }
   return unique;
+}
+
+function normalizeBuckets(input: Record<string, unknown>): CacheBuckets {
+  const buckets = createEmptyBuckets();
+  for (const [rawKey, value] of Object.entries(input)) {
+    if (!Array.isArray(value)) continue;
+    const normalizedKey = cityKey(rawKey);
+    if (!normalizedKey) continue;
+    buckets[normalizedKey] = value.filter(isRecord).map((item) => {
+      const cachedItem = item as Partial<CachedHealthPlace>;
+      const itemCity = typeof cachedItem.city === "string" && cachedItem.city.trim() ? cachedItem.city : findSupportedCity(rawKey)?.name ?? rawKey;
+      return { ...cachedItem, city: itemCity } as CachedHealthPlace;
+    });
+  }
+  return buckets;
+}
+
+function flattenBuckets(byCity: CacheBuckets) {
+  const orderedKeys = SUPPORTED_CITIES.map((city) => cityKey(city.name));
+  const ordered = orderedKeys.flatMap((key) => byCity[key] ?? []);
+  const supportedKeySet = new Set(orderedKeys);
+  const extras = Object.keys(byCity)
+    .filter((key) => !supportedKeySet.has(key))
+    .sort()
+    .flatMap((key) => byCity[key] ?? []);
+  return [...ordered, ...extras];
+}
+
+function countBuckets(byCity: CacheBuckets) {
+  return flattenBuckets(byCity).length;
 }
 
 async function callGoogleNearby(city: SupportedCity, type: "pharmacy" | "hospital" | "doctor") {
@@ -235,16 +273,26 @@ async function fetchGoogleItemsForCity(kind: CacheKind, city: SupportedCity) {
   return [...hospitals, ...doctors].map((item, index) => normalizeGooglePlace(item, "clinic", city, index)).filter((item): item is CachedHealthPlace => item !== null);
 }
 
-async function fetchGoogleItems(kind: CacheKind) {
-  const settled = await Promise.allSettled(SUPPORTED_CITIES.map((city) => fetchGoogleItemsForCity(kind, city)));
-  const items = settled.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
-  const errors = settled.filter((result): result is PromiseRejectedResult => result.status === "rejected").map((result) => (result.reason instanceof Error ? result.reason.message : "Erreur Google API inconnue"));
+async function fetchGoogleItemsByCity(kind: CacheKind) {
+  const settled = await Promise.allSettled(
+    SUPPORTED_CITIES.map(async (city) => ({ city, items: dedupePlaces(await fetchGoogleItemsForCity(kind, city)) })),
+  );
+  const byCity = createEmptyBuckets();
+  const errors: string[] = [];
 
-  if (items.length === 0 && errors.length > 0) {
+  for (const result of settled) {
+    if (result.status === "fulfilled") {
+      byCity[cityKey(result.value.city.name)] = result.value.items.map((item) => ({ ...item, city: result.value.city.name }));
+    } else {
+      errors.push(result.reason instanceof Error ? result.reason.message : "Erreur Google API inconnue");
+    }
+  }
+
+  if (countBuckets(byCity) === 0 && errors.length > 0) {
     throw new Error(errors.join(" | "));
   }
 
-  return dedupePlaces(items);
+  return byCity;
 }
 
 async function persistState(kind: CacheKind, state: CacheState) {
@@ -255,18 +303,20 @@ async function persistState(kind: CacheKind, state: CacheState) {
 async function loadState(kind: CacheKind) {
   try {
     const raw = await readFile(fileFor(kind), "utf8");
-    const parsed = JSON.parse(raw) as Partial<CacheState>;
-    if (parsed.kind === kind && Array.isArray(parsed.items)) {
+    const parsed = JSON.parse(raw) as Partial<CacheState> & { version?: number; byCity?: unknown };
+    if (parsed.version === 2 && parsed.kind === kind && isRecord(parsed.byCity)) {
       memoryCache[kind] = {
-        version: 1,
+        version: 2,
         kind,
-        items: parsed.items.filter(isRecord) as CachedHealthPlace[],
+        byCity: normalizeBuckets(parsed.byCity),
         updatedAt: parsed.updatedAt ?? null,
         expiresAt: parsed.expiresAt ?? null,
         lastRefreshAttemptAt: parsed.lastRefreshAttemptAt ?? null,
         lastError: parsed.lastError,
       };
+      return;
     }
+    memoryCache[kind] = createEmptyState(kind);
   } catch {
     memoryCache[kind] = createEmptyState(kind);
   }
@@ -288,7 +338,7 @@ export function isCacheFresh(kind: CacheKind) {
 export async function updateCachedDataset(kind: CacheKind, force = false): Promise<UpdateResult> {
   if (!force && isCacheFresh(kind)) {
     const state = memoryCache[kind];
-    return { kind, ok: true, refreshed: false, itemCount: state.items.length, updatedAt: state.updatedAt, expiresAt: state.expiresAt };
+    return { kind, ok: true, refreshed: false, itemCount: countBuckets(state.byCity), updatedAt: state.updatedAt, expiresAt: state.expiresAt };
   }
 
   if (refreshLocks[kind]) return refreshLocks[kind];
@@ -297,25 +347,25 @@ export async function updateCachedDataset(kind: CacheKind, force = false): Promi
     const attemptAt = nowIso();
     memoryCache[kind] = { ...memoryCache[kind], lastRefreshAttemptAt: attemptAt };
     try {
-      const items = await fetchGoogleItems(kind);
+      const byCity = await fetchGoogleItemsByCity(kind);
       const updatedAt = nowIso();
       const next: CacheState = {
-        version: 1,
+        version: 2,
         kind,
-        items,
+        byCity,
         updatedAt,
         expiresAt: new Date(Date.now() + ttlFor(kind)).toISOString(),
         lastRefreshAttemptAt: attemptAt,
       };
       memoryCache[kind] = next;
       await persistState(kind, next);
-      return { kind, ok: true, refreshed: true, itemCount: items.length, updatedAt: next.updatedAt, expiresAt: next.expiresAt };
+      return { kind, ok: true, refreshed: true, itemCount: countBuckets(byCity), updatedAt: next.updatedAt, expiresAt: next.expiresAt };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Erreur Google API inconnue";
       const fallback = { ...memoryCache[kind], lastRefreshAttemptAt: attemptAt, lastError: message };
       memoryCache[kind] = fallback;
       await persistState(kind, fallback).catch(() => undefined);
-      return { kind, ok: false, refreshed: false, itemCount: fallback.items.length, updatedAt: fallback.updatedAt, expiresAt: fallback.expiresAt, error: message };
+      return { kind, ok: false, refreshed: false, itemCount: countBuckets(fallback.byCity), updatedAt: fallback.updatedAt, expiresAt: fallback.expiresAt, error: message };
     } finally {
       delete refreshLocks[kind];
     }
@@ -353,18 +403,18 @@ function withCacheHeaders(res: Response, kind: CacheKind) {
   res.setHeader("Cache-Control", kind === "pharmacies" ? "public, max-age=300, stale-while-revalidate=86400" : "public, max-age=1800, stale-while-revalidate=604800");
   if (state.updatedAt) res.setHeader("Last-Modified", new Date(state.updatedAt).toUTCString());
   if (state.expiresAt) res.setHeader("X-PharmaGarde-Cache-Expires-At", state.expiresAt);
-  res.setHeader("X-PharmaGarde-Cache-Source", "server-local-cache");
+  res.setHeader("X-PharmaGarde-Cache-Source", "server-local-cache-by-city");
 }
 
-function filterItemsByCity(items: CachedHealthPlace[], cityFilter: RequestedCityFilter) {
-  if (!cityFilter.normalizedCity) return items;
-  return items.filter((item) => normalizeCityName(item.city) === cityFilter.normalizedCity);
+function selectItemsByCity(state: CacheState, cityFilter: RequestedCityFilter) {
+  if (cityFilter.key) return state.byCity[cityFilter.key] ?? [];
+  return flattenBuckets(state.byCity);
 }
 
 function sendCachedDataset(req: Request, res: Response, kind: CacheKind, rootKey: "pharmacies" | "healthcare" | "cliniques") {
   const state = memoryCache[kind];
   const cityFilter = getRequestedCityFilter(req);
-  const items = filterItemsByCity(state.items, cityFilter);
+  const items = selectItemsByCity(state, cityFilter);
   const responseCity = cityFilter.supportedCity?.name ?? cityFilter.rawCity ?? null;
 
   console.info(`[PharmaGardeCache] ${kind}: ville demandée=${responseCity ?? "toutes"}, résultats retournés=${items.length}`);
@@ -374,12 +424,13 @@ function sendCachedDataset(req: Request, res: Response, kind: CacheKind, rootKey
     [rootKey]: items,
     data: items,
     meta: {
-      cache: "server-local-cache",
+      cache: "server-local-cache-by-city",
       kind,
       city: responseCity,
+      cityKey: cityFilter.key ?? null,
       supportedCities: SUPPORTED_CITIES.map((city) => city.name),
       itemCount: items.length,
-      totalItemCount: state.items.length,
+      totalItemCount: countBuckets(state.byCity),
       updatedAt: state.updatedAt,
       expiresAt: state.expiresAt,
       stale: !isCacheFresh(kind),

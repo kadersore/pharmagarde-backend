@@ -248,3 +248,15 @@
 - [x] Ajouter ou adapter les tests pour vérifier que chaque ville retourne uniquement ses pharmacies
 - [x] Valider TypeScript, Vitest et état serveur après correction du filtrage par ville
 - [x] Sauvegarder un checkpoint de livraison pour la correction du filtrage pharmacies par ville
+
+- [x] Repenser le stockage backend pour organiser les pharmacies par clé de ville normalisée
+- [x] Repenser le stockage backend pour organiser les structures de santé par clé de ville normalisée
+- [x] Supprimer la dépendance à l’ancien cache global plat pour les endpoints publics
+- [x] Lors de la récupération Google, utiliser les coordonnées de chaque ville et stocker les résultats sous la clé de ville correspondante
+- [x] Modifier `GET /pharmacies` pour retourner uniquement `pharmaciesByCity[city]` quand `city` est fourni
+- [x] Modifier `GET /healthcare` pour retourner uniquement `healthcareByCity[city]` quand `city` est fourni
+- [x] Conserver le retour de toutes les villes uniquement lorsque `city` est absent
+- [x] Ajouter les logs ville demandée et nombre de résultats retournés pour pharmacies et structures de santé
+- [x] Ajouter des tests vérifiant que Koudougou, Kaya, Ziniaré et autres villes ne retournent pas Ouagadougou/Bobo
+- [x] Valider TypeScript, Vitest et état serveur après refactorisation cache par ville
+- [x] Sauvegarder un checkpoint de livraison pour la correction définitive du filtrage par ville

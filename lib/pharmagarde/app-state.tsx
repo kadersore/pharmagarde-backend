@@ -223,13 +223,12 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
 
     setLoading(true);
     const nextErrors: DataErrors = {};
+    const selectedCity = preferences.city;
     const [pharmacyResult, clinicResult, medicineResult] = await Promise.allSettled([
-      fetchPharmacies(apiBaseUrl, userLocation),
-      fetchClinics(apiBaseUrl, userLocation),
+      fetchPharmacies(apiBaseUrl, userLocation, selectedCity),
+      fetchClinics(apiBaseUrl, userLocation, selectedCity),
       fetchMedicines(apiBaseUrl),
     ]);
-
-    const selectedCity = preferences.city;
 
     if (pharmacyResult.status === "fulfilled") setPharmacies(sortPlacesByOpenThenDistance(filterPlacesByCity(pharmacyResult.value, selectedCity)));
     else {
