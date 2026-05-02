@@ -54,3 +54,16 @@ describe("premium ui contract", () => {
     expect(theme).toContain("#101512");
   });
 });
+
+describe("cartes médicaments", () => {
+  it("force le format FCFA et masque les détails jusqu’au clic", () => {
+    const appUi = read("components/pharmagarde/app-ui.tsx");
+
+    expect(appUi).toContain("export function formatMedicinePrice");
+    expect(appUi).toContain("toLocaleString(\"fr-FR\")} FCFA");
+    expect(appUi).toContain("const [expanded, setExpanded] = useState(false)");
+    expect(appUi).toContain("setExpanded((current) => !current)");
+    expect(appUi).toContain("{expanded ? (");
+    expect(appUi).toContain("styles.medicineDetails");
+  });
+});

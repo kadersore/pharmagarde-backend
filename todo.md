@@ -163,4 +163,11 @@
 - [x] Supprimer la section erreur API de la page Médicaments
 - [x] Inverser les positions du bouton favoris et du prix dans les éléments de liste de la page Médicaments
 - [x] Valider TypeScript, Vitest et état Expo après modifications de la page Médicaments
-- [ ] Sauvegarder un checkpoint de livraison après modifications de la page Médicaments
+- [x] Sauvegarder un checkpoint de livraison après modifications de la page Médicaments
+
+- [x] Corriger les prix de la liste des médicaments pour afficher systématiquement la devise FCFA
+- [x] Masquer par défaut la partie inférieure des cartes médicaments contenant type, forme, favoris et détails
+- [x] Afficher ou masquer la partie inférieure de chaque carte médicament au clic
+- [x] Ajouter ou adapter les tests de non-régression pour le format FCFA et le comportement dépliable des cartes médicaments
+- [x] Valider TypeScript, Vitest et état Expo après correction des cartes médicaments
+- [x] Sauvegarder un checkpoint de livraison après correction des cartes médicaments

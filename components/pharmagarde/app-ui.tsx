@@ -1,6 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as WebBrowser from "expo-web-browser";
-import { PropsWithChildren } from "react";
+import { PropsWithChildren, useState } from "react";
 import { Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { GlobalAppShell } from "@/components/pharmagarde/app-shell";
@@ -23,6 +23,10 @@ async function openDirections(item: { latitude?: number; longitude?: number; tit
 async function callPhone(phone?: string) {
   if (!phone) return;
   await Linking.openURL(`tel:${phone.replace(/\s+/g, "")}`);
+}
+
+export function formatMedicinePrice(priceApprox?: number) {
+  return priceApprox !== undefined ? `${priceApprox.toLocaleString("fr-FR")} FCFA` : "Prix variable";
 }
 
 export function AppChrome({ children, subtitle }: PropsWithChildren<{ subtitle?: string }>) {
@@ -130,32 +134,43 @@ export function PlaceCard({ place }: { place: HealthPlace }) {
 export function MedicineCard({ medicine }: { medicine: Medicine }) {
   const { favoriteKeys, toggleFavorite } = usePharmaGarde();
   const palette = usePremiumPalette();
+  const [expanded, setExpanded] = useState(false);
+  const priceLabel = formatMedicinePrice(medicine.priceApprox);
   const favorite: FavoriteItem = {
     id: medicine.id,
     entityType: "medicine",
     title: medicine.name,
     subtitle: medicine.category,
-    metadata: [medicine.ageCategory, medicine.pharmaceuticalType, medicine.priceApprox !== undefined ? `${medicine.priceApprox.toLocaleString("fr-FR")} FCFA` : undefined].filter(Boolean).join(" · "),
+    metadata: [medicine.ageCategory, medicine.pharmaceuticalType, priceLabel].filter(Boolean).join(" · "),
   };
   const active = favoriteKeys.has(favoriteKey("medicine", medicine.id));
   return (
-    <Pressable style={({ pressed }) => [styles.card, { backgroundColor: palette.card, borderColor: palette.border }, pressed ? styles.pressedCard : undefined]}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${medicine.name}. Appuyer pour ${expanded ? "masquer" : "afficher"} les détails.`}
+      style={({ pressed }) => [styles.card, { backgroundColor: palette.card, borderColor: palette.border }, pressed ? styles.pressedCard : undefined]}
+      onPress={() => { haptic.selection(); setExpanded((current) => !current); }}
+    >
       <View style={styles.cardHeader}>
         {medicine.imageUrl ? <Image source={{ uri: medicine.imageUrl }} style={styles.medicineImage} /> : <View style={[styles.medicineFallback, { backgroundColor: palette.softGreen }]}><MaterialIcons name="medication" size={23} color={palette.brand} /></View>}
         <View style={styles.cardTitleArea}>
           <Text style={[styles.cardTitle, { color: palette.text }]}>{medicine.name}</Text>
           <Text style={[styles.cardSubtitle, { color: palette.muted }]}>{medicine.category ?? "Catégorie non renseignée"}</Text>
         </View>
-        <View style={[styles.pricePill, { backgroundColor: palette.softGreen }]}><Text style={[styles.priceText, { color: palette.brand }]}>{medicine.priceApprox !== undefined ? `${medicine.priceApprox.toLocaleString("fr-FR")} FCFA` : "Prix variable"}</Text></View>
+        <View style={[styles.pricePill, { backgroundColor: palette.softGreen }]}><Text numberOfLines={1} style={[styles.priceText, { color: palette.brand }]}>{priceLabel}</Text></View>
       </View>
-      <View style={styles.metaRow}>
-        <View style={[styles.metaPill, { backgroundColor: palette.cardMuted }]}><Text style={[styles.metaText, { color: palette.text }]}>{medicine.ageCategory ?? "Tous"}</Text></View>
-        <View style={[styles.metaPill, { backgroundColor: palette.cardMuted }]}><Text style={[styles.metaText, { color: palette.text }]}>{medicine.pharmaceuticalType ?? "Type inconnu"}</Text></View>
-        <Pressable accessibilityRole="button" hitSlop={10} style={({ pressed }) => [styles.favoriteButton, pressed ? styles.pressedScale : undefined]} onPress={() => { haptic.light(); toggleFavorite(favorite); }}>
-          <MaterialIcons name={active ? "favorite" : "favorite-border"} size={23} color={active ? palette.danger : palette.muted} />
-        </Pressable>
-      </View>
-      {medicine.description ? <Text style={[styles.description, { color: palette.muted }]}>{medicine.description}</Text> : null}
+      {expanded ? (
+        <View style={styles.medicineDetails}>
+          <View style={styles.metaRow}>
+            <View style={[styles.metaPill, { backgroundColor: palette.cardMuted }]}><Text style={[styles.metaText, { color: palette.text }]}>{medicine.ageCategory ?? "Tous"}</Text></View>
+            <View style={[styles.metaPill, { backgroundColor: palette.cardMuted }]}><Text style={[styles.metaText, { color: palette.text }]}>{medicine.pharmaceuticalType ?? "Type inconnu"}</Text></View>
+            <Pressable accessibilityRole="button" hitSlop={10} style={({ pressed }) => [styles.favoriteButton, pressed ? styles.pressedScale : undefined]} onPress={() => { haptic.light(); toggleFavorite(favorite); }}>
+              <MaterialIcons name={active ? "favorite" : "favorite-border"} size={23} color={active ? palette.danger : palette.muted} />
+            </Pressable>
+          </View>
+          {medicine.description ? <Text style={[styles.description, { color: palette.muted }]}>{medicine.description}</Text> : null}
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -238,7 +253,8 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 13 },
   metaPill: { minHeight: 30, borderRadius: 15, paddingHorizontal: 10, alignItems: "center", justifyContent: "center" },
   metaText: { fontSize: 12, lineHeight: 15, fontWeight: "900" },
-  pricePill: { minHeight: 30, borderRadius: 15, paddingHorizontal: 10, alignItems: "center", justifyContent: "center" },
+  pricePill: { minHeight: 30, borderRadius: 15, paddingHorizontal: 10, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  medicineDetails: { marginTop: 2 },
   priceText: { fontSize: 12, lineHeight: 15, fontWeight: "900" },
   cardActions: { flexDirection: "row", gap: 9, marginTop: 13 },
   secondaryButton: { flex: 1, minHeight: 43, borderRadius: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
