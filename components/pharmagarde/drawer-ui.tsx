@@ -25,21 +25,22 @@ export type DrawerIconName = keyof typeof MaterialIcons.glyphMap;
 
 function useDrawerPalette(): DrawerPalette {
   const colors = useColors();
+  const isDark = colors.background.toLowerCase() !== "#f6fbf8";
   return useMemo(
     () => ({
       brandGreen: BRAND_GREEN,
-      darkGreen: DARK_GREEN,
+      darkGreen: isDark ? "#34D273" : DARK_GREEN,
       background: colors.background,
       foreground: colors.foreground,
       muted: colors.muted,
       border: colors.border,
       surface: colors.surface,
       softSurface: colors.background,
-      selectedSurface: colors.background === "#151718" ? "#12351F" : "#F0FFF5",
-      overlay: colors.background === "#151718" ? "rgba(0, 0, 0, 0.66)" : "rgba(16, 32, 22, 0.42)",
-      elevatedShadow: colors.background === "#151718" ? "#000000" : "#102016",
+      selectedSurface: isDark ? "#12351F" : "#F0FFF5",
+      overlay: isDark ? "rgba(0, 0, 0, 0.68)" : "rgba(16, 32, 22, 0.42)",
+      elevatedShadow: isDark ? "#000000" : "#102016",
     }),
-    [colors.background, colors.border, colors.foreground, colors.muted, colors.surface],
+    [colors.background, colors.border, colors.foreground, colors.muted, colors.surface, isDark],
   );
 }
 

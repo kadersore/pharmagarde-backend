@@ -1,34 +1,17 @@
-import { FlatList, StyleSheet, Text, View } from "react-native";
-
-import { AppChrome, EmptyState, PlaceCard, StatusNotice } from "@/components/pharmagarde/app-ui";
+import { PremiumMapExperience } from "@/components/pharmagarde/premium-map-experience";
 import { usePharmaGarde } from "@/lib/pharmagarde/app-state";
-import { HealthPlace } from "@/lib/pharmagarde/types";
 
 export default function ClinicsScreen() {
-  const { clinics, errors, refreshData } = usePharmaGarde();
-
-  const header = (
-    <View>
-      <Text style={styles.pageTitle}>Cliniques et Centres de soins</Text>
-      <StatusNotice message={errors.clinics} tone="error" />
-    </View>
-  );
+  const { clinics } = usePharmaGarde();
 
   return (
-    <AppChrome subtitle="Cliniques">
-      <FlatList<HealthPlace>
-        data={clinics}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <PlaceCard place={item} />}
-        ListHeaderComponent={header}
-        ListEmptyComponent={<EmptyState title="Aucune clinique disponible" message="Configurez un backend réel, puis actualisez depuis l’accueil ou le menu." actionLabel="Réessayer" onAction={refreshData} />}
-        contentContainerStyle={styles.listContent}
-      />
-    </AppChrome>
+    <PremiumMapExperience
+      places={clinics}
+      filter="clinic"
+      title="Cliniques et centres de soins"
+      subtitle="Sélectionnez une clinique sur la carte ou dans la liste"
+      emptyTitle="Aucune clinique disponible"
+      emptyMessage="Configurez un backend réel, puis actualisez depuis le panneau de la carte ou le menu."
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  listContent: { paddingBottom: 28 },
-  pageTitle: { color: "#102016", fontSize: 24, lineHeight: 31, fontWeight: "900", marginHorizontal: 16, marginTop: 18, marginBottom: 10 },
-});
