@@ -150,3 +150,7 @@
 - [x] Faire en sorte que le bouton Ma position sur la carte synchronise automatiquement la ville dans les paramètres et recharge les éléments du lieu détecté
 - [x] Valider TypeScript, Vitest et état Expo après les ajustements carte, titres et géolocalisation
 - [x] Sauvegarder un checkpoint de livraison après les ajustements carte, titres et géolocalisation
+
+- [x] Appliquer la couleur verte de marque au header global de l’application
+- [x] Valider TypeScript et état Expo après modification de la couleur du header
+- [x] Sauvegarder un checkpoint de livraison après modification de la couleur du header

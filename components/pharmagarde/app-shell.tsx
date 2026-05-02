@@ -55,31 +55,31 @@ function AppHeader({ title, onOpenMenu, rightAccessory }: { title: string; onOpe
   };
 
   return (
-    <View style={[styles.header, { backgroundColor: palette.background, borderBottomColor: palette.border }]}> 
+    <View style={[styles.header, { backgroundColor: palette.brand, borderBottomColor: palette.brand }]}> 
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Ouvrir le menu"
-        android_ripple={{ color: palette.softGreen, borderless: true }}
-        style={({ pressed }) => [styles.headerButton, { backgroundColor: palette.card, borderColor: palette.border }, pressed ? styles.pressedScale : undefined]}
+        android_ripple={{ color: "rgba(255, 255, 255, 0.28)", borderless: true }}
+        style={({ pressed }) => [styles.headerButton, styles.headerButtonOnGreen, pressed ? styles.pressedScale : undefined]}
         onPress={() => {
           haptic.light();
           onOpenMenu();
         }}
       >
-        <MaterialIcons name="menu" size={24} color={palette.text} />
+        <MaterialIcons name="menu" size={24} color={palette.brand} />
       </Pressable>
 
       <Pressable
         accessibilityRole="search"
         accessibilityLabel="Ouvrir la recherche"
-        android_ripple={{ color: palette.softGreen }}
-        style={({ pressed }) => [styles.searchPill, { backgroundColor: palette.glass, borderColor: palette.border }, pressed ? styles.pressedScale : undefined]}
+        android_ripple={{ color: "rgba(3, 192, 74, 0.12)" }}
+        style={({ pressed }) => [styles.searchPill, styles.searchPillOnGreen, pressed ? styles.pressedScale : undefined]}
         onPress={openSearch}
       >
         <MaterialIcons name="search" size={20} color={palette.brand} />
         <View style={styles.searchTextWrap}>
-          <Text style={[styles.searchLabel, { color: palette.text }]} numberOfLines={1}>{searchQuery || "Rechercher pharmacies, cliniques"}</Text>
-          <Text style={[styles.searchHint, { color: palette.muted }]} numberOfLines={1}>{title === "Carte" ? "Autour de vous" : title}</Text>
+          <Text style={[styles.searchLabel, styles.searchLabelOnGreen]} numberOfLines={1}>{searchQuery || "Rechercher pharmacies, cliniques"}</Text>
+          <Text style={[styles.searchHint, styles.searchHintOnGreen]} numberOfLines={1}>{title === "Carte" ? "Autour de vous" : title}</Text>
         </View>
         {loading ? <ActivityIndicator color={palette.brand} size="small" /> : null}
       </Pressable>
@@ -89,8 +89,8 @@ function AppHeader({ title, onOpenMenu, rightAccessory }: { title: string; onOpe
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Ouvrir les favoris"
-          android_ripple={{ color: palette.softGreen, borderless: true }}
-          style={({ pressed }) => [styles.headerButton, { backgroundColor: palette.card, borderColor: palette.border }, pressed ? styles.pressedScale : undefined]}
+          android_ripple={{ color: "rgba(255, 255, 255, 0.28)", borderless: true }}
+          style={({ pressed }) => [styles.headerButton, styles.headerButtonOnGreen, pressed ? styles.pressedScale : undefined]}
           onPress={() => {
             haptic.selection();
             router.push("/pharmagarde/favoris" as never);
@@ -232,6 +232,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 5 },
     elevation: 3,
   },
+  headerButtonOnGreen: { backgroundColor: "#FFFFFF", borderColor: "rgba(255, 255, 255, 0.72)" },
   pressedScale: { opacity: 0.88, transform: [{ scale: 0.97 }] },
   searchPill: {
     flex: 1,
@@ -248,9 +249,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 7 },
     elevation: 5,
   },
+  searchPillOnGreen: { backgroundColor: "#FFFFFF", borderColor: "rgba(255, 255, 255, 0.78)" },
   searchTextWrap: { flex: 1 },
   searchLabel: { fontSize: 14, lineHeight: 18, fontWeight: "900" },
+  searchLabelOnGreen: { color: "#102016" },
   searchHint: { fontSize: 11, lineHeight: 15, fontWeight: "700", marginTop: 1 },
+  searchHintOnGreen: { color: "rgba(16, 32, 22, 0.64)" },
   headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
   content: { flex: 1 },
   footer: {
