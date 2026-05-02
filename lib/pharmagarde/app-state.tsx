@@ -63,6 +63,7 @@ function toFavoriteFromPlace(place: HealthPlace): FavoriteItem {
     subtitle: place.address ?? place.city,
     metadata: place.distanceKm !== undefined ? `${place.distanceKm.toFixed(1)} km` : place.isOpen === true ? "Ouvert" : undefined,
     phone: place.phone,
+    rating: place.rating,
     latitude: place.latitude,
     longitude: place.longitude,
   };

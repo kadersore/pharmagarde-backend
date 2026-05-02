@@ -11,6 +11,7 @@ export type CachedHealthPlace = {
   address?: string;
   city?: string;
   phone?: string;
+  rating?: number;
   distanceKm?: number;
   latitude?: number;
   longitude?: number;
@@ -119,6 +120,7 @@ function normalizeGooglePlace(raw: Record<string, unknown>, type: CachedPlaceTyp
     address: getString(raw, ["vicinity", "formatted_address", "address", "adresse"]),
     city: getString(raw, ["city", "ville", "commune"]),
     phone: getString(raw, ["formatted_phone_number", "international_phone_number", "phone", "telephone"]),
+    rating: getNumber(raw, ["rating", "note", "googleRating", "google_rating", "noteGoogle", "stars"]),
     latitude: location ? getNumber(location, ["lat", "latitude"]) : getNumber(raw, ["lat", "latitude"]),
     longitude: location ? getNumber(location, ["lng", "lon", "longitude"]) : getNumber(raw, ["lng", "lon", "longitude"]),
     isOpen: isRecord(raw.opening_hours) && typeof raw.opening_hours.open_now === "boolean" ? raw.opening_hours.open_now : undefined,

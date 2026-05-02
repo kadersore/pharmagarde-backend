@@ -23,6 +23,7 @@ function favoriteFromPlace(place: HealthPlace): FavoriteItem {
     subtitle: place.address ?? place.city,
     metadata: place.distanceKm !== undefined ? `${place.distanceKm.toFixed(1)} km` : place.isOpen === true ? "Ouvert" : undefined,
     phone: place.phone,
+    rating: place.rating,
     latitude: place.latitude,
     longitude: place.longitude,
   };
@@ -55,18 +56,22 @@ function SkeletonCard() {
 
 function MapPlaceCard({ place, active, favorite, onSelect, onToggleFavorite }: { place: HealthPlace; active: boolean; favorite: boolean; onSelect: () => void; onToggleFavorite: () => void }) {
   const palette = usePremiumPalette();
+  const [expanded, setExpanded] = useState(false);
   const accent = place.type === "pharmacy" ? palette.brand : palette.clinic;
   const canCall = !!place.phone;
   const canNavigate = place.latitude !== undefined && place.longitude !== undefined;
+  const ratingLabel = place.rating !== undefined ? `${place.rating.toFixed(1)}/5` : "Note inconnue";
+  const phoneLabel = place.phone ?? "Téléphone indisponible";
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Voir ${place.name}`}
+      accessibilityLabel={`${place.name}. Appuyer pour ${expanded ? "masquer" : "afficher"} les actions.`}
       style={({ pressed }) => [styles.placeCard, { backgroundColor: palette.card, borderColor: active ? accent : palette.border, borderWidth: active ? 2 : 1 }, pressed ? styles.pressedCard : undefined]}
       onPress={() => {
         haptic.selection();
         onSelect();
+        setExpanded((current) => !current);
       }}
     >
       <View style={styles.placeHeader}>
@@ -77,18 +82,6 @@ function MapPlaceCard({ place, active, favorite, onSelect, onToggleFavorite }: {
           <Text style={[styles.placeTitle, { color: palette.text }]} numberOfLines={1}>{place.name}</Text>
           <Text style={[styles.placeSubtitle, { color: palette.muted }]} numberOfLines={1}>{place.address ?? place.city ?? "Adresse non renseignée"}</Text>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={favorite ? "Retirer des favoris" : "Ajouter aux favoris"}
-          hitSlop={10}
-          style={({ pressed }) => [styles.favoriteButton, pressed ? styles.pressedScale : undefined]}
-          onPress={() => {
-            haptic.light();
-            onToggleFavorite();
-          }}
-        >
-          <MaterialIcons name={favorite ? "favorite" : "favorite-border"} size={23} color={favorite ? palette.danger : palette.muted} />
-        </Pressable>
       </View>
 
       <View style={styles.metaRow}>
@@ -102,32 +95,61 @@ function MapPlaceCard({ place, active, favorite, onSelect, onToggleFavorite }: {
         </View>
       </View>
 
-      <View style={styles.actionRow}>
-        <Pressable
-          accessibilityRole="button"
-          disabled={!canCall}
-          style={({ pressed }) => [styles.actionButton, { backgroundColor: palette.cardMuted, opacity: canCall ? 1 : 0.46 }, pressed && canCall ? styles.pressedScale : undefined]}
-          onPress={() => {
-            haptic.light();
-            callPhone(place.phone);
-          }}
-        >
-          <MaterialIcons name="call" size={18} color={canCall ? accent : palette.muted} />
-          <Text style={[styles.actionText, { color: canCall ? palette.text : palette.muted }]}>Appel</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          disabled={!canNavigate}
-          style={({ pressed }) => [styles.actionButton, { backgroundColor: palette.cardMuted, opacity: canNavigate ? 1 : 0.46 }, pressed && canNavigate ? styles.pressedScale : undefined]}
-          onPress={() => {
-            haptic.medium();
-            openDirections(place);
-          }}
-        >
-          <MaterialIcons name="directions" size={18} color={canNavigate ? accent : palette.muted} />
-          <Text style={[styles.actionText, { color: canNavigate ? palette.text : palette.muted }]}>Itinéraire</Text>
-        </Pressable>
-      </View>
+      {expanded ? (
+        <View style={styles.placeExpandableContent}>
+          <View style={styles.placeInfoRow}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={favorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+              hitSlop={10}
+              style={({ pressed }) => [styles.favoriteButton, pressed ? styles.pressedScale : undefined]}
+              onPress={(event) => {
+                event.stopPropagation();
+                haptic.light();
+                onToggleFavorite();
+              }}
+            >
+              <MaterialIcons name={favorite ? "favorite" : "favorite-border"} size={23} color={favorite ? palette.danger : palette.muted} />
+            </Pressable>
+            <View style={[styles.compactInfoPill, { backgroundColor: palette.cardMuted }]}> 
+              <MaterialIcons name="star" size={15} color={place.rating !== undefined ? "#F59E0B" : palette.muted} />
+              <Text style={[styles.compactInfoText, { color: palette.text }]}>{ratingLabel}</Text>
+            </View>
+            <View style={[styles.compactInfoPill, styles.phoneInfoPill, { backgroundColor: palette.cardMuted }]}> 
+              <MaterialIcons name="phone" size={15} color={canCall ? accent : palette.muted} />
+              <Text numberOfLines={1} style={[styles.compactInfoText, { color: canCall ? palette.text : palette.muted }]}>{phoneLabel}</Text>
+            </View>
+          </View>
+          <View style={styles.actionRow}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={!canCall}
+              style={({ pressed }) => [styles.actionButton, { backgroundColor: palette.cardMuted, opacity: canCall ? 1 : 0.46 }, pressed && canCall ? styles.pressedScale : undefined]}
+              onPress={(event) => {
+                event.stopPropagation();
+                haptic.light();
+                callPhone(place.phone);
+              }}
+            >
+              <MaterialIcons name="call" size={18} color={canCall ? accent : palette.muted} />
+              <Text style={[styles.actionText, { color: canCall ? palette.text : palette.muted }]}>Appel</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              disabled={!canNavigate}
+              style={({ pressed }) => [styles.actionButton, { backgroundColor: palette.cardMuted, opacity: canNavigate ? 1 : 0.46 }, pressed && canNavigate ? styles.pressedScale : undefined]}
+              onPress={(event) => {
+                event.stopPropagation();
+                haptic.medium();
+                openDirections(place);
+              }}
+            >
+              <MaterialIcons name="directions" size={18} color={canNavigate ? accent : palette.muted} />
+              <Text style={[styles.actionText, { color: canNavigate ? palette.text : palette.muted }]}>Itinéraire</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -301,6 +323,11 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 12 },
   metaPill: { minHeight: 30, borderRadius: 15, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", gap: 6 },
   metaText: { fontSize: 12, lineHeight: 15, fontWeight: "900" },
+  placeExpandableContent: { marginTop: 2 },
+  placeInfoRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12 },
+  compactInfoPill: { minHeight: 34, borderRadius: 17, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5 },
+  phoneInfoPill: { flex: 1, justifyContent: "flex-start" },
+  compactInfoText: { fontSize: 12, lineHeight: 15, fontWeight: "900" },
   actionRow: { flexDirection: "row", gap: 9, marginTop: 12 },
   actionButton: { flex: 1, minHeight: 42, borderRadius: 16, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 7 },
   actionText: { fontSize: 13, lineHeight: 16, fontWeight: "900" },

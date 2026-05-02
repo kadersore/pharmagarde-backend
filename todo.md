@@ -188,3 +188,14 @@
 - [x] Ajouter ou adapter les tests de non-régression pour la configuration assets et icônes
 - [x] Valider TypeScript, Vitest et état Expo après correction du chargement des assets
 - [x] Sauvegarder un checkpoint de livraison après correction des assets Expo
+
+- [x] Ajouter la note Google Maps sur la même ligne que le favori dans les cartes pharmacies
+- [x] Ajouter le numéro de téléphone sur la même ligne que le favori dans les cartes pharmacies
+- [x] Ajouter la note Google Maps sur la même ligne que le favori dans les cartes cliniques
+- [x] Ajouter le numéro de téléphone sur la même ligne que le favori dans les cartes cliniques
+- [x] Masquer par défaut la partie inférieure des cartes pharmacies contenant favori, note, téléphone et boutons
+- [x] Masquer par défaut la partie inférieure des cartes cliniques contenant favori, note, téléphone et boutons
+- [x] Afficher ou masquer la partie inférieure des cartes pharmacies et cliniques au clic
+- [x] Ajouter ou adapter les tests de non-régression pour les cartes pharmacies et cliniques repliables
+- [x] Valider TypeScript, Vitest et état Expo après modification des cartes pharmacies et cliniques
+- [x] Sauvegarder un checkpoint de livraison après modification des cartes pharmacies et cliniques repliables

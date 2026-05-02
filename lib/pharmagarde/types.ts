@@ -12,6 +12,7 @@ export type HealthPlace = {
   address?: string;
   city?: string;
   phone?: string;
+  rating?: number;
   distanceKm?: number;
   latitude?: number;
   longitude?: number;
@@ -50,6 +51,7 @@ export type FavoriteItem = {
   subtitle?: string;
   metadata?: string;
   phone?: string;
+  rating?: number;
   latitude?: number;
   longitude?: number;
 };

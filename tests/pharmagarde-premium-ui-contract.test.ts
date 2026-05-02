@@ -69,14 +69,24 @@ describe("cartes médicaments", () => {
 });
 
 describe("cartes pharmacies et cliniques", () => {
-  it("place la distance en haut à droite, le statut dessous et le favori dans la rangée méta", () => {
+  it("place la distance en haut à droite et replie favori, note, téléphone et boutons jusqu’au clic", () => {
     const appUi = read("components/pharmagarde/app-ui.tsx");
+    const carte = read("app/(tabs)/carte.tsx");
     const placeCard = appUi.slice(appUi.indexOf("export function PlaceCard"), appUi.indexOf("export function MedicineCard"));
+    const mapPlaceCard = carte.slice(carte.indexOf("function MapPlaceCard"), carte.indexOf("export default function CarteScreen"));
 
     expect(placeCard).toContain("styles.placeHeaderMeta");
-    expect(placeCard.indexOf("styles.placeHeaderMeta")).toBeLessThan(placeCard.indexOf("styles.metaRow"));
-    expect(placeCard.indexOf("Distance inconnue")).toBeLessThan(placeCard.indexOf("Statut inconnu"));
-    expect(placeCard.indexOf("styles.metaRow")).toBeLessThan(placeCard.indexOf("favorite-border"));
+    expect(placeCard.indexOf("styles.placeHeaderMeta")).toBeLessThan(placeCard.indexOf("{expanded ? ("));
+    expect(placeCard).toContain("const [expanded, setExpanded] = useState(false)");
+    expect(placeCard).toContain("setExpanded((current) => !current)");
+    expect(placeCard).toContain("styles.placeInfoRow");
+    expect(placeCard).toContain("ratingLabel");
+    expect(placeCard).toContain("phoneLabel");
+    expect(placeCard.indexOf("favorite-border")).toBeGreaterThan(placeCard.indexOf("{expanded ? ("));
+    expect(mapPlaceCard).toContain("const [expanded, setExpanded] = useState(false)");
+    expect(mapPlaceCard).toContain("styles.placeInfoRow");
+    expect(mapPlaceCard).toContain("ratingLabel");
+    expect(mapPlaceCard).toContain("phoneLabel");
     expect(appUi).toContain("placeHeaderMeta: { alignItems: \"flex-end\", gap: 6, flexShrink: 0 }");
   });
 });

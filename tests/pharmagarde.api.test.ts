@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchClinics, fetchMedicines, fetchPharmacies, normalizeBaseUrl } from "../lib/pharmagarde/api";
 
 describe("pharmagarde API helpers", () => {
@@ -24,6 +24,7 @@ describe("pharmagarde API helpers", () => {
             adresse: "Avenue Kwame Nkrumah",
             ville: "Ouagadougou",
             telephone: "+22670000000",
+            note: "4,3",
             distance: "1,4",
             latitude: "12.3714",
             longitude: "-1.5197",
@@ -47,6 +48,7 @@ describe("pharmagarde API helpers", () => {
       id: "ph-1",
       type: "pharmacy",
       name: "Pharmacie Centrale",
+      rating: 4.3,
       distanceKm: 1.4,
       isOpen: true,
     });
@@ -57,7 +59,7 @@ describe("pharmagarde API helpers", () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          results: [{ uuid: "cl-1", libelle: "Clinique du Centre", commune: "Bobo-Dioulasso", lat: 11.17, lng: -4.29 }],
+          results: [{ uuid: "cl-1", libelle: "Clinique du Centre", commune: "Bobo-Dioulasso", googleRating: 4.7, lat: 11.17, lng: -4.29 }],
         }),
       } as Response)
       .mockResolvedValueOnce({
@@ -71,7 +73,7 @@ describe("pharmagarde API helpers", () => {
     const medicines = await fetchMedicines("https://api.pharmagarde.bf");
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(clinics[0]).toMatchObject({ id: "cl-1", type: "clinic", name: "Clinique du Centre", city: "Bobo-Dioulasso" });
+    expect(clinics[0]).toMatchObject({ id: "cl-1", type: "clinic", name: "Clinique du Centre", city: "Bobo-Dioulasso", rating: 4.7 });
     expect(medicines[0]).toMatchObject({ id: "med-1", type: "medicine", name: "Paracétamol", category: "Antalgique", pharmaceuticalType: "Comprimé" });
   });
 });
