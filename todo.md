@@ -171,3 +171,11 @@
 - [x] Ajouter ou adapter les tests de non-régression pour le format FCFA et le comportement dépliable des cartes médicaments
 - [x] Valider TypeScript, Vitest et état Expo après correction des cartes médicaments
 - [x] Sauvegarder un checkpoint de livraison après correction des cartes médicaments
+
+- [x] Inverser la position de la distance et du bouton favoris dans les cartes pharmacies
+- [x] Placer le statut sous la nouvelle position de la distance dans les cartes pharmacies
+- [x] Inverser la position de la distance et du bouton favoris dans les cartes cliniques
+- [x] Placer le statut sous la nouvelle position de la distance dans les cartes cliniques
+- [x] Ajouter ou adapter les tests de non-régression pour la disposition distance, favoris et statut
+- [x] Valider TypeScript, Vitest et état Expo après réorganisation des cartes pharmacies et cliniques
+- [x] Sauvegarder un checkpoint de livraison après réorganisation des cartes pharmacies et cliniques

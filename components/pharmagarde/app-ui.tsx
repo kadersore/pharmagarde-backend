@@ -105,17 +105,19 @@ export function PlaceCard({ place }: { place: HealthPlace }) {
           <Text style={[styles.cardTitle, { color: palette.text }]} numberOfLines={1}>{place.name}</Text>
           <Text style={[styles.cardSubtitle, { color: palette.muted }]} numberOfLines={2}>{place.address ?? place.city ?? "Adresse non renseignée"}</Text>
         </View>
+        <View style={styles.placeHeaderMeta}>
+          <View style={[styles.metaPill, { backgroundColor: palette.cardMuted }]}> 
+            <Text style={[styles.metaText, { color: palette.text }]}>{place.distanceKm !== undefined ? `${place.distanceKm.toFixed(1)} km` : "Distance inconnue"}</Text>
+          </View>
+          <View style={[styles.metaPill, { backgroundColor: place.isOpen === false ? "rgba(225, 29, 72, 0.1)" : palette.softGreen }]}> 
+            <Text style={[styles.metaText, { color: place.isOpen === false ? palette.danger : palette.success }]}>{place.isOpen === true ? "Ouvert" : place.isOpen === false ? "Fermé" : "Statut inconnu"}</Text>
+          </View>
+        </View>
+      </View>
+      <View style={styles.metaRow}>
         <Pressable accessibilityRole="button" hitSlop={10} style={({ pressed }) => [styles.favoriteButton, pressed ? styles.pressedScale : undefined]} onPress={() => { haptic.light(); toggleFavorite(favorite); }}>
           <MaterialIcons name={active ? "favorite" : "favorite-border"} size={23} color={active ? palette.danger : palette.muted} />
         </Pressable>
-      </View>
-      <View style={styles.metaRow}>
-        <View style={[styles.metaPill, { backgroundColor: palette.cardMuted }]}> 
-          <Text style={[styles.metaText, { color: palette.text }]}>{place.distanceKm !== undefined ? `${place.distanceKm.toFixed(1)} km` : "Distance inconnue"}</Text>
-        </View>
-        <View style={[styles.metaPill, { backgroundColor: place.isOpen === false ? "rgba(225, 29, 72, 0.1)" : palette.softGreen }]}> 
-          <Text style={[styles.metaText, { color: place.isOpen === false ? palette.danger : palette.success }]}>{place.isOpen === true ? "Ouvert" : place.isOpen === false ? "Fermé" : "Statut inconnu"}</Text>
-        </View>
       </View>
       <View style={styles.cardActions}>
         <Pressable accessibilityRole="button" style={({ pressed }) => [styles.secondaryButton, { backgroundColor: palette.cardMuted, opacity: place.phone ? 1 : 0.46 }, pressed && place.phone ? styles.pressedScale : undefined]} disabled={!place.phone} onPress={() => { haptic.light(); callPhone(place.phone); }}>
@@ -250,6 +252,7 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, lineHeight: 21, fontWeight: "900" },
   cardSubtitle: { fontSize: 12, lineHeight: 18, fontWeight: "700", marginTop: 2 },
   favoriteButton: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
+  placeHeaderMeta: { alignItems: "flex-end", gap: 6, flexShrink: 0 },
   metaRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 13 },
   metaPill: { minHeight: 30, borderRadius: 15, paddingHorizontal: 10, alignItems: "center", justifyContent: "center" },
   metaText: { fontSize: 12, lineHeight: 15, fontWeight: "900" },

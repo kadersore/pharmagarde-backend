@@ -67,3 +67,16 @@ describe("cartes médicaments", () => {
     expect(appUi).toContain("styles.medicineDetails");
   });
 });
+
+describe("cartes pharmacies et cliniques", () => {
+  it("place la distance en haut à droite, le statut dessous et le favori dans la rangée méta", () => {
+    const appUi = read("components/pharmagarde/app-ui.tsx");
+    const placeCard = appUi.slice(appUi.indexOf("export function PlaceCard"), appUi.indexOf("export function MedicineCard"));
+
+    expect(placeCard).toContain("styles.placeHeaderMeta");
+    expect(placeCard.indexOf("styles.placeHeaderMeta")).toBeLessThan(placeCard.indexOf("styles.metaRow"));
+    expect(placeCard.indexOf("Distance inconnue")).toBeLessThan(placeCard.indexOf("Statut inconnu"));
+    expect(placeCard.indexOf("styles.metaRow")).toBeLessThan(placeCard.indexOf("favorite-border"));
+    expect(appUi).toContain("placeHeaderMeta: { alignItems: \"flex-end\", gap: 6, flexShrink: 0 }");
+  });
+});
