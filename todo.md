@@ -268,7 +268,7 @@
 - [x] Valider TypeScript, Vitest et état serveur après correction de l’état vide par ville
 - [x] Sauvegarder un checkpoint de livraison pour la correction de l’affichage des villes secondaires
 
-- [ ] Vérifier l’état Git local et le dépôt distant GitHub de l’application Expo
-- [ ] Commiter la version corrigée des villes secondaires et de l’état vide client
-- [ ] Pousser la version Expo corrigée sur GitHub
-- [ ] Vérifier le lien GitHub et confirmer le push à l’utilisateur
+- [x] Vérifier l’état Git local et le dépôt distant GitHub de l’application Expo
+- [x] Commiter la version corrigée des villes secondaires et de l’état vide client
+- [x] Pousser la version Expo corrigée sur GitHub
+- [x] Vérifier le lien GitHub et confirmer le push à l’utilisateur
