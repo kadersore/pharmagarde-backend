@@ -158,3 +158,9 @@
 - [x] Appliquer un vert plus clair que le header aux boutons et à la barre de recherche du header
 - [x] Valider TypeScript, Vitest et état Expo après ajustement des éléments du header
 - [x] Sauvegarder un checkpoint de livraison après ajustement vert clair des éléments du header
+
+- [x] Supprimer les sous-sections « références » et « prix indicatif » de la première section de la page Médicaments
+- [x] Supprimer la section erreur API de la page Médicaments
+- [x] Inverser les positions du bouton favoris et du prix dans les éléments de liste de la page Médicaments
+- [x] Valider TypeScript, Vitest et état Expo après modifications de la page Médicaments
+- [ ] Sauvegarder un checkpoint de livraison après modifications de la page Médicaments

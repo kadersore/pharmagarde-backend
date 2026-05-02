@@ -146,14 +146,14 @@ export function MedicineCard({ medicine }: { medicine: Medicine }) {
           <Text style={[styles.cardTitle, { color: palette.text }]}>{medicine.name}</Text>
           <Text style={[styles.cardSubtitle, { color: palette.muted }]}>{medicine.category ?? "Catégorie non renseignée"}</Text>
         </View>
-        <Pressable accessibilityRole="button" hitSlop={10} style={({ pressed }) => [styles.favoriteButton, pressed ? styles.pressedScale : undefined]} onPress={() => { haptic.light(); toggleFavorite(favorite); }}>
-          <MaterialIcons name={active ? "favorite" : "favorite-border"} size={23} color={active ? palette.danger : palette.muted} />
-        </Pressable>
+        <View style={[styles.pricePill, { backgroundColor: palette.softGreen }]}><Text style={[styles.priceText, { color: palette.brand }]}>{medicine.priceApprox !== undefined ? `${medicine.priceApprox.toLocaleString("fr-FR")} FCFA` : "Prix variable"}</Text></View>
       </View>
       <View style={styles.metaRow}>
         <View style={[styles.metaPill, { backgroundColor: palette.cardMuted }]}><Text style={[styles.metaText, { color: palette.text }]}>{medicine.ageCategory ?? "Tous"}</Text></View>
         <View style={[styles.metaPill, { backgroundColor: palette.cardMuted }]}><Text style={[styles.metaText, { color: palette.text }]}>{medicine.pharmaceuticalType ?? "Type inconnu"}</Text></View>
-        <View style={[styles.pricePill, { backgroundColor: palette.softGreen }]}><Text style={[styles.priceText, { color: palette.brand }]}>{medicine.priceApprox !== undefined ? `${medicine.priceApprox.toLocaleString("fr-FR")} FCFA` : "Prix variable"}</Text></View>
+        <Pressable accessibilityRole="button" hitSlop={10} style={({ pressed }) => [styles.favoriteButton, pressed ? styles.pressedScale : undefined]} onPress={() => { haptic.light(); toggleFavorite(favorite); }}>
+          <MaterialIcons name={active ? "favorite" : "favorite-border"} size={23} color={active ? palette.danger : palette.muted} />
+        </Pressable>
       </View>
       {medicine.description ? <Text style={[styles.description, { color: palette.muted }]}>{medicine.description}</Text> : null}
     </Pressable>
