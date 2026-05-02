@@ -179,3 +179,12 @@
 - [x] Ajouter ou adapter les tests de non-régression pour la disposition distance, favoris et statut
 - [x] Valider TypeScript, Vitest et état Expo après réorganisation des cartes pharmacies et cliniques
 - [x] Sauvegarder un checkpoint de livraison après réorganisation des cartes pharmacies et cliniques
+
+- [x] Diagnostiquer l’erreur ExpoAsset.downloadAsync liée aux URLs d’assets invalides de type http://8081
+- [x] Corriger la configuration de base URL des assets pour utiliser un host valide dans l’environnement Manus
+- [x] Forcer le chargement local des assets Expo lorsque l’URL distante est invalide
+- [x] Vérifier et corriger les imports @expo/vector-icons pour garantir l’affichage des icônes
+- [x] Nettoyer et reconfigurer le bundler Expo après correction des assets
+- [x] Ajouter ou adapter les tests de non-régression pour la configuration assets et icônes
+- [x] Valider TypeScript, Vitest et état Expo après correction du chargement des assets
+- [x] Sauvegarder un checkpoint de livraison après correction des assets Expo

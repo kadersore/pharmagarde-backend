@@ -80,3 +80,23 @@ describe("cartes pharmacies et cliniques", () => {
     expect(appUi).toContain("placeHeaderMeta: { alignItems: \"flex-end\", gap: 6, flexShrink: 0 }");
   });
 });
+
+describe("assets Expo et icônes locales", () => {
+  it("normalise les URL d’assets invalides et précharge localement MaterialIcons", () => {
+    const expoAssets = read("lib/pharmagarde/expo-assets.ts");
+    const rootLayout = read("app/_layout.tsx");
+    const metroConfig = read("metro.config.js");
+    const packageJson = read("package.json");
+
+    expect(expoAssets).toContain("normalizeExpoAssetUri");
+    expect(expoAssets).toContain("parsed.hostname === \"8081\"");
+    expect(expoAssets).toContain("Asset.prototype.downloadAsync");
+    expect(expoAssets).toContain("Font.loadAsync(MaterialIcons.font)");
+    expect(expoAssets).toContain("getBrowserOrigin");
+    expect(rootLayout).toContain("preloadLocalIconAssets");
+    expect(rootLayout).toContain("installExpoAssetUriFix");
+    expect(metroConfig).toContain("config.resolver.assetExts");
+    expect(metroConfig).toContain("\"ttf\"");
+    expect(packageJson).toContain("dev:metro:clean");
+  });
+});

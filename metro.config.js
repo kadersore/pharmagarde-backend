@@ -3,6 +3,10 @@ const { withNativeWind } = require("nativewind/metro");
 
 const config = getDefaultConfig(__dirname);
 
+config.resolver.assetExts = Array.from(
+  new Set([...(config.resolver.assetExts ?? []), "ttf", "otf", "png", "jpg", "jpeg", "webp"]),
+);
+
 module.exports = withNativeWind(config, {
   input: "./global.css",
   // Force write CSS to file system instead of virtual modules
