@@ -42,19 +42,19 @@ export function AppChrome({ children, subtitle }: PropsWithChildren<{ subtitle?:
       <View style={styles.page}>
         <View style={styles.topBar}>
           <TouchableOpacity accessibilityRole="button" accessibilityLabel="Ouvrir le menu" style={styles.iconButton} onPress={() => router.push("/pharmagarde/menu" as never)}>
-            <MaterialIcons name="menu" size={26} color={FOREGROUND} />
+            <MaterialIcons name="menu" size={26} color="#FFFFFF" />
           </TouchableOpacity>
           <View style={styles.titleBlock}>
             <Text style={styles.title}>PharmaGarde BF</Text>
             <Text style={styles.subtitle}>{subtitle ?? "Santé de proximité"}</Text>
           </View>
           <View style={styles.actions}>
-            {loading ? <ActivityIndicator color={BRAND_GREEN} /> : null}
+            {loading ? <ActivityIndicator color="#FFFFFF" /> : null}
             <TouchableOpacity accessibilityRole="button" accessibilityLabel="Ouvrir les favoris" style={styles.iconButton} onPress={() => router.push("/pharmagarde/favoris" as never)}>
-              <MaterialIcons name="favorite-border" size={24} color={FOREGROUND} />
+              <MaterialIcons name="favorite-border" size={24} color="#FFFFFF" />
             </TouchableOpacity>
             <TouchableOpacity accessibilityRole="button" accessibilityLabel="Ouvrir la recherche" style={styles.iconButton} onPress={() => router.push("/pharmagarde/search" as never)}>
-              <MaterialIcons name="search" size={25} color={FOREGROUND} />
+              <MaterialIcons name="search" size={25} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         </View>
@@ -159,7 +159,7 @@ export function MedicineCard({ medicine }: { medicine: Medicine }) {
     entityType: "medicine",
     title: medicine.name,
     subtitle: medicine.category,
-    metadata: medicine.pharmaceuticalType,
+    metadata: [medicine.ageCategory, medicine.pharmaceuticalType, medicine.priceApprox !== undefined ? `${medicine.priceApprox.toLocaleString("fr-FR")} FCFA` : undefined].filter(Boolean).join(" · "),
   };
   const active = favoriteKeys.has(favoriteKey("medicine", medicine.id));
   return (
@@ -175,7 +175,9 @@ export function MedicineCard({ medicine }: { medicine: Medicine }) {
         </TouchableOpacity>
       </View>
       <View style={styles.metaRow}>
+        <Text style={styles.metaPill}>{medicine.ageCategory ?? "Tous"}</Text>
         <Text style={styles.metaPill}>{medicine.pharmaceuticalType ?? "Type inconnu"}</Text>
+        <Text style={styles.pricePill}>{medicine.priceApprox !== undefined ? `${medicine.priceApprox.toLocaleString("fr-FR")} FCFA` : "Prix variable"}</Text>
       </View>
       {medicine.description ? <Text style={styles.description}>{medicine.description}</Text> : null}
     </View>
@@ -236,11 +238,11 @@ export function MenuRow({ icon, title, description, onPress }: { icon: keyof typ
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: BACKGROUND },
-  topBar: { minHeight: 70, paddingHorizontal: 16, paddingBottom: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomColor: BORDER, borderBottomWidth: 1, backgroundColor: SURFACE },
-  iconButton: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: "#F1F8F3" },
+  topBar: { minHeight: 70, paddingHorizontal: 16, paddingBottom: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomColor: "rgba(255,255,255,0.24)", borderBottomWidth: 1, backgroundColor: BRAND_GREEN },
+  iconButton: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.18)" },
   titleBlock: { flex: 1, alignItems: "center", paddingHorizontal: 8 },
-  title: { fontSize: 19, lineHeight: 24, fontWeight: "800", color: FOREGROUND },
-  subtitle: { fontSize: 12, lineHeight: 16, color: MUTED, marginTop: 2 },
+  title: { fontSize: 19, lineHeight: 24, fontWeight: "800", color: "#FFFFFF" },
+  subtitle: { fontSize: 12, lineHeight: 16, color: "#E8FFF0", marginTop: 2 },
   actions: { flexDirection: "row", alignItems: "center", gap: 8 },
   emptyState: { flex: 1, alignItems: "center", justifyContent: "center", padding: 28 },
   emptyIcon: { width: 58, height: 58, borderRadius: 29, backgroundColor: "#E6F8EC", alignItems: "center", justifyContent: "center", marginBottom: 14 },
@@ -265,13 +267,14 @@ const styles = StyleSheet.create({
   favoriteButton: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: "#F7F7F7" },
   metaRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 14 },
   metaPill: { overflow: "hidden", borderRadius: 14, paddingHorizontal: 10, paddingVertical: 6, color: FOREGROUND, backgroundColor: "#EEF8F2", fontSize: 12, fontWeight: "700" },
+  pricePill: { overflow: "hidden", borderRadius: 14, paddingHorizontal: 10, paddingVertical: 6, color: "#FFFFFF", backgroundColor: BRAND_GREEN, fontSize: 12, fontWeight: "900" },
   cardActions: { flexDirection: "row", gap: 10, marginTop: 14 },
   secondaryButton: { flex: 1, minHeight: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 7, backgroundColor: "#F5FBF7", borderWidth: 1, borderColor: BORDER },
   secondaryButtonText: { color: BRAND_GREEN, fontSize: 14, fontWeight: "800" },
   disabledButton: { opacity: 0.55 },
   disabledText: { color: MUTED },
-  medicineImage: { width: 46, height: 46, borderRadius: 16, backgroundColor: "#EAF8EF" },
-  medicineFallback: { width: 46, height: 46, borderRadius: 16, backgroundColor: "#EAF8EF", alignItems: "center", justifyContent: "center" },
+  medicineImage: { width: 50, height: 50, borderRadius: 18, backgroundColor: "#EAF8EF" },
+  medicineFallback: { width: 50, height: 50, borderRadius: 18, backgroundColor: "#EAF8EF", alignItems: "center", justifyContent: "center" },
   description: { marginTop: 12, color: MUTED, fontSize: 13, lineHeight: 20 },
   resultRow: { marginHorizontal: 16, marginVertical: 6, padding: 14, borderRadius: 20, backgroundColor: SURFACE, borderWidth: 1, borderColor: BORDER, flexDirection: "row", alignItems: "center", gap: 12 },
   resultIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#EAF8EF", alignItems: "center", justifyContent: "center" },

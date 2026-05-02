@@ -65,3 +65,12 @@
 - [ ] Mettre à jour la version backend livrable prête pour Render avec les routes REST
 
 - [x] Envoyer à l’utilisateur la version Expo actuelle de l’application PharmaGarde BF.
+
+- [x] Remplacer le contenu actuel du menu latéral par les éléments de navigation, préférences locales et actions rapides demandés.
+- [x] Créer les fonctionnalités nécessaires pour changer le mode, la langue, le type de carte et la ville.
+- [x] Nettoyer la page d’accueil en supprimant tous les éléments situés au-dessus de « Pharmacies proches ».
+- [x] Remplacer le premier bloc de la page Cliniques par le titre « Cliniques et Centres de soins ».
+- [x] Générer et afficher une liste de médicaments essentiels courants au Burkina Faso avec image, nom, catégorie, type et prix approximatif en FCFA.
+- [x] Remplacer le premier bloc de la page Carte par un titre de page et supprimer les éléments situés en bas de la carte.
+- [x] Appliquer la couleur verte au header de l’application.
+- [x] Améliorer les éléments visuels et logiques utiles tout en conservant les flux principaux.

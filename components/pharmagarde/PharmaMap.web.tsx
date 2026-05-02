@@ -139,9 +139,7 @@ export function PharmaMap({ places, userLocation }: { places: HealthPlace[]; use
           <Text style={styles.overlayHelp}>Renseignez EXPO_PUBLIC_GOOGLE_MAPS_API_KEY avec Maps JavaScript API activée pour afficher la carte Google ici.</Text>
         </View>
       ) : null}
-      <View style={styles.legend}>
-        <Text style={styles.legendText}>Google Maps · P pharmacies · C cliniques</Text>
-      </View>
+
     </View>
   );
 }
@@ -153,6 +151,5 @@ const styles = StyleSheet.create({
   overlayTitle: { color: "#102016", fontWeight: "900", fontSize: 15, lineHeight: 20 },
   overlayText: { color: "#B42318", marginTop: 5, fontWeight: "800", fontSize: 13, lineHeight: 18 },
   overlayHelp: { color: "#667085", marginTop: 6, fontSize: 12, lineHeight: 17 },
-  legend: { position: "absolute", left: 14, right: 14, bottom: 14, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 12, paddingVertical: 9 },
-  legendText: { color: "#102016", fontWeight: "800", fontSize: 12 },
+
 });

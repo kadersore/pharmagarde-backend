@@ -9,11 +9,7 @@ export default function ClinicsScreen() {
 
   const header = (
     <View>
-      <View style={styles.headerCard}>
-        <Text style={styles.kicker}>Structures sanitaires</Text>
-        <Text style={styles.title}>Cliniques et centres de soins</Text>
-        <Text style={styles.description}>Les données affichées proviennent de votre endpoint `/cliniques/nearby`. Les cartes indiquent téléphone, distance, état d’ouverture et itinéraire lorsque l’API les fournit.</Text>
-      </View>
+      <Text style={styles.pageTitle}>Cliniques et Centres de soins</Text>
       <StatusNotice message={errors.clinics} tone="error" />
     </View>
   );
@@ -34,8 +30,5 @@ export default function ClinicsScreen() {
 
 const styles = StyleSheet.create({
   listContent: { paddingBottom: 28 },
-  headerCard: { margin: 16, padding: 18, borderRadius: 26, backgroundColor: "#EAF4FF", borderWidth: 1, borderColor: "#B9DAFF" },
-  kicker: { color: "#0B74DE", fontSize: 12, lineHeight: 17, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.6 },
-  title: { color: "#102016", fontSize: 22, lineHeight: 28, fontWeight: "900", marginTop: 6 },
-  description: { color: "#667085", fontSize: 14, lineHeight: 21, marginTop: 8 },
+  pageTitle: { color: "#102016", fontSize: 24, lineHeight: 31, fontWeight: "900", marginHorizontal: 16, marginTop: 18, marginBottom: 10 },
 });

@@ -5,11 +5,20 @@ import { Platform } from "react-native";
 
 import { fetchClinics, fetchMedicines, fetchPharmacies, normalizeBaseUrl } from "./api";
 import { DEFAULT_LOCATION, getDefaultLocationFallback } from "./location-policy";
-import { CombinedSearchItem, Coordinates, FavoriteItem, HealthPlace, Medicine, favoriteKey } from "./types";
+import { LOCAL_ESSENTIAL_MEDICINES, LOCAL_MEDICINES_NOTICE } from "./medicines-data";
+import { AppPreferences, CombinedSearchItem, Coordinates, FavoriteItem, HealthPlace, Medicine, favoriteKey } from "./types";
 
 const FAVORITES_KEY = "pharmagarde:favorites:v1";
 const API_URL_KEY = "pharmagarde:api-url:v1";
+const PREFERENCES_KEY = "pharmagarde:preferences:v1";
 const INITIAL_API_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? "";
+
+const DEFAULT_PREFERENCES: AppPreferences = {
+  mode: "Système",
+  language: "Français",
+  mapType: "Standard",
+  city: "Ouagadougou",
+};
 
 type DataErrors = {
   pharmacies?: string;
@@ -34,6 +43,8 @@ type PharmaGardeContextValue = {
   refreshingLocation: boolean;
   searchQuery: string;
   setSearchQuery: (value: string) => void;
+  preferences: AppPreferences;
+  updatePreference: <Key extends keyof AppPreferences>(key: Key, value: AppPreferences[Key]) => Promise<void>;
   requestLocation: () => Promise<void>;
   refreshData: () => Promise<void>;
   toggleFavorite: (item: FavoriteItem) => Promise<void>;
@@ -56,17 +67,25 @@ function toFavoriteFromPlace(place: HealthPlace): FavoriteItem {
 }
 
 function toFavoriteFromMedicine(medicine: Medicine): FavoriteItem {
+  const price = medicine.priceApprox !== undefined ? `${medicine.priceApprox.toLocaleString("fr-FR")} FCFA` : undefined;
   return {
     id: medicine.id,
     entityType: "medicine",
     title: medicine.name,
     subtitle: medicine.category,
-    metadata: medicine.pharmaceuticalType,
+    metadata: [medicine.ageCategory, medicine.pharmaceuticalType, price].filter(Boolean).join(" · "),
   };
 }
 
 function asSearchText(item: FavoriteItem) {
   return [item.title, item.subtitle, item.metadata, item.entityType].filter(Boolean).join(" ").toLowerCase();
+}
+
+function normalizePreferences(value: Partial<AppPreferences> | null | undefined): AppPreferences {
+  return {
+    ...DEFAULT_PREFERENCES,
+    ...(value ?? {}),
+  };
 }
 
 export function PharmaGardeProvider({ children }: PropsWithChildren) {
@@ -75,19 +94,24 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
   const [locationMessage, setLocationMessage] = useState<string | undefined>(undefined);
   const [pharmacies, setPharmacies] = useState<HealthPlace[]>([]);
   const [clinics, setClinics] = useState<HealthPlace[]>([]);
-  const [medicines, setMedicines] = useState<Medicine[]>([]);
+  const [medicines, setMedicines] = useState<Medicine[]>(LOCAL_ESSENTIAL_MEDICINES);
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [errors, setErrors] = useState<DataErrors>({});
   const [loading, setLoading] = useState(false);
   const [refreshingLocation, setRefreshingLocation] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [preferences, setPreferences] = useState<AppPreferences>(DEFAULT_PREFERENCES);
 
   const isApiConfigured = apiBaseUrl.length > 0;
 
   useEffect(() => {
     let mounted = true;
     async function hydrate() {
-      const [storedApiUrl, storedFavorites] = await Promise.all([AsyncStorage.getItem(API_URL_KEY), AsyncStorage.getItem(FAVORITES_KEY)]);
+      const [storedApiUrl, storedFavorites, storedPreferences] = await Promise.all([
+        AsyncStorage.getItem(API_URL_KEY),
+        AsyncStorage.getItem(FAVORITES_KEY),
+        AsyncStorage.getItem(PREFERENCES_KEY),
+      ]);
       if (!mounted) return;
       if (storedApiUrl) setApiBaseUrl(normalizeBaseUrl(storedApiUrl));
       if (storedFavorites) {
@@ -96,6 +120,14 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
           if (Array.isArray(parsed)) setFavorites(parsed);
         } catch {
           setFavorites([]);
+        }
+      }
+      if (storedPreferences) {
+        try {
+          const parsed = JSON.parse(storedPreferences) as Partial<AppPreferences>;
+          setPreferences(normalizePreferences(parsed));
+        } catch {
+          setPreferences(DEFAULT_PREFERENCES);
         }
       }
     }
@@ -144,11 +176,10 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
     if (!isApiConfigured) {
       setPharmacies([]);
       setClinics([]);
-      setMedicines([]);
+      setMedicines(LOCAL_ESSENTIAL_MEDICINES);
       setErrors({
         pharmacies: "Configurez l’URL API dans le menu pour charger les pharmacies réelles.",
         clinics: "Configurez l’URL API dans le menu pour charger les cliniques réelles.",
-        medicines: "Configurez l’URL API dans le menu pour charger les médicaments réels.",
       });
       return;
     }
@@ -173,10 +204,10 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
       nextErrors.clinics = clinicResult.reason instanceof Error ? clinicResult.reason.message : "Erreur de chargement des cliniques.";
     }
 
-    if (medicineResult.status === "fulfilled") setMedicines(medicineResult.value);
+    if (medicineResult.status === "fulfilled" && medicineResult.value.length > 0) setMedicines(medicineResult.value);
     else {
-      setMedicines([]);
-      nextErrors.medicines = medicineResult.reason instanceof Error ? medicineResult.reason.message : "Erreur de chargement des médicaments.";
+      setMedicines(LOCAL_ESSENTIAL_MEDICINES);
+      nextErrors.medicines = medicineResult.status === "rejected" && medicineResult.reason instanceof Error ? `${medicineResult.reason.message} ${LOCAL_MEDICINES_NOTICE}` : LOCAL_MEDICINES_NOTICE;
     }
 
     setErrors(nextErrors);
@@ -195,6 +226,14 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
     const next = normalizeBaseUrl(value);
     setApiBaseUrl(next);
     await AsyncStorage.setItem(API_URL_KEY, next);
+  }, []);
+
+  const updatePreference = useCallback(async <Key extends keyof AppPreferences>(key: Key, value: AppPreferences[Key]) => {
+    setPreferences((current) => {
+      const next = { ...current, [key]: value };
+      AsyncStorage.setItem(PREFERENCES_KEY, JSON.stringify(next));
+      return next;
+    });
   }, []);
 
   const toggleFavorite = useCallback(async (item: FavoriteItem) => {
@@ -239,11 +278,13 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
     refreshingLocation,
     searchQuery,
     setSearchQuery,
+    preferences,
+    updatePreference,
     requestLocation,
     refreshData,
     toggleFavorite,
     searchResults,
-  }), [apiBaseUrl, clinics, errors, favoriteKeys, favorites, isApiConfigured, loading, locationMessage, medicines, pharmacies, refreshingLocation, requestLocation, refreshData, searchQuery, searchResults, toggleFavorite, updateApiBaseUrl, userLocation]);
+  }), [apiBaseUrl, clinics, errors, favoriteKeys, favorites, isApiConfigured, loading, locationMessage, medicines, pharmacies, preferences, refreshingLocation, requestLocation, refreshData, searchQuery, searchResults, toggleFavorite, updateApiBaseUrl, updatePreference, userLocation]);
 
   return <PharmaGardeContext.Provider value={value}>{children}</PharmaGardeContext.Provider>;
 }

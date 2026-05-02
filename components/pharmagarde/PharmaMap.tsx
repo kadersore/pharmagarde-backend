@@ -33,9 +33,7 @@ export function PharmaMap({ places, userLocation }: { places: HealthPlace[]; use
           </View>
         );
       })}
-      <View style={styles.legend}>
-        <Text style={styles.legendText}>P pharmacies · C cliniques</Text>
-      </View>
+
     </View>
   );
 }
@@ -48,6 +46,5 @@ const styles = StyleSheet.create({
   pinText: { color: "#FFFFFF", fontWeight: "900", fontSize: 13 },
   userDot: { position: "absolute", left: "48%", top: "47%", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, backgroundColor: "#102016" },
   userDotText: { color: "#FFFFFF", fontWeight: "800", fontSize: 12 },
-  legend: { position: "absolute", left: 14, right: 14, bottom: 14, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.92)", paddingHorizontal: 12, paddingVertical: 9 },
-  legendText: { color: "#102016", fontWeight: "800", fontSize: 12 },
+
 });
