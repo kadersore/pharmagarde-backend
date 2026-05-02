@@ -260,3 +260,10 @@
 - [x] Ajouter des tests vérifiant que Koudougou, Kaya, Ziniaré et autres villes ne retournent pas Ouagadougou/Bobo
 - [x] Valider TypeScript, Vitest et état serveur après refactorisation cache par ville
 - [x] Sauvegarder un checkpoint de livraison pour la correction définitive du filtrage par ville
+
+- [x] Corriger l’état vide client qui affiche “API réelle attendue” pour les villes secondaires ayant des données backend
+- [x] Vérifier que le changement de ville déclenche un chargement backend `GET /pharmacies?city=<ville>` et `GET /healthcare?city=<ville>`
+- [x] Remplacer le message générique par un état vide précis uniquement lorsque le backend renvoie réellement zéro résultat
+- [x] Ajouter des tests anti-régression côté client pour l’état vide des villes secondaires
+- [x] Valider TypeScript, Vitest et état serveur après correction de l’état vide par ville
+- [x] Sauvegarder un checkpoint de livraison pour la correction de l’affichage des villes secondaires

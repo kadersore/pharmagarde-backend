@@ -24,6 +24,20 @@ function normalizeBaseUrl(value?: string | null) {
   return trimmed.replace(/\/+$/, "");
 }
 
+function getDefaultApiBaseUrl() {
+  const configured = normalizeBaseUrl(process.env.EXPO_PUBLIC_API_BASE_URL ?? "");
+  if (configured) return configured;
+
+  if (typeof window !== "undefined" && window.location) {
+    const { protocol, hostname, origin } = window.location;
+    const previewApiHostname = hostname.replace(/^8081-/, "3000-");
+    if (previewApiHostname !== hostname) return normalizeBaseUrl(`${protocol}//${previewApiHostname}`);
+    return normalizeBaseUrl(origin);
+  }
+
+  return "";
+}
+
 function getString(record: Record<string, unknown>, keys: string[]) {
   for (const key of keys) {
     const value = record[key];
@@ -211,12 +225,12 @@ async function requestJson(baseUrl: string, path: string, coordinates?: Coordina
 }
 
 export async function fetchPharmacies(baseUrl: string, coordinates?: Coordinates, city?: string) {
-  const payload = await requestJson(baseUrl, "/pharmacies/nearby", coordinates, city);
+  const payload = await requestJson(baseUrl, "/pharmacies", coordinates, city);
   return asRecords(payload).map((item, index) => normalizePlace(item, "pharmacy", index)).filter((item): item is HealthPlace => item !== null);
 }
 
 export async function fetchClinics(baseUrl: string, coordinates?: Coordinates, city?: string) {
-  const payload = await requestJson(baseUrl, "/cliniques/nearby", coordinates, city);
+  const payload = await requestJson(baseUrl, "/healthcare", coordinates, city);
   return asRecords(payload).map((item, index) => normalizePlace(item, "clinic", index)).filter((item): item is HealthPlace => item !== null);
 }
 
@@ -225,4 +239,4 @@ export async function fetchMedicines(baseUrl: string) {
   return asRecords(payload).map((item, index) => normalizeMedicine(item, index)).filter((item): item is Medicine => item !== null);
 }
 
-export { normalizeBaseUrl };
+export { getDefaultApiBaseUrl, normalizeBaseUrl };

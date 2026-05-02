@@ -6,8 +6,15 @@ import { usePharmaGarde } from "@/lib/pharmagarde/app-state";
 import { HealthPlace } from "@/lib/pharmagarde/types";
 
 export default function ClinicsScreen() {
-  const { clinics, errors, refreshData } = usePharmaGarde();
+  const { clinics, errors, isApiConfigured, loading, preferences, refreshData } = usePharmaGarde();
   const [expandedPlaceId, setExpandedPlaceId] = useState<string | undefined>();
+  const selectedCity = preferences.city;
+  const emptyTitle = loading ? "Chargement des cliniques" : errors.clinics ? "Chargement impossible" : `Aucune clinique trouvée à ${selectedCity}`;
+  const emptyMessage = loading
+    ? `Recherche des structures de santé de ${selectedCity}…`
+    : errors.clinics ?? (isApiConfigured
+      ? `Le backend n’a retourné aucune structure de santé pour ${selectedCity}. Essayez d’actualiser ou choisissez une autre ville.`
+      : "Le backend n’est pas disponible dans cet environnement de test.");
 
   const header = (
     <View style={styles.headerNotice}>
@@ -31,7 +38,7 @@ export default function ClinicsScreen() {
           );
         }}
         ListHeaderComponent={header}
-        ListEmptyComponent={<EmptyState title="Aucune clinique disponible" message="Configurez un backend réel, puis actualisez depuis l’accueil ou le menu." actionLabel="Réessayer" onAction={refreshData} />}
+        ListEmptyComponent={<EmptyState title={emptyTitle} message={emptyMessage} actionLabel={errors.clinics ? "Réessayer" : undefined} onAction={errors.clinics ? refreshData : undefined} />}
         contentContainerStyle={styles.listContent}
       />
     </AppChrome>

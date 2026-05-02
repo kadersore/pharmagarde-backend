@@ -4,7 +4,7 @@ import { PropsWithChildren, createContext, useCallback, useContext, useEffect, u
 import { Platform } from "react-native";
 
 import { useThemeContext } from "@/lib/theme-provider";
-import { fetchClinics, fetchMedicines, fetchPharmacies, normalizeBaseUrl } from "./api";
+import { fetchClinics, fetchMedicines, fetchPharmacies, getDefaultApiBaseUrl, normalizeBaseUrl } from "./api";
 import { filterPlacesByCity, inferCityFromAddressParts, inferNearestKnownCity, normalizeCityName } from "./city-utils";
 import { DEFAULT_LOCATION, getDefaultLocationFallback } from "./location-policy";
 import { LOCAL_ESSENTIAL_MEDICINES, LOCAL_MEDICINES_NOTICE } from "./medicines-data";
@@ -14,7 +14,7 @@ import { AppPreferences, CombinedSearchItem, Coordinates, FavoriteItem, HealthPl
 const FAVORITES_KEY = "pharmagarde:favorites:v1";
 const API_URL_KEY = "pharmagarde:api-url:v1";
 const PREFERENCES_KEY = "pharmagarde:preferences:v1";
-const INITIAL_API_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? "";
+const INITIAL_API_URL = getDefaultApiBaseUrl();
 
 const DEFAULT_PREFERENCES: AppPreferences = {
   mode: "Clair",
@@ -215,8 +215,8 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
       setClinics([]);
       setMedicines(LOCAL_ESSENTIAL_MEDICINES);
       setErrors({
-        pharmacies: "Configurez l’URL API dans le menu pour charger les pharmacies réelles.",
-        clinics: "Configurez l’URL API dans le menu pour charger les cliniques réelles.",
+        pharmacies: "L’URL du backend est indisponible dans cet environnement. Réessayez depuis le domaine de prévisualisation ou après publication.",
+        clinics: "L’URL du backend est indisponible dans cet environnement. Réessayez depuis le domaine de prévisualisation ou après publication.",
       });
       return;
     }
