@@ -1,17 +1,24 @@
-import { PremiumMapExperience } from "@/components/pharmagarde/premium-map-experience";
+import { StyleSheet, Text, View } from "react-native";
+
+import { AppChrome } from "@/components/pharmagarde/app-ui";
+import { PharmaMap } from "@/components/pharmagarde/PharmaMap";
 import { usePharmaGarde } from "@/lib/pharmagarde/app-state";
 
 export default function MapScreen() {
-  const { pharmacies, clinics } = usePharmaGarde();
+  const { pharmacies, clinics, userLocation, preferences } = usePharmaGarde();
   const places = [...pharmacies, ...clinics];
 
   return (
-    <PremiumMapExperience
-      places={places}
-      title="Carte santé autour de vous"
-      subtitle="Pharmacies et cliniques synchronisées en temps réel"
-      emptyTitle="Aucun point de santé disponible"
-      emptyMessage="Les pharmacies et cliniques apparaîtront ici dès que l’API renverra des données exploitables."
-    />
+    <AppChrome subtitle="Carte">
+      <View style={styles.content}>
+        <Text style={styles.pageTitle}>Carte des pharmacies et cliniques</Text>
+        <PharmaMap places={places} userLocation={userLocation} mapType={preferences.mapType} />
+      </View>
+    </AppChrome>
   );
 }
+
+const styles = StyleSheet.create({
+  content: { flex: 1, paddingTop: 18 },
+  pageTitle: { color: "#102016", fontSize: 24, lineHeight: 31, fontWeight: "900", marginHorizontal: 16, marginBottom: 12 },
+});

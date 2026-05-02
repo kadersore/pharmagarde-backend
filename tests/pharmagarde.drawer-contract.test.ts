@@ -36,7 +36,6 @@ describe("drawer PharmaGarde", () => {
   it("relie le drawer aux écrans et préférences nécessaires", () => {
     const menu = readProjectFile("components/pharmagarde/menu-content.tsx");
     const mapScreen = readProjectFile("app/(tabs)/carte.tsx");
-    const premiumMap = readProjectFile("components/pharmagarde/premium-map-experience.tsx");
 
     expect(menu).toContain("updatePreference(\"mode\"");
     expect(menu).toContain("updatePreference(\"language\"");
@@ -47,7 +46,6 @@ describe("drawer PharmaGarde", () => {
     expect(menu).toContain("/pharmagarde/contribution/signaler-probleme");
     expect(menu).toContain("/pharmagarde/info/");
     expect(menu).toContain("/pharmagarde/abonnement");
-    expect(mapScreen).toContain("PremiumMapExperience");
-    expect(premiumMap).toContain("mapType={preferences.mapType}");
+    expect(mapScreen).toContain("mapType={preferences.mapType}");
   });
 });

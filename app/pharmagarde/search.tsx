@@ -3,32 +3,30 @@ import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native
 
 import { EmptyState, SearchField, SearchResultRow } from "@/components/pharmagarde/app-ui";
 import { ScreenContainer } from "@/components/screen-container";
-import { useColors } from "@/hooks/use-colors";
 import { usePharmaGarde } from "@/lib/pharmagarde/app-state";
 import { CombinedSearchItem } from "@/lib/pharmagarde/types";
 
 export default function SearchScreen() {
   const router = useRouter();
-  const colors = useColors();
   const { searchQuery, setSearchQuery, searchResults } = usePharmaGarde();
 
   const header = (
     <View>
       <View style={styles.topRow}>
-        <Text style={[styles.title, { color: colors.text }]}>Recherche</Text>
-        <TouchableOpacity style={[styles.closeButton, { backgroundColor: colors.surface, borderColor: colors.border, shadowColor: colors.text }]} onPress={() => router.back()}>
+        <Text style={styles.title}>Recherche</Text>
+        <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
           <Text style={styles.closeText}>Fermer</Text>
         </TouchableOpacity>
       </View>
       <SearchField value={searchQuery} onChangeText={setSearchQuery} placeholder="Nom, quartier, catégorie..." />
-      <Text style={[styles.count, { color: colors.muted }]}>{searchResults.length} résultat(s)</Text>
+      <Text style={styles.count}>{searchResults.length} résultat(s)</Text>
     </View>
   );
 
   return (
     <ScreenContainer className="" containerClassName="">
       <FlatList<CombinedSearchItem>
-        style={[styles.page, { backgroundColor: colors.background }]}
+        style={styles.page}
         data={searchResults}
         keyExtractor={(item) => `${item.entityType}-${item.id}`}
         renderItem={({ item }) => <SearchResultRow item={item} />}

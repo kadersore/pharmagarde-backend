@@ -3,7 +3,6 @@ import * as WebBrowser from "expo-web-browser";
 import { PropsWithChildren, useState } from "react";
 import { Image, Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
-import { useColors } from "@/hooks/use-colors";
 import { usePharmaGarde } from "@/lib/pharmagarde/app-state";
 import { CombinedSearchItem, FavoriteItem, HealthPlace, Medicine, favoriteKey } from "@/lib/pharmagarde/types";
 
@@ -34,19 +33,17 @@ async function callPhone(phone?: string) {
 }
 
 export function AppChrome({ children }: PropsWithChildren<{ subtitle?: string }>) {
-  const colors = useColors();
-  return <View style={[styles.page, { backgroundColor: colors.background }]}>{children}</View>;
+  return <View style={styles.page}>{children}</View>;
 }
 
 export function EmptyState({ title, message, actionLabel, onAction }: { title: string; message: string; actionLabel?: string; onAction?: () => void }) {
-  const colors = useColors();
   return (
     <View style={styles.emptyState}>
-      <View style={[styles.emptyIcon, { backgroundColor: `${BRAND_GREEN}15` }]}>
+      <View style={styles.emptyIcon}>
         <MaterialIcons name="local-pharmacy" size={30} color={BRAND_GREEN} />
       </View>
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>{title}</Text>
-      <Text style={[styles.emptyMessage, { color: colors.muted }]}>{message}</Text>
+      <Text style={styles.emptyTitle}>{title}</Text>
+      <Text style={styles.emptyMessage}>{message}</Text>
       {actionLabel && onAction ? (
         <TouchableOpacity accessibilityRole="button" style={styles.primaryButton} onPress={onAction}>
           <Text style={styles.primaryButtonText}>{actionLabel}</Text>
@@ -57,26 +54,24 @@ export function EmptyState({ title, message, actionLabel, onAction }: { title: s
 }
 
 export function StatusNotice({ message, tone = "info" }: { message?: string; tone?: "info" | "error" | "success" }) {
-  const colors = useColors();
   if (!message) return null;
   return (
-    <View style={[styles.notice, tone === "error" ? styles.noticeError : tone === "success" ? styles.noticeSuccess : styles.noticeInfo, { borderColor: tone === "error" ? "#FDA29B" : colors.border }]}>
-      <Text style={[styles.noticeText, { color: colors.text }, tone === "error" ? styles.noticeTextError : undefined]}>{message}</Text>
+    <View style={[styles.notice, tone === "error" ? styles.noticeError : tone === "success" ? styles.noticeSuccess : styles.noticeInfo]}>
+      <Text style={[styles.noticeText, tone === "error" ? styles.noticeTextError : undefined]}>{message}</Text>
     </View>
   );
 }
 
 export function SearchField({ value, onChangeText, placeholder = "Rechercher" }: { value: string; onChangeText: (value: string) => void; placeholder?: string }) {
-  const colors = useColors();
   return (
-    <View style={[styles.searchBox, { backgroundColor: colors.surface, borderColor: colors.border, shadowColor: colors.text }]}>
-      <MaterialIcons name="search" size={21} color={colors.muted} />
+    <View style={styles.searchBox}>
+      <MaterialIcons name="search" size={21} color={MUTED} />
       <TextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={colors.muted}
-        style={[styles.searchInput, { color: colors.text }]}
+        placeholderTextColor={MUTED}
+        style={styles.searchInput}
         returnKeyType="search"
       />
     </View>
@@ -84,7 +79,6 @@ export function SearchField({ value, onChangeText, placeholder = "Rechercher" }:
 }
 
 export function PlaceCard({ place }: { place: HealthPlace }) {
-  const colors = useColors();
   const { favoriteKeys, toggleFavorite } = usePharmaGarde();
   const favorite: FavoriteItem = {
     id: place.id,
@@ -99,31 +93,31 @@ export function PlaceCard({ place }: { place: HealthPlace }) {
   const active = favoriteKeys.has(favoriteKey(favorite.entityType, favorite.id));
   const accent = place.type === "pharmacy" ? BRAND_GREEN : BRAND_BLUE;
   return (
-    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, shadowColor: colors.text }]}>
+    <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={[styles.markerBadge, { backgroundColor: accent }]}>
           <MaterialIcons name={place.type === "pharmacy" ? "local-pharmacy" : "local-hospital"} size={20} color="#FFFFFF" />
         </View>
         <View style={styles.cardTitleArea}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>{place.name}</Text>
-          <Text style={[styles.cardSubtitle, { color: colors.muted }]}>{place.address ?? place.city ?? "Adresse non renseignée"}</Text>
+          <Text style={styles.cardTitle}>{place.name}</Text>
+          <Text style={styles.cardSubtitle}>{place.address ?? place.city ?? "Adresse non renseignée"}</Text>
         </View>
-        <TouchableOpacity accessibilityRole="button" style={[styles.favoriteButton, { backgroundColor: `${colors.border}55` }]} onPress={() => toggleFavorite(favorite)}>
-          <MaterialIcons name={active ? "favorite" : "favorite-border"} size={23} color={active ? ERROR : colors.muted} />
+        <TouchableOpacity accessibilityRole="button" style={styles.favoriteButton} onPress={() => toggleFavorite(favorite)}>
+          <MaterialIcons name={active ? "favorite" : "favorite-border"} size={23} color={active ? ERROR : MUTED} />
         </TouchableOpacity>
       </View>
       <View style={styles.metaRow}>
-        <Text style={[styles.metaPill, { color: colors.text }]}>{place.distanceKm !== undefined ? `${place.distanceKm.toFixed(1)} km` : "Distance inconnue"}</Text>
-        <Text style={[styles.metaPill, { color: colors.text }]}>{place.isOpen === true ? "Ouvert" : place.isOpen === false ? "Fermé" : "Statut inconnu"}</Text>
+        <Text style={styles.metaPill}>{place.distanceKm !== undefined ? `${place.distanceKm.toFixed(1)} km` : "Distance inconnue"}</Text>
+        <Text style={styles.metaPill}>{place.isOpen === true ? "Ouvert" : place.isOpen === false ? "Fermé" : "Statut inconnu"}</Text>
       </View>
       <View style={styles.cardActions}>
-        <TouchableOpacity accessibilityRole="button" style={[styles.secondaryButton, { borderColor: colors.border }, !place.phone ? styles.disabledButton : undefined]} disabled={!place.phone} onPress={() => callPhone(place.phone)}>
-          <MaterialIcons name="call" size={18} color={place.phone ? BRAND_GREEN : colors.muted} />
-          <Text style={[styles.secondaryButtonText, { color: colors.text }, !place.phone ? styles.disabledText : undefined]}>Appeler</Text>
+        <TouchableOpacity accessibilityRole="button" style={[styles.secondaryButton, !place.phone ? styles.disabledButton : undefined]} disabled={!place.phone} onPress={() => callPhone(place.phone)}>
+          <MaterialIcons name="call" size={18} color={place.phone ? BRAND_GREEN : MUTED} />
+          <Text style={[styles.secondaryButtonText, !place.phone ? styles.disabledText : undefined]}>Appeler</Text>
         </TouchableOpacity>
-        <TouchableOpacity accessibilityRole="button" style={[styles.secondaryButton, { borderColor: colors.border }, place.latitude === undefined || place.longitude === undefined ? styles.disabledButton : undefined]} disabled={place.latitude === undefined || place.longitude === undefined} onPress={() => openDirections(favorite)}>
-          <MaterialIcons name="directions" size={18} color={place.latitude !== undefined && place.longitude !== undefined ? BRAND_GREEN : colors.muted} />
-          <Text style={[styles.secondaryButtonText, { color: colors.text }, place.latitude === undefined || place.longitude === undefined ? styles.disabledText : undefined]}>Itinéraire</Text>
+        <TouchableOpacity accessibilityRole="button" style={[styles.secondaryButton, place.latitude === undefined || place.longitude === undefined ? styles.disabledButton : undefined]} disabled={place.latitude === undefined || place.longitude === undefined} onPress={() => openDirections(favorite)}>
+          <MaterialIcons name="directions" size={18} color={place.latitude !== undefined && place.longitude !== undefined ? BRAND_GREEN : MUTED} />
+          <Text style={[styles.secondaryButtonText, place.latitude === undefined || place.longitude === undefined ? styles.disabledText : undefined]}>Itinéraire</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -131,7 +125,6 @@ export function PlaceCard({ place }: { place: HealthPlace }) {
 }
 
 export function MedicineCard({ medicine }: { medicine: Medicine }) {
-  const colors = useColors();
   const { favoriteKeys, toggleFavorite } = usePharmaGarde();
   const favorite: FavoriteItem = {
     id: medicine.id,
@@ -142,58 +135,56 @@ export function MedicineCard({ medicine }: { medicine: Medicine }) {
   };
   const active = favoriteKeys.has(favoriteKey("medicine", medicine.id));
   return (
-    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, shadowColor: colors.text }]}>
+    <View style={styles.card}>
       <View style={styles.cardHeader}>
         {medicine.imageUrl ? <Image source={{ uri: medicine.imageUrl }} style={styles.medicineImage} /> : <View style={styles.medicineFallback}><MaterialIcons name="medication" size={23} color={BRAND_GREEN} /></View>}
         <View style={styles.cardTitleArea}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>{medicine.name}</Text>
-          <Text style={[styles.cardSubtitle, { color: colors.muted }]}>{medicine.category ?? "Catégorie non renseignée"}</Text>
+          <Text style={styles.cardTitle}>{medicine.name}</Text>
+          <Text style={styles.cardSubtitle}>{medicine.category ?? "Catégorie non renseignée"}</Text>
         </View>
-        <TouchableOpacity accessibilityRole="button" style={[styles.favoriteButton, { backgroundColor: `${colors.border}55` }]} onPress={() => toggleFavorite(favorite)}>
-          <MaterialIcons name={active ? "favorite" : "favorite-border"} size={23} color={active ? ERROR : colors.muted} />
+        <TouchableOpacity accessibilityRole="button" style={styles.favoriteButton} onPress={() => toggleFavorite(favorite)}>
+          <MaterialIcons name={active ? "favorite" : "favorite-border"} size={23} color={active ? ERROR : MUTED} />
         </TouchableOpacity>
       </View>
       <View style={styles.metaRow}>
-        <Text style={[styles.metaPill, { color: colors.text }]}>{medicine.ageCategory ?? "Tous"}</Text>
-        <Text style={[styles.metaPill, { color: colors.text }]}>{medicine.pharmaceuticalType ?? "Type inconnu"}</Text>
-        <Text style={[styles.pricePill, { color: colors.text }]}>{medicine.priceApprox !== undefined ? `${medicine.priceApprox.toLocaleString("fr-FR")} FCFA` : "Prix variable"}</Text>
+        <Text style={styles.metaPill}>{medicine.ageCategory ?? "Tous"}</Text>
+        <Text style={styles.metaPill}>{medicine.pharmaceuticalType ?? "Type inconnu"}</Text>
+        <Text style={styles.pricePill}>{medicine.priceApprox !== undefined ? `${medicine.priceApprox.toLocaleString("fr-FR")} FCFA` : "Prix variable"}</Text>
       </View>
-      {medicine.description ? <Text style={[styles.description, { color: colors.muted }]}>{medicine.description}</Text> : null}
+      {medicine.description ? <Text style={styles.description}>{medicine.description}</Text> : null}
     </View>
   );
 }
 
 export function SearchResultRow({ item }: { item: CombinedSearchItem }) {
-  const colors = useColors();
   const { favoriteKeys, toggleFavorite } = usePharmaGarde();
   const active = favoriteKeys.has(favoriteKey(item.entityType, item.id));
   return (
-    <View style={[styles.resultRow, { backgroundColor: colors.surface, borderColor: colors.border, shadowColor: colors.text }]}>
+    <View style={styles.resultRow}>
       <View style={styles.resultIcon}>
         <MaterialIcons name={item.entityType === "medicine" ? "medication" : item.entityType === "clinic" ? "local-hospital" : "local-pharmacy"} size={20} color={BRAND_GREEN} />
       </View>
       <View style={styles.resultText}>
-        <Text style={[styles.resultTitle, { color: colors.text }]}>{item.title}</Text>
-        <Text style={[styles.resultSubtitle, { color: colors.muted }]}>{item.sourceLabel}{item.subtitle ? ` · ${item.subtitle}` : ""}</Text>
+        <Text style={styles.resultTitle}>{item.title}</Text>
+        <Text style={styles.resultSubtitle}>{item.sourceLabel}{item.subtitle ? ` · ${item.subtitle}` : ""}</Text>
       </View>
       <TouchableOpacity accessibilityRole="button" style={styles.favoriteButton} onPress={() => toggleFavorite(item)}>
-          <MaterialIcons name={active ? "favorite" : "favorite-border"} size={22} color={active ? ERROR : colors.muted} />
+        <MaterialIcons name={active ? "favorite" : "favorite-border"} size={22} color={active ? ERROR : MUTED} />
       </TouchableOpacity>
     </View>
   );
 }
 
 export function FavoriteRow({ item }: { item: FavoriteItem }) {
-  const colors = useColors();
   const { toggleFavorite } = usePharmaGarde();
   return (
-    <View style={[styles.resultRow, { backgroundColor: colors.surface, borderColor: colors.border, shadowColor: colors.text }]}>
+    <View style={styles.resultRow}>
       <View style={styles.resultIcon}>
         <MaterialIcons name={item.entityType === "medicine" ? "medication" : item.entityType === "clinic" ? "local-hospital" : "local-pharmacy"} size={20} color={BRAND_GREEN} />
       </View>
       <View style={styles.resultText}>
-        <Text style={[styles.resultTitle, { color: colors.text }]}>{item.title}</Text>
-        <Text style={[styles.resultSubtitle, { color: colors.muted }]}>{entityLabel(item.entityType)}{item.subtitle ? ` · ${item.subtitle}` : ""}</Text>
+        <Text style={styles.resultTitle}>{item.title}</Text>
+        <Text style={styles.resultSubtitle}>{entityLabel(item.entityType)}{item.subtitle ? ` · ${item.subtitle}` : ""}</Text>
       </View>
       <TouchableOpacity accessibilityRole="button" style={styles.favoriteButton} onPress={() => toggleFavorite(item)}>
         <MaterialIcons name="favorite" size={22} color={ERROR} />
@@ -203,23 +194,22 @@ export function FavoriteRow({ item }: { item: FavoriteItem }) {
 }
 
 export function MenuRow({ icon, title, description, onPress }: { icon: keyof typeof MaterialIcons.glyphMap; title: string; description: string; onPress?: () => void }) {
-  const colors = useColors();
   return (
-    <TouchableOpacity accessibilityRole="button" style={[styles.menuRow, { backgroundColor: colors.surface, borderColor: colors.border, shadowColor: colors.text }]} onPress={onPress}>
-      <View style={[styles.menuIcon, { backgroundColor: `${BRAND_GREEN}15` }]}>
+    <TouchableOpacity accessibilityRole="button" style={styles.menuRow} onPress={onPress}>
+      <View style={styles.menuIcon}>
         <MaterialIcons name={icon} size={21} color={BRAND_GREEN} />
       </View>
       <View style={styles.menuText}>
-        <Text style={[styles.menuTitle, { color: colors.text }]}>{title}</Text>
-        <Text style={[styles.menuDescription, { color: colors.muted }]}>{description}</Text>
+        <Text style={styles.menuTitle}>{title}</Text>
+        <Text style={styles.menuDescription}>{description}</Text>
       </View>
-      <MaterialIcons name="chevron-right" size={22} color={colors.muted} />
+      <MaterialIcons name="chevron-right" size={22} color={MUTED} />
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: BACKGROUND, paddingTop: 92, paddingBottom: 96 },
+  page: { flex: 1, backgroundColor: BACKGROUND },
   topBar: { minHeight: 70, paddingHorizontal: 16, paddingBottom: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomColor: "rgba(255,255,255,0.24)", borderBottomWidth: 1, backgroundColor: BRAND_GREEN },
   iconButton: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.18)" },
   titleBlock: { flex: 1, alignItems: "center", paddingHorizontal: 8 },
@@ -240,7 +230,7 @@ const styles = StyleSheet.create({
   noticeTextError: { color: ERROR },
   searchBox: { margin: 16, height: 48, borderRadius: 12, backgroundColor: SURFACE, borderColor: BORDER, borderWidth: 1, flexDirection: "row", alignItems: "center", paddingHorizontal: 15, gap: 10, shadowColor: "#092A13", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
   searchInput: { flex: 1, fontSize: 15, color: FOREGROUND, paddingVertical: 8 },
-  card: { backgroundColor: SURFACE, borderRadius: 14, borderWidth: 1, borderColor: BORDER, marginHorizontal: 16, marginVertical: 8, padding: 16, shadowColor: "#092A13", shadowOpacity: 0.1, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
+  card: { backgroundColor: SURFACE, borderRadius: 12, borderWidth: 1, borderColor: BORDER, marginHorizontal: 16, marginVertical: 8, padding: 16, shadowColor: "#092A13", shadowOpacity: 0.08, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
   markerBadge: { width: 42, height: 42, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   cardTitleArea: { flex: 1 },
@@ -258,12 +248,12 @@ const styles = StyleSheet.create({
   medicineImage: { width: 50, height: 50, borderRadius: 12, backgroundColor: "#EAF8EF" },
   medicineFallback: { width: 50, height: 50, borderRadius: 12, backgroundColor: "#EAF8EF", alignItems: "center", justifyContent: "center" },
   description: { marginTop: 12, color: MUTED, fontSize: 13, lineHeight: 20 },
-  resultRow: { marginHorizontal: 16, marginVertical: 6, padding: 14, borderRadius: 14, backgroundColor: SURFACE, borderWidth: 1, borderColor: BORDER, flexDirection: "row", alignItems: "center", gap: 12, shadowColor: "#092A13", shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  resultRow: { marginHorizontal: 16, marginVertical: 6, padding: 14, borderRadius: 12, backgroundColor: SURFACE, borderWidth: 1, borderColor: BORDER, flexDirection: "row", alignItems: "center", gap: 12, shadowColor: "#092A13", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
   resultIcon: { width: 40, height: 40, borderRadius: 10, backgroundColor: "#EAF8EF", alignItems: "center", justifyContent: "center" },
   resultText: { flex: 1 },
   resultTitle: { color: FOREGROUND, fontSize: 15, lineHeight: 21, fontWeight: "800" },
   resultSubtitle: { color: MUTED, fontSize: 12, lineHeight: 17, marginTop: 2 },
-  menuRow: { flexDirection: "row", alignItems: "center", marginHorizontal: 16, marginVertical: 6, padding: 14, borderRadius: 14, borderColor: BORDER, borderWidth: 1, backgroundColor: SURFACE, gap: 12, shadowColor: "#092A13", shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  menuRow: { flexDirection: "row", alignItems: "center", marginHorizontal: 16, marginVertical: 6, padding: 14, borderRadius: 12, borderColor: BORDER, borderWidth: 1, backgroundColor: SURFACE, gap: 12, shadowColor: "#092A13", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
   menuIcon: { width: 40, height: 40, borderRadius: 10, backgroundColor: "#EAF8EF", alignItems: "center", justifyContent: "center" },
   menuText: { flex: 1 },
   menuTitle: { fontSize: 15, lineHeight: 20, color: FOREGROUND, fontWeight: "800" },
