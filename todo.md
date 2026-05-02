@@ -105,3 +105,15 @@
 - [x] Remplacer les popups de sélection par des modals centrés horizontalement et verticalement.
 - [x] Ajouter overlay sombre, bouton X, fermeture au clic extérieur, retour visuel de sélection et animation fade/scale aux modals.
 - [x] Valider TypeScript, tests et état Expo après correction du thème interne et des modals centrés.
+
+- [x] Implémenter un cache serveur global persistant pour pharmacies avec TTL 24h
+- [x] Implémenter un cache serveur global persistant pour healthcare avec TTL 7 jours
+- [x] Charger les données locales au démarrage du serveur comme source principale
+- [x] Ajouter des mises à jour planifiées serveur pour pharmacies toutes les 24h et healthcare tous les 7 jours
+- [x] Empêcher les endpoints publics de déclencher des appels directs à Google API
+- [x] Optimiser GET /pharmacies et GET /healthcare pour lire uniquement le cache/local storage
+- [x] Ajouter un fallback retournant les dernières données disponibles si Google API échoue
+- [x] Ajouter POST /admin/update-data pour forcer la mise à jour manuelle
+- [x] Ajouter ou adapter le cache côté client mobile pour limiter les appels au serveur
+- [x] Valider TypeScript, tests et état Expo après optimisation backend
+- [x] Sauvegarder un checkpoint de livraison après optimisation backend
