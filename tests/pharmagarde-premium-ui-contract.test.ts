@@ -26,6 +26,8 @@ describe("premium ui contract", () => {
 
     expect(shell).toContain("BlurView");
     expect(shell).toContain("DrawerOverlay");
+    expect(shell).toContain("DrawerBackdrop");
+    expect(shell).toContain('Platform.OS === "android"');
     expect(shell).toContain("Animated.timing");
     expect(shell).toContain("contentOpacity");
     expect(shell).toContain("usePremiumPalette");

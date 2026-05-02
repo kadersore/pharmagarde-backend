@@ -135,6 +135,14 @@ function AppFooter() {
   );
 }
 
+function DrawerBackdrop({ dark }: { dark: boolean }) {
+  if (Platform.OS === "android") {
+    return <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: dark ? "rgba(8, 12, 10, 0.52)" : "rgba(16, 32, 22, 0.28)" }]} />;
+  }
+
+  return <BlurView pointerEvents="none" intensity={dark ? 24 : 18} tint={dark ? "dark" : "light"} style={StyleSheet.absoluteFill} />;
+}
+
 function DrawerOverlay({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { width } = useWindowDimensions();
   const palette = usePremiumPalette();
@@ -161,7 +169,7 @@ function DrawerOverlay({ visible, onClose }: { visible: boolean; onClose: () => 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}> 
-        <BlurView intensity={palette.dark ? 24 : 18} tint={palette.dark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+        <DrawerBackdrop dark={palette.dark} />
         <Pressable accessibilityRole="button" accessibilityLabel="Fermer le menu" style={[StyleSheet.absoluteFill, { backgroundColor: palette.overlay }]} onPress={onClose} />
       </Animated.View>
       <Animated.View style={[styles.drawerPanel, { width: drawerWidth, backgroundColor: palette.background, borderColor: palette.border, transform: [{ translateX }] }]}> 

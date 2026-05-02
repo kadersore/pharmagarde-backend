@@ -136,3 +136,8 @@
 - [x] Vérifier qu’un seul shell global est rendu sur l’écran d’accueil et les onglets
 - [x] Valider TypeScript, Vitest et état Expo après correction du double header/footer
 - [x] Sauvegarder un checkpoint de livraison après correction du double header/footer
+- [x] Corriger l’erreur fatale déclenchée dans Expo au clic sur l’icône menu
+- [x] Vérifier la compatibilité mobile du drawer premium, notamment blur, animations et overlay
+- [x] Ajouter un test anti-régression couvrant le menu latéral et l’absence d’import natif instable
+- [x] Valider TypeScript, Vitest et état Expo après correction du crash menu
+- [x] Sauvegarder un checkpoint de livraison après correction du crash menu
