@@ -280,4 +280,4 @@
 - [x] Vérifier que le fichier principal exécuté contient bien ces routes
 - [x] Vérifier que le build génère `dist/index.js` avec les routes `/healthcare` et `/pharmacies`
 - [x] Tester localement les endpoints `/healthcare` et `/pharmacies` après build
-- [ ] Sauvegarder, pousser et confirmer la correction des routes REST publiques
+- [x] Sauvegarder, pousser et confirmer la correction des routes REST publiques
