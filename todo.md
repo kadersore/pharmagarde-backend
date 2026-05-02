@@ -281,3 +281,7 @@
 - [x] Vérifier que le build génère `dist/index.js` avec les routes `/healthcare` et `/pharmacies`
 - [x] Tester localement les endpoints `/healthcare` et `/pharmacies` après build
 - [x] Sauvegarder, pousser et confirmer la correction des routes REST publiques
+
+- [x] Vérifier qu’il ne reste aucune modification locale non poussée après la correction `/healthcare` et `/pharmacies`
+- [x] Pousser sur GitHub toute modification locale restante de la correction des routes REST publiques
+- [x] Confirmer à l’utilisateur le commit GitHub distant le plus récent
