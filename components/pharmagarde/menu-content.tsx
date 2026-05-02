@@ -5,11 +5,12 @@ import { ScrollView, StyleSheet } from "react-native";
 import { DrawerActionRow, DrawerFooter, DrawerHero, DrawerSection, DrawerSelectRow, DrawerSelectionModal, DrawerSwitchRow } from "@/components/pharmagarde/drawer-ui";
 import { useColors } from "@/hooks/use-colors";
 import { usePharmaGarde } from "@/lib/pharmagarde/app-state";
+import { PHARMAGARDE_CITIES } from "@/lib/pharmagarde/city-utils";
 import { AppLanguage, MapPreference } from "@/lib/pharmagarde/types";
 
 const LANGUAGE_OPTIONS: readonly AppLanguage[] = ["FR", "EN"];
 const MAP_OPTIONS: readonly MapPreference[] = ["Standard", "Satellite"];
-const CITY_OPTIONS = ["Ouagadougou", "Bobo-Dioulasso", "Koudougou", "Ouahigouya", "Banfora", "Fada N’Gourma", "Dédougou", "Tenkodogo"] as const;
+const CITY_OPTIONS = PHARMAGARDE_CITIES;
 
 type SelectorKey = "city" | "language" | "mapType";
 

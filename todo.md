@@ -207,3 +207,9 @@
 - [x] Ajouter ou adapter les tests de non-régression pour la disposition distance/statut sur la page Carte
 - [x] Valider TypeScript, Vitest et état Expo après ajustement des cartes de la page Carte
 - [x] Sauvegarder un checkpoint de livraison après alignement distance/statut sur la page Carte
+
+- [x] Remplacer la liste actuelle des villes par Ouagadougou, Bobo-Dioulasso, Koudougou, Ouahigouya, Kaya, Tenkodogo, Fada N'gourma, Dori, Gaoua, Banfora, Ziniaré, Dédougou et Manga
+- [x] Vérifier que les sélecteurs et filtres de ville utilisent uniquement la nouvelle liste de 13 villes
+- [x] Adapter les tests de non-régression liés aux villes et filtres géographiques
+- [x] Valider TypeScript, Vitest et état Expo après remplacement de la liste des villes
+- [x] Sauvegarder un checkpoint de livraison après remplacement de la liste des villes

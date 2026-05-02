@@ -4,9 +4,10 @@ import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { AppChrome } from "@/components/pharmagarde/app-ui";
 import { usePharmaGarde } from "@/lib/pharmagarde/app-state";
+import { PHARMAGARDE_CITIES } from "@/lib/pharmagarde/city-utils";
 
 const BRAND_GREEN = "#03C04A";
-const CITIES = ["Ouagadougou", "Bobo-Dioulasso", "Koudougou", "Ouahigouya", "Banfora", "Fada N’Gourma", "Dédougou", "Tenkodogo"];
+
 
 export default function CitySelectionScreen() {
   const router = useRouter();
@@ -23,7 +24,7 @@ export default function CitySelectionScreen() {
         <Text style={styles.title}>Changer de ville</Text>
         <Text style={styles.description}>Choisissez la ville qui servira de référence pour la carte, les recherches et les suggestions locales.</Text>
         <FlatList
-          data={CITIES}
+          data={PHARMAGARDE_CITIES}
           keyExtractor={(item) => item}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => {
