@@ -98,3 +98,10 @@
 - [x] Modifier le header du drawer en bloc plein collé en haut, sans espace supérieur ni arrondis inférieurs.
 - [x] Déplacer le bouton de fermeture en haut à droite du drawer et le garder accessible.
 - [x] Valider TypeScript, tests et état Expo après correction du drawer.
+
+- [x] Corriger le mode sombre pour qu’il utilise uniquement un thème interne global sans modifier le thème du téléphone.
+- [x] Sauvegarder et restaurer le choix clair/sombre depuis le stockage persistant de l’application.
+- [x] Vérifier que le thème interne s’applique aux backgrounds, textes, cartes, header, footer et drawer.
+- [x] Remplacer les popups de sélection par des modals centrés horizontalement et verticalement.
+- [x] Ajouter overlay sombre, bouton X, fermeture au clic extérieur, retour visuel de sélection et animation fade/scale aux modals.
+- [x] Valider TypeScript, tests et état Expo après correction du thème interne et des modals centrés.

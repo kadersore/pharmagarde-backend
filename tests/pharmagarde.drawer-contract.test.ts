@@ -21,6 +21,18 @@ describe("drawer PharmaGarde", () => {
     expect(menu).toContain("DrawerSelectionModal");
   });
 
+  it("utilise un thème interne persistant et des modals centrés animés", () => {
+    const drawerUi = readProjectFile("components/pharmagarde/drawer-ui.tsx");
+    const themeProvider = readProjectFile("lib/theme-provider.tsx");
+    const webSchemeHook = readProjectFile("hooks/use-color-scheme.web.ts");
+
+    expect(drawerUi).toContain("justifyContent: \"center\"");
+    expect(drawerUi).toContain("transform: [{ scale: modalScale }]");
+    expect(drawerUi).toContain("StyleSheet.absoluteFill");
+    expect(themeProvider).not.toContain("Appearance.setColorScheme");
+    expect(webSchemeHook).toContain("useThemeContext().colorScheme");
+  });
+
   it("relie le drawer aux écrans et préférences nécessaires", () => {
     const menu = readProjectFile("components/pharmagarde/menu-content.tsx");
     const mapScreen = readProjectFile("app/(tabs)/carte.tsx");

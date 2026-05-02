@@ -2,7 +2,8 @@ import { usePathname, useRouter } from "expo-router";
 import { useState } from "react";
 import { ScrollView, StyleSheet } from "react-native";
 
-import { DrawerActionRow, DrawerFooter, DrawerHero, DrawerSection, DrawerSelectRow, DrawerSelectionModal, DrawerSwitchRow, drawerColors } from "@/components/pharmagarde/drawer-ui";
+import { DrawerActionRow, DrawerFooter, DrawerHero, DrawerSection, DrawerSelectRow, DrawerSelectionModal, DrawerSwitchRow } from "@/components/pharmagarde/drawer-ui";
+import { useColors } from "@/hooks/use-colors";
 import { usePharmaGarde } from "@/lib/pharmagarde/app-state";
 import { AppLanguage, MapPreference } from "@/lib/pharmagarde/types";
 
@@ -48,6 +49,7 @@ export function MenuContent({ onClose }: MenuContentProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { preferences, updatePreference } = usePharmaGarde();
+  const colors = useColors();
   const [selector, setSelector] = useState<SelectorKey | null>(null);
 
   const navigate = (href: string) => {
@@ -59,7 +61,7 @@ export function MenuContent({ onClose }: MenuContentProps) {
 
   return (
     <>
-      <ScrollView style={styles.page} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={[styles.page, { backgroundColor: colors.background }]} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <DrawerHero onClose={onClose} />
 
         <DrawerSection title="Références">
@@ -151,6 +153,6 @@ export function MenuContent({ onClose }: MenuContentProps) {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: drawerColors.background },
+  page: { flex: 1 },
   content: { paddingBottom: 28 },
 });

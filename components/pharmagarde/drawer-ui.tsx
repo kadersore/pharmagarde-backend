@@ -1,16 +1,47 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { PropsWithChildren } from "react";
-import { FlatList, Modal, Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import { PropsWithChildren, useEffect, useMemo, useRef, useState } from "react";
+import { Animated, Easing, FlatList, Modal, Pressable, StyleSheet, Switch, Text, View } from "react-native";
+
+import { useColors } from "@/hooks/use-colors";
 
 const BRAND_GREEN = "#03C04A";
 const DARK_GREEN = "#02983B";
-const BACKGROUND = "#F6FBF8";
-const FOREGROUND = "#102016";
-const MUTED = "#667085";
-const BORDER = "#D6EBDD";
-const SURFACE = "#FFFFFF";
+
+type DrawerPalette = {
+  brandGreen: string;
+  darkGreen: string;
+  background: string;
+  foreground: string;
+  muted: string;
+  border: string;
+  surface: string;
+  softSurface: string;
+  selectedSurface: string;
+  overlay: string;
+  elevatedShadow: string;
+};
 
 export type DrawerIconName = keyof typeof MaterialIcons.glyphMap;
+
+function useDrawerPalette(): DrawerPalette {
+  const colors = useColors();
+  return useMemo(
+    () => ({
+      brandGreen: BRAND_GREEN,
+      darkGreen: DARK_GREEN,
+      background: colors.background,
+      foreground: colors.foreground,
+      muted: colors.muted,
+      border: colors.border,
+      surface: colors.surface,
+      softSurface: colors.background,
+      selectedSurface: colors.background === "#151718" ? "#12351F" : "#F0FFF5",
+      overlay: colors.background === "#151718" ? "rgba(0, 0, 0, 0.66)" : "rgba(16, 32, 22, 0.42)",
+      elevatedShadow: colors.background === "#151718" ? "#000000" : "#102016",
+    }),
+    [colors.background, colors.border, colors.foreground, colors.muted, colors.surface],
+  );
+}
 
 export function DrawerHero({ onClose }: { onClose: () => void }) {
   return (
@@ -36,10 +67,11 @@ export function DrawerHero({ onClose }: { onClose: () => void }) {
 }
 
 export function DrawerSection({ title, children }: PropsWithChildren<{ title: string }>) {
+  const palette = useDrawerPalette();
   return (
     <View style={styles.sectionWrap}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <View style={styles.sectionCard}>{children}</View>
+      <Text style={[styles.sectionTitle, { color: palette.foreground }]}>{title}</Text>
+      <View style={[styles.sectionCard, { backgroundColor: palette.surface, borderColor: palette.border, shadowColor: palette.elevatedShadow }]}>{children}</View>
     </View>
   );
 }
@@ -57,20 +89,25 @@ export function DrawerActionRow({
   active?: boolean;
   onPress: () => void;
 }) {
+  const palette = useDrawerPalette();
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected: !!active }}
       android_ripple={{ color: "rgba(3,192,74,0.12)", borderless: false }}
-      style={({ pressed }) => [styles.row, active && styles.activeRow, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.row,
+        { backgroundColor: active ? palette.selectedSurface : palette.surface, borderBottomColor: palette.border },
+        pressed && styles.pressed,
+      ]}
       onPress={onPress}
     >
-      <View style={[styles.rowIcon, active && styles.activeRowIcon]}>
+      <View style={[styles.rowIcon, { backgroundColor: active ? BRAND_GREEN : palette.selectedSurface }]}>
         <MaterialIcons name={icon} size={21} color={active ? "#FFFFFF" : BRAND_GREEN} />
       </View>
-      <Text style={[styles.rowTitle, active && styles.activeRowTitle]} numberOfLines={1}>{title}</Text>
-      {value ? <Text style={styles.rowValue} numberOfLines={1}>{value}</Text> : null}
-      <MaterialIcons name="chevron-right" size={22} color={active ? BRAND_GREEN : MUTED} />
+      <Text style={[styles.rowTitle, { color: active ? DARK_GREEN : palette.foreground }]} numberOfLines={1}>{title}</Text>
+      {value ? <Text style={[styles.rowValue, { color: DARK_GREEN }]} numberOfLines={1}>{value}</Text> : null}
+      <MaterialIcons name="chevron-right" size={22} color={active ? BRAND_GREEN : palette.muted} />
     </Pressable>
   );
 }
@@ -86,20 +123,21 @@ export function DrawerSelectRow({
   value: string;
   onPress: () => void;
 }) {
+  const palette = useDrawerPalette();
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${title} : ${value}`}
       android_ripple={{ color: "rgba(3,192,74,0.12)", borderless: false }}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.row, { backgroundColor: palette.surface, borderBottomColor: palette.border }, pressed && styles.pressed]}
       onPress={onPress}
     >
-      <View style={styles.rowIcon}>
+      <View style={[styles.rowIcon, { backgroundColor: palette.selectedSurface }]}>
         <MaterialIcons name={icon} size={21} color={BRAND_GREEN} />
       </View>
-      <Text style={styles.rowTitle} numberOfLines={1}>{title}</Text>
-      <Text style={styles.rowValue} numberOfLines={1}>{value}</Text>
-      <MaterialIcons name="expand-more" size={22} color={MUTED} />
+      <Text style={[styles.rowTitle, { color: palette.foreground }]} numberOfLines={1}>{title}</Text>
+      <Text style={[styles.rowValue, { color: DARK_GREEN }]} numberOfLines={1}>{value}</Text>
+      <MaterialIcons name="expand-more" size={22} color={palette.muted} />
     </Pressable>
   );
 }
@@ -115,20 +153,21 @@ export function DrawerSwitchRow({
   value: boolean;
   onValueChange: (next: boolean) => void;
 }) {
+  const palette = useDrawerPalette();
   return (
-    <View style={styles.row}>
-      <View style={styles.rowIcon}>
+    <View style={[styles.row, { backgroundColor: palette.surface, borderBottomColor: palette.border }]}>
+      <View style={[styles.rowIcon, { backgroundColor: palette.selectedSurface }]}>
         <MaterialIcons name={icon} size={21} color={BRAND_GREEN} />
       </View>
-      <Text style={styles.rowTitle} numberOfLines={1}>{title}</Text>
+      <Text style={[styles.rowTitle, { color: palette.foreground }]} numberOfLines={1}>{title}</Text>
       <Switch
         accessibilityRole="switch"
         accessibilityLabel={title}
         value={value}
         onValueChange={onValueChange}
-        trackColor={{ false: "#D6EBDD", true: "rgba(3,192,74,0.36)" }}
-        thumbColor={value ? BRAND_GREEN : "#FFFFFF"}
-        ios_backgroundColor="#D6EBDD"
+        trackColor={{ false: palette.border, true: "rgba(3,192,74,0.36)" }}
+        thumbColor={value ? BRAND_GREEN : palette.surface}
+        ios_backgroundColor={palette.border}
       />
     </View>
   );
@@ -149,23 +188,62 @@ export function DrawerSelectionModal<T extends string>({
   onSelect: (next: T) => void;
   onClose: () => void;
 }) {
+  const palette = useDrawerPalette();
+  const [mounted, setMounted] = useState(visible);
+  const progress = useRef(new Animated.Value(visible ? 1 : 0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      setMounted(true);
+      Animated.timing(progress, {
+        toValue: 1,
+        duration: 190,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+      return;
+    }
+
+    Animated.timing(progress, {
+      toValue: 0,
+      duration: 150,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) setMounted(false);
+    });
+  }, [progress, visible]);
+
+  if (!mounted) return null;
+
+  const modalScale = progress.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] });
+
   return (
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
-      <View style={styles.modalRoot}>
+    <Modal visible={mounted} transparent animationType="none" statusBarTranslucent onRequestClose={onClose}>
+      <Animated.View style={[styles.modalRoot, { backgroundColor: palette.overlay, opacity: progress }]}>
         <Pressable accessibilityRole="button" accessibilityLabel="Fermer la sélection" style={StyleSheet.absoluteFill} onPress={onClose} />
-        <View style={styles.sheet}>
-          <View style={styles.sheetHandle} />
-          <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>{title}</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Fermer" style={({ pressed }) => [styles.sheetClose, pressed && styles.pressed]} onPress={onClose}>
-              <MaterialIcons name="close" size={20} color={MUTED} />
+        <Animated.View
+          style={[
+            styles.dialog,
+            {
+              backgroundColor: palette.surface,
+              borderColor: palette.border,
+              shadowColor: palette.elevatedShadow,
+              transform: [{ scale: modalScale }],
+            },
+          ]}
+        >
+          <View style={[styles.dialogHeader, { borderBottomColor: palette.border }]}>
+            <Text style={[styles.dialogTitle, { color: palette.foreground }]}>{title}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Fermer" style={({ pressed }) => [styles.dialogClose, { backgroundColor: palette.softSurface }, pressed && styles.pressed]} onPress={onClose}>
+              <MaterialIcons name="close" size={20} color={palette.muted} />
             </Pressable>
           </View>
           <FlatList
             data={[...options]}
             keyExtractor={(item) => item}
             scrollEnabled={options.length > 6}
-            contentContainerStyle={styles.sheetList}
+            contentContainerStyle={styles.dialogList}
             renderItem={({ item }) => {
               const selected = item === value;
               return (
@@ -173,26 +251,32 @@ export function DrawerSelectionModal<T extends string>({
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
                   android_ripple={{ color: "rgba(3,192,74,0.12)", borderless: false }}
-                  style={({ pressed }) => [styles.optionRow, selected && styles.selectedOptionRow, pressed && styles.pressed]}
+                  style={({ pressed }) => [
+                    styles.optionRow,
+                    { backgroundColor: palette.surface, borderColor: palette.border },
+                    selected && { backgroundColor: palette.selectedSurface, borderColor: BRAND_GREEN },
+                    pressed && styles.pressed,
+                  ]}
                   onPress={() => onSelect(item)}
                 >
-                  <Text style={[styles.optionText, selected && styles.selectedOptionText]}>{item}</Text>
+                  <Text style={[styles.optionText, { color: selected ? DARK_GREEN : palette.foreground }]}>{item}</Text>
                   {selected ? <MaterialIcons name="check-circle" size={22} color={BRAND_GREEN} /> : null}
                 </Pressable>
               );
             }}
           />
-        </View>
-      </View>
+        </Animated.View>
+      </Animated.View>
     </Modal>
   );
 }
 
 export function DrawerFooter() {
+  const palette = useDrawerPalette();
   return (
-    <View style={styles.footer}>
-      <Text style={styles.footerText}>Version communautaire · Burkina Faso</Text>
-      <View style={styles.footerBadge}>
+    <View style={[styles.footer, { backgroundColor: palette.selectedSurface, borderColor: palette.border }]}>
+      <Text style={[styles.footerText, { color: palette.muted }]}>Version communautaire · Burkina Faso</Text>
+      <View style={[styles.footerBadge, { backgroundColor: palette.surface }]}>
         <MaterialIcons name="verified" size={15} color={DARK_GREEN} />
         <Text style={styles.footerBadgeText}>#03C04A</Text>
       </View>
@@ -203,11 +287,11 @@ export function DrawerFooter() {
 export const drawerColors = {
   brandGreen: BRAND_GREEN,
   darkGreen: DARK_GREEN,
-  background: BACKGROUND,
-  foreground: FOREGROUND,
-  muted: MUTED,
-  border: BORDER,
-  surface: SURFACE,
+  background: "#F6FBF8",
+  foreground: "#102016",
+  muted: "#667085",
+  border: "#D6EBDD",
+  surface: "#FFFFFF",
 };
 
 const styles = StyleSheet.create({
@@ -218,29 +302,23 @@ const styles = StyleSheet.create({
   heroTitle: { color: "#FFFFFF", fontSize: 23, lineHeight: 29, fontWeight: "900", marginTop: 2 },
   closeButton: { position: "absolute", top: 18, right: 16, width: 42, height: 42, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" },
   sectionWrap: { marginHorizontal: 16, marginTop: 16 },
-  sectionTitle: { color: FOREGROUND, fontSize: 14, lineHeight: 20, fontWeight: "900", letterSpacing: 0.4, textTransform: "uppercase", marginBottom: 8 },
-  sectionCard: { borderRadius: 12, backgroundColor: SURFACE, borderWidth: 1, borderColor: BORDER, overflow: "hidden", shadowColor: "#092A13", shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
-  row: { minHeight: 58, paddingHorizontal: 14, paddingVertical: 8, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: BORDER, backgroundColor: SURFACE },
-  activeRow: { backgroundColor: "#F0FFF5" },
+  sectionTitle: { fontSize: 14, lineHeight: 20, fontWeight: "900", letterSpacing: 0.4, textTransform: "uppercase", marginBottom: 8 },
+  sectionCard: { borderRadius: 12, borderWidth: 1, overflow: "hidden", shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
+  row: { minHeight: 58, paddingHorizontal: 14, paddingVertical: 8, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: StyleSheet.hairlineWidth },
   pressed: { opacity: 0.78, transform: [{ scale: 0.995 }] },
-  rowIcon: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "#EAF8EF" },
-  activeRowIcon: { backgroundColor: BRAND_GREEN },
-  rowTitle: { flex: 1, color: FOREGROUND, fontSize: 15, lineHeight: 20, fontWeight: "900" },
-  activeRowTitle: { color: DARK_GREEN },
-  rowValue: { maxWidth: 120, color: DARK_GREEN, fontSize: 12, lineHeight: 17, fontWeight: "900", textAlign: "right" },
-  modalRoot: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(16, 32, 22, 0.38)" },
-  sheet: { maxHeight: "78%", marginHorizontal: 10, marginBottom: 10, borderRadius: 16, backgroundColor: SURFACE, borderWidth: 1, borderColor: BORDER, overflow: "hidden", shadowColor: "#102016", shadowOpacity: 0.18, shadowRadius: 18, shadowOffset: { width: 0, height: -4 }, elevation: 16 },
-  sheetHandle: { alignSelf: "center", width: 42, height: 4, borderRadius: 2, marginTop: 10, marginBottom: 4, backgroundColor: "#D6EBDD" },
-  sheetHeader: { minHeight: 54, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: BORDER },
-  sheetTitle: { color: FOREGROUND, fontSize: 18, lineHeight: 24, fontWeight: "900" },
-  sheetClose: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "#F6FBF8" },
-  sheetList: { padding: 12, gap: 8 },
-  optionRow: { minHeight: 52, borderRadius: 12, borderWidth: 1, borderColor: BORDER, backgroundColor: "#FFFFFF", paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
-  selectedOptionRow: { backgroundColor: "#F0FFF5", borderColor: BRAND_GREEN },
-  optionText: { flex: 1, color: FOREGROUND, fontSize: 15, lineHeight: 21, fontWeight: "800" },
-  selectedOptionText: { color: DARK_GREEN, fontWeight: "900" },
-  footer: { margin: 16, marginTop: 16, padding: 14, borderRadius: 12, backgroundColor: "#EAF8EF", borderWidth: 1, borderColor: BORDER, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
-  footerText: { flex: 1, color: MUTED, fontSize: 12, lineHeight: 17, fontWeight: "700" },
-  footerBadge: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 8, backgroundColor: "#FFFFFF" },
+  rowIcon: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  rowTitle: { flex: 1, fontSize: 15, lineHeight: 20, fontWeight: "900" },
+  rowValue: { maxWidth: 120, fontSize: 12, lineHeight: 17, fontWeight: "900", textAlign: "right" },
+  modalRoot: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 22, paddingVertical: 28 },
+  dialog: { width: "100%", maxWidth: 420, maxHeight: "78%", borderRadius: 14, borderWidth: 1, overflow: "hidden", shadowOpacity: 0.2, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 18 },
+  dialogHeader: { minHeight: 58, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: StyleSheet.hairlineWidth },
+  dialogTitle: { flex: 1, fontSize: 18, lineHeight: 24, fontWeight: "900", paddingRight: 12 },
+  dialogClose: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  dialogList: { padding: 12, gap: 8 },
+  optionRow: { minHeight: 52, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  optionText: { flex: 1, fontSize: 15, lineHeight: 21, fontWeight: "800" },
+  footer: { margin: 16, marginTop: 16, padding: 14, borderRadius: 12, borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
+  footerText: { flex: 1, fontSize: 12, lineHeight: 17, fontWeight: "700" },
+  footerBadge: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 8 },
   footerBadgeText: { color: DARK_GREEN, fontSize: 12, fontWeight: "900" },
 });
