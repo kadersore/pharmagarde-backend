@@ -83,11 +83,16 @@ describe("cartes pharmacies et cliniques", () => {
     expect(placeCard).toContain("ratingLabel");
     expect(placeCard).toContain("phoneLabel");
     expect(placeCard.indexOf("favorite-border")).toBeGreaterThan(placeCard.indexOf("{expanded ? ("));
+    expect(mapPlaceCard).toContain("styles.placeHeaderMeta");
+    expect(mapPlaceCard.indexOf("styles.placeHeaderMeta")).toBeLessThan(mapPlaceCard.indexOf("{expanded ? ("));
+    expect(mapPlaceCard).toContain("Distance inconnue");
+    expect(mapPlaceCard).toContain("Statut inconnu");
     expect(mapPlaceCard).toContain("const [expanded, setExpanded] = useState(false)");
     expect(mapPlaceCard).toContain("styles.placeInfoRow");
     expect(mapPlaceCard).toContain("ratingLabel");
     expect(mapPlaceCard).toContain("phoneLabel");
     expect(appUi).toContain("placeHeaderMeta: { alignItems: \"flex-end\", gap: 6, flexShrink: 0 }");
+    expect(carte).toContain("placeHeaderMeta: { alignItems: \"flex-end\", gap: 6, maxWidth: 132 }");
   });
 });
 

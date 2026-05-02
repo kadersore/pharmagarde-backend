@@ -199,3 +199,11 @@
 - [x] Ajouter ou adapter les tests de non-régression pour les cartes pharmacies et cliniques repliables
 - [x] Valider TypeScript, Vitest et état Expo après modification des cartes pharmacies et cliniques
 - [x] Sauvegarder un checkpoint de livraison après modification des cartes pharmacies et cliniques repliables
+
+- [x] Aligner la position de la distance dans les cartes pharmacies de la page Carte avec les autres pages de liste
+- [x] Aligner la position du statut dans les cartes pharmacies de la page Carte avec les autres pages de liste
+- [x] Aligner la position de la distance dans les cartes cliniques de la page Carte avec les autres pages de liste
+- [x] Aligner la position du statut dans les cartes cliniques de la page Carte avec les autres pages de liste
+- [x] Ajouter ou adapter les tests de non-régression pour la disposition distance/statut sur la page Carte
+- [x] Valider TypeScript, Vitest et état Expo après ajustement des cartes de la page Carte
+- [x] Sauvegarder un checkpoint de livraison après alignement distance/statut sur la page Carte

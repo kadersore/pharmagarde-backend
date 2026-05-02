@@ -82,16 +82,13 @@ function MapPlaceCard({ place, active, favorite, onSelect, onToggleFavorite }: {
           <Text style={[styles.placeTitle, { color: palette.text }]} numberOfLines={1}>{place.name}</Text>
           <Text style={[styles.placeSubtitle, { color: palette.muted }]} numberOfLines={1}>{place.address ?? place.city ?? "Adresse non renseignée"}</Text>
         </View>
-      </View>
-
-      <View style={styles.metaRow}>
-        <View style={[styles.metaPill, { backgroundColor: palette.cardMuted }]}> 
-          <MaterialIcons name="near-me" size={14} color={accent} />
-          <Text style={[styles.metaText, { color: palette.text }]}>{place.distanceKm !== undefined ? `${place.distanceKm.toFixed(1)} km` : "Distance inconnue"}</Text>
-        </View>
-        <View style={[styles.metaPill, { backgroundColor: place.isOpen === false ? "rgba(225, 29, 72, 0.1)" : palette.softGreen }]}> 
-          <MaterialIcons name={place.isOpen === false ? "schedule" : "verified"} size={14} color={place.isOpen === false ? palette.danger : palette.success} />
-          <Text style={[styles.metaText, { color: place.isOpen === false ? palette.danger : palette.success }]}>{place.isOpen === true ? "Ouvert" : place.isOpen === false ? "Fermé" : place.type === "pharmacy" ? "Garde à vérifier" : "Service disponible"}</Text>
+        <View style={styles.placeHeaderMeta}>
+          <View style={[styles.metaPill, { backgroundColor: palette.cardMuted }]}> 
+            <Text style={[styles.metaText, { color: palette.text }]}>{place.distanceKm !== undefined ? `${place.distanceKm.toFixed(1)} km` : "Distance inconnue"}</Text>
+          </View>
+          <View style={[styles.metaPill, { backgroundColor: place.isOpen === false ? "rgba(225, 29, 72, 0.1)" : palette.softGreen }]}> 
+            <Text style={[styles.metaText, { color: place.isOpen === false ? palette.danger : palette.success }]}>{place.isOpen === true ? "Ouvert" : place.isOpen === false ? "Fermé" : "Statut inconnu"}</Text>
+          </View>
         </View>
       </View>
 
@@ -317,6 +314,7 @@ const styles = StyleSheet.create({
   placeHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
   placeIcon: { width: 44, height: 44, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   placeTitleArea: { flex: 1 },
+  placeHeaderMeta: { alignItems: "flex-end", gap: 6, maxWidth: 132 },
   placeTitle: { fontSize: 15, lineHeight: 20, fontWeight: "900" },
   placeSubtitle: { fontSize: 12, lineHeight: 17, fontWeight: "700", marginTop: 2 },
   favoriteButton: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
