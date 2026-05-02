@@ -32,6 +32,14 @@ describe("premium ui contract", () => {
     expect(shell).toContain("haptic.light");
   });
 
+  it("évite l’imbrication du shell global dans le layout des onglets", () => {
+    const tabsLayout = read("app/(tabs)/_layout.tsx");
+    const appUi = read("components/pharmagarde/app-ui.tsx");
+
+    expect(tabsLayout).not.toContain("GlobalAppShell");
+    expect(appUi).toContain("return <GlobalAppShell subtitle={subtitle}>{children}</GlobalAppShell>;");
+  });
+
   it("centralise la palette et les haptics premium autour du vert PharmaGarde", () => {
     const premiumUi = read("lib/pharmagarde/premium-ui.ts");
     const theme = read("theme.config.js");

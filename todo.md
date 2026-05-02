@@ -131,3 +131,8 @@
 - [x] Harmoniser typographie, espacements, arrondis, ombres et couleur principale #03C04A dans toute l’application
 - [x] Valider TypeScript, Vitest et état Expo après refonte UI/UX premium
 - [x] Sauvegarder un checkpoint de livraison après refonte UI/UX premium
+
+- [x] Corriger la duplication du header et du footer visible à l’ouverture de l’application
+- [x] Vérifier qu’un seul shell global est rendu sur l’écran d’accueil et les onglets
+- [x] Valider TypeScript, Vitest et état Expo après correction du double header/footer
+- [x] Sauvegarder un checkpoint de livraison après correction du double header/footer

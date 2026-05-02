@@ -2,7 +2,6 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as WebBrowser from "expo-web-browser";
 import { PropsWithChildren } from "react";
 import { Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { useSegments } from "expo-router";
 
 import { GlobalAppShell } from "@/components/pharmagarde/app-shell";
 import { usePharmaGarde } from "@/lib/pharmagarde/app-state";
@@ -27,13 +26,6 @@ async function callPhone(phone?: string) {
 }
 
 export function AppChrome({ children, subtitle }: PropsWithChildren<{ subtitle?: string }>) {
-  const segments = useSegments();
-  const isInsideTabs = segments[0] === "(tabs)";
-
-  if (isInsideTabs) {
-    return <>{children}</>;
-  }
-
   return <GlobalAppShell subtitle={subtitle}>{children}</GlobalAppShell>;
 }
 
