@@ -154,3 +154,7 @@
 - [x] Appliquer la couleur verte de marque au header global de l’application
 - [x] Valider TypeScript et état Expo après modification de la couleur du header
 - [x] Sauvegarder un checkpoint de livraison après modification de la couleur du header
+
+- [x] Appliquer un vert plus clair que le header aux boutons et à la barre de recherche du header
+- [x] Valider TypeScript, Vitest et état Expo après ajustement des éléments du header
+- [x] Sauvegarder un checkpoint de livraison après ajustement vert clair des éléments du header
