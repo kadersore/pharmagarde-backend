@@ -285,3 +285,9 @@
 - [x] Vérifier qu’il ne reste aucune modification locale non poussée après la correction `/healthcare` et `/pharmacies`
 - [x] Pousser sur GitHub toute modification locale restante de la correction des routes REST publiques
 - [x] Confirmer à l’utilisateur le commit GitHub distant le plus récent
+
+- [x] Vérifier la structure du dépôt GitHub correct `kadersore/pharmagarde-backend`
+- [x] Reporter la correction backend `/healthcare` et `/pharmacies` dans le dépôt `pharmagarde-backend` sans écraser son historique
+- [x] Valider les tests ou le build disponibles dans `pharmagarde-backend`
+- [x] Pousser la correction sur `https://github.com/kadersore/pharmagarde-backend`
+- [x] Confirmer à l’utilisateur le dernier commit du dépôt backend correct
