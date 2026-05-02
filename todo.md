@@ -267,3 +267,8 @@
 - [x] Ajouter des tests anti-régression côté client pour l’état vide des villes secondaires
 - [x] Valider TypeScript, Vitest et état serveur après correction de l’état vide par ville
 - [x] Sauvegarder un checkpoint de livraison pour la correction de l’affichage des villes secondaires
+
+- [ ] Vérifier l’état Git local et le dépôt distant GitHub de l’application Expo
+- [ ] Commiter la version corrigée des villes secondaires et de l’état vide client
+- [ ] Pousser la version Expo corrigée sur GitHub
+- [ ] Vérifier le lien GitHub et confirmer le push à l’utilisateur
