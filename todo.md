@@ -213,3 +213,9 @@
 - [x] Adapter les tests de non-régression liés aux villes et filtres géographiques
 - [x] Valider TypeScript, Vitest et état Expo après remplacement de la liste des villes
 - [x] Sauvegarder un checkpoint de livraison après remplacement de la liste des villes
+
+- [x] Implémenter un accordion exclusif sur les listes de pharmacies et cliniques afin qu’une seule carte soit ouverte à la fois
+- [x] Synchroniser le comportement exclusif des cartes repliables sur la page Carte si applicable
+- [x] Ajouter ou adapter les tests UI pour vérifier la fermeture automatique de la carte précédemment ouverte
+- [x] Valider TypeScript, Vitest et état Expo après l’accordion exclusif
+- [x] Sauvegarder un checkpoint de livraison pour l’accordion exclusif

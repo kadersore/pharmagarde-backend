@@ -54,9 +54,8 @@ function SkeletonCard() {
   );
 }
 
-function MapPlaceCard({ place, active, favorite, onSelect, onToggleFavorite }: { place: HealthPlace; active: boolean; favorite: boolean; onSelect: () => void; onToggleFavorite: () => void }) {
+function MapPlaceCard({ place, active, favorite, isExpanded, onSelect, onToggle, onToggleFavorite }: { place: HealthPlace; active: boolean; favorite: boolean; isExpanded: boolean; onSelect: () => void; onToggle: () => void; onToggleFavorite: () => void }) {
   const palette = usePremiumPalette();
-  const [expanded, setExpanded] = useState(false);
   const accent = place.type === "pharmacy" ? palette.brand : palette.clinic;
   const canCall = !!place.phone;
   const canNavigate = place.latitude !== undefined && place.longitude !== undefined;
@@ -66,12 +65,12 @@ function MapPlaceCard({ place, active, favorite, onSelect, onToggleFavorite }: {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${place.name}. Appuyer pour ${expanded ? "masquer" : "afficher"} les actions.`}
+      accessibilityLabel={`${place.name}. Appuyer pour ${isExpanded ? "masquer" : "afficher"} les actions.`}
       style={({ pressed }) => [styles.placeCard, { backgroundColor: palette.card, borderColor: active ? accent : palette.border, borderWidth: active ? 2 : 1 }, pressed ? styles.pressedCard : undefined]}
       onPress={() => {
         haptic.selection();
         onSelect();
-        setExpanded((current) => !current);
+        onToggle();
       }}
     >
       <View style={styles.placeHeader}>
@@ -92,7 +91,7 @@ function MapPlaceCard({ place, active, favorite, onSelect, onToggleFavorite }: {
         </View>
       </View>
 
-      {expanded ? (
+      {isExpanded ? (
         <View style={styles.placeExpandableContent}>
           <View style={styles.placeInfoRow}>
             <Pressable
@@ -159,6 +158,7 @@ export default function CarteScreen() {
   const allPlaces = useMemo(() => [...pharmacies, ...clinics].sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999)), [clinics, pharmacies]);
   const visiblePlaces = useMemo(() => filter === "all" ? allPlaces : allPlaces.filter((place) => place.type === filter), [allPlaces, filter]);
   const [selectedId, setSelectedId] = useState<string | undefined>(() => visiblePlaces[0] ? keyFor(visiblePlaces[0]) : undefined);
+  const [expandedPlaceId, setExpandedPlaceId] = useState<string | undefined>();
   const sheetHeight = Math.min(Math.max(height * 0.66, 440), 640);
   const snap = useMemo(() => ({ full: 0, mid: sheetHeight * 0.42, min: sheetHeight - 104 }), [sheetHeight]);
   const translateY = useRef(new Animated.Value(snap.mid)).current;
@@ -276,7 +276,18 @@ export default function CarteScreen() {
               keyExtractor={keyFor}
               renderItem={({ item }) => {
                 const favorite = favoriteKeys.has(favoriteKey(item.type, item.id));
-                return <MapPlaceCard place={item} active={keyFor(item) === selectedId} favorite={favorite} onSelect={() => selectPlace(item)} onToggleFavorite={() => toggleFavorite(favoriteFromPlace(item))} />;
+                const itemKey = keyFor(item);
+                return (
+                  <MapPlaceCard
+                    place={item}
+                    active={itemKey === selectedId}
+                    favorite={favorite}
+                    isExpanded={expandedPlaceId === itemKey}
+                    onSelect={() => selectPlace(item)}
+                    onToggle={() => setExpandedPlaceId((current) => current === itemKey ? undefined : itemKey)}
+                    onToggleFavorite={() => toggleFavorite(favoriteFromPlace(item))}
+                  />
+                );
               }}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.sheetList}

@@ -76,23 +76,39 @@ describe("cartes pharmacies et cliniques", () => {
     const mapPlaceCard = carte.slice(carte.indexOf("function MapPlaceCard"), carte.indexOf("export default function CarteScreen"));
 
     expect(placeCard).toContain("styles.placeHeaderMeta");
-    expect(placeCard.indexOf("styles.placeHeaderMeta")).toBeLessThan(placeCard.indexOf("{expanded ? ("));
-    expect(placeCard).toContain("const [expanded, setExpanded] = useState(false)");
-    expect(placeCard).toContain("setExpanded((current) => !current)");
+    expect(placeCard.indexOf("styles.placeHeaderMeta")).toBeLessThan(placeCard.indexOf("{isExpanded ? ("));
+    expect(placeCard).toContain("isExpanded: boolean");
+    expect(placeCard).toContain("onToggle: () => void");
+    expect(placeCard).toContain("onPress={() => { haptic.selection(); onToggle(); }}");
+    expect(placeCard).not.toContain("const [expanded, setExpanded] = useState(false)");
     expect(placeCard).toContain("styles.placeInfoRow");
     expect(placeCard).toContain("ratingLabel");
     expect(placeCard).toContain("phoneLabel");
-    expect(placeCard.indexOf("favorite-border")).toBeGreaterThan(placeCard.indexOf("{expanded ? ("));
+    expect(placeCard.indexOf("favorite-border")).toBeGreaterThan(placeCard.indexOf("{isExpanded ? ("));
     expect(mapPlaceCard).toContain("styles.placeHeaderMeta");
-    expect(mapPlaceCard.indexOf("styles.placeHeaderMeta")).toBeLessThan(mapPlaceCard.indexOf("{expanded ? ("));
+    expect(mapPlaceCard.indexOf("styles.placeHeaderMeta")).toBeLessThan(mapPlaceCard.indexOf("{isExpanded ? ("));
     expect(mapPlaceCard).toContain("Distance inconnue");
     expect(mapPlaceCard).toContain("Statut inconnu");
-    expect(mapPlaceCard).toContain("const [expanded, setExpanded] = useState(false)");
+    expect(mapPlaceCard).toContain("isExpanded: boolean");
+    expect(mapPlaceCard).toContain("onToggle: () => void");
+    expect(mapPlaceCard).not.toContain("const [expanded, setExpanded] = useState(false)");
     expect(mapPlaceCard).toContain("styles.placeInfoRow");
     expect(mapPlaceCard).toContain("ratingLabel");
     expect(mapPlaceCard).toContain("phoneLabel");
     expect(appUi).toContain("placeHeaderMeta: { alignItems: \"flex-end\", gap: 6, flexShrink: 0 }");
     expect(carte).toContain("placeHeaderMeta: { alignItems: \"flex-end\", gap: 6, maxWidth: 132 }");
+  });
+
+  it("contrôle l’ouverture depuis le parent pour garantir un accordion exclusif", () => {
+    const index = read("app/(tabs)/index.tsx");
+    const clinics = read("app/(tabs)/cliniques.tsx");
+    const carte = read("app/(tabs)/carte.tsx");
+
+    for (const source of [index, clinics, carte]) {
+      expect(source).toContain("const [expandedPlaceId, setExpandedPlaceId] = useState<string | undefined>();");
+      expect(source).toContain("isExpanded={expandedPlaceId === itemKey}");
+      expect(source).toContain("setExpandedPlaceId((current) => current === itemKey ? undefined : itemKey)");
+    }
   });
 });
 

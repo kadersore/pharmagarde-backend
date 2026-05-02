@@ -80,10 +80,9 @@ export function SearchField({ value, onChangeText, placeholder = "Rechercher" }:
   );
 }
 
-export function PlaceCard({ place }: { place: HealthPlace }) {
+export function PlaceCard({ place, isExpanded, onToggle }: { place: HealthPlace; isExpanded: boolean; onToggle: () => void }) {
   const { favoriteKeys, toggleFavorite } = usePharmaGarde();
   const palette = usePremiumPalette();
-  const [expanded, setExpanded] = useState(false);
   const favorite: FavoriteItem = {
     id: place.id,
     entityType: place.type,
@@ -104,9 +103,9 @@ export function PlaceCard({ place }: { place: HealthPlace }) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${place.name}. Appuyer pour ${expanded ? "masquer" : "afficher"} les actions.`}
+      accessibilityLabel={`${place.name}. Appuyer pour ${isExpanded ? "masquer" : "afficher"} les actions.`}
       style={({ pressed }) => [styles.card, { backgroundColor: palette.card, borderColor: palette.border }, pressed ? styles.pressedCard : undefined]}
-      onPress={() => { haptic.selection(); setExpanded((current) => !current); }}
+      onPress={() => { haptic.selection(); onToggle(); }}
     >
       <View style={styles.cardHeader}>
         <View style={[styles.markerBadge, { backgroundColor: accent }]}> 
@@ -125,7 +124,7 @@ export function PlaceCard({ place }: { place: HealthPlace }) {
           </View>
         </View>
       </View>
-      {expanded ? (
+      {isExpanded ? (
         <View style={styles.placeExpandableContent}>
           <View style={styles.placeInfoRow}>
             <Pressable accessibilityRole="button" hitSlop={10} style={({ pressed }) => [styles.favoriteButton, pressed ? styles.pressedScale : undefined]} onPress={(event) => { event.stopPropagation(); haptic.light(); toggleFavorite(favorite); }}>
