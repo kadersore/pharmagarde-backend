@@ -144,9 +144,22 @@ function findSupportedCity(value?: string | null) {
   return SUPPORTED_CITIES.find((city) => normalizeCityName(city.name) === normalized);
 }
 
-function getRequestedCity(req: Request) {
-  const rawCity = typeof req.query.city === "string" ? req.query.city : typeof req.query.ville === "string" ? req.query.ville : undefined;
-  return findSupportedCity(rawCity);
+type RequestedCityFilter = {
+  rawCity?: string;
+  supportedCity?: SupportedCity;
+  normalizedCity?: string;
+};
+
+function getRequestedCityFilter(req: Request): RequestedCityFilter {
+  const rawCity = typeof req.query.city === "string" ? req.query.city.trim() : typeof req.query.ville === "string" ? req.query.ville.trim() : undefined;
+  if (!rawCity) return {};
+
+  const supportedCity = findSupportedCity(rawCity);
+  return {
+    rawCity,
+    supportedCity,
+    normalizedCity: normalizeCityName(supportedCity?.name ?? rawCity),
+  };
 }
 
 function normalizeGooglePlace(raw: Record<string, unknown>, type: CachedPlaceType, city: SupportedCity, index: number): CachedHealthPlace | null {
@@ -343,16 +356,19 @@ function withCacheHeaders(res: Response, kind: CacheKind) {
   res.setHeader("X-PharmaGarde-Cache-Source", "server-local-cache");
 }
 
-function filterItemsByCity(items: CachedHealthPlace[], city?: SupportedCity) {
-  if (!city) return items;
-  const normalizedCity = normalizeCityName(city.name);
-  return items.filter((item) => normalizeCityName(item.city) === normalizedCity);
+function filterItemsByCity(items: CachedHealthPlace[], cityFilter: RequestedCityFilter) {
+  if (!cityFilter.normalizedCity) return items;
+  return items.filter((item) => normalizeCityName(item.city) === cityFilter.normalizedCity);
 }
 
 function sendCachedDataset(req: Request, res: Response, kind: CacheKind, rootKey: "pharmacies" | "healthcare" | "cliniques") {
   const state = memoryCache[kind];
-  const requestedCity = getRequestedCity(req);
-  const items = filterItemsByCity(state.items, requestedCity);
+  const cityFilter = getRequestedCityFilter(req);
+  const items = filterItemsByCity(state.items, cityFilter);
+  const responseCity = cityFilter.supportedCity?.name ?? cityFilter.rawCity ?? null;
+
+  console.info(`[PharmaGardeCache] ${kind}: ville demandée=${responseCity ?? "toutes"}, résultats retournés=${items.length}`);
+
   withCacheHeaders(res, kind);
   res.json({
     [rootKey]: items,
@@ -360,7 +376,7 @@ function sendCachedDataset(req: Request, res: Response, kind: CacheKind, rootKey
     meta: {
       cache: "server-local-cache",
       kind,
-      city: requestedCity?.name ?? null,
+      city: responseCity,
       supportedCities: SUPPORTED_CITIES.map((city) => city.name),
       itemCount: items.length,
       totalItemCount: state.items.length,

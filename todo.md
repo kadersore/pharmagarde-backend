@@ -238,3 +238,13 @@
 - [x] Ajouter ou adapter les tests pour vérifier le tri ouvert puis distance
 - [x] Valider TypeScript, Vitest et état serveur après modification du tri
 - [x] Sauvegarder un checkpoint de livraison pour le tri ouvert puis proximité
+
+- [x] Diagnostiquer pourquoi `GET /pharmacies?city=Koudougou` retourne des données d’autres villes
+- [x] Garantir l’ajout du champ `city` sur chaque pharmacie lors du stockage cache/backend
+- [x] Associer strictement chaque résultat Google Places à la ville collectée lors de la récupération
+- [x] Corriger `GET /pharmacies` pour filtrer par `req.query.city` avec comparaison insensible à la casse
+- [x] Conserver le retour de toutes les pharmacies uniquement lorsqu’aucune ville n’est fournie
+- [x] Ajouter des logs backend indiquant la ville demandée et le nombre de pharmacies retournées
+- [x] Ajouter ou adapter les tests pour vérifier que chaque ville retourne uniquement ses pharmacies
+- [x] Valider TypeScript, Vitest et état serveur après correction du filtrage par ville
+- [x] Sauvegarder un checkpoint de livraison pour la correction du filtrage pharmacies par ville
