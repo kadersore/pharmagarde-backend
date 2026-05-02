@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
-import { Coordinates, HealthPlace } from "@/lib/pharmagarde/types";
+import { Coordinates, HealthPlace, MapPreference } from "@/lib/pharmagarde/types";
 
 const GREEN = "#03C04A";
 const BLUE = "#0B74DE";
@@ -53,7 +53,7 @@ function markerLabel(place: HealthPlace) {
   return place.type === "pharmacy" ? "P" : "C";
 }
 
-export function PharmaMap({ places, userLocation }: { places: HealthPlace[]; userLocation?: Coordinates }) {
+export function PharmaMap({ places, userLocation, mapType = "Standard" }: { places: HealthPlace[]; userLocation?: Coordinates; mapType?: MapPreference }) {
   const mapContainerRef = useRef<any>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const center = useMemo(() => getCenter(places, userLocation), [places, userLocation]);
@@ -73,6 +73,7 @@ export function PharmaMap({ places, userLocation }: { places: HealthPlace[]; use
           fullscreenControl: true,
           clickableIcons: true,
           gestureHandling: "greedy",
+          mapTypeId: mapType === "Satellite" ? window.google.maps.MapTypeId.SATELLITE : window.google.maps.MapTypeId.ROADMAP,
           styles: [
             { featureType: "poi.medical", stylers: [{ visibility: "on" }] },
             { featureType: "poi.business", stylers: [{ saturation: -20 }] },
@@ -127,7 +128,7 @@ export function PharmaMap({ places, userLocation }: { places: HealthPlace[]; use
     return () => {
       cancelled = true;
     };
-  }, [center, places, userLocation]);
+  }, [center, places, userLocation, mapType]);
 
   return (
     <View style={styles.wrapper}>

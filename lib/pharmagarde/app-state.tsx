@@ -3,6 +3,7 @@ import * as Location from "expo-location";
 import { PropsWithChildren, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
 
+import { useThemeContext } from "@/lib/theme-provider";
 import { fetchClinics, fetchMedicines, fetchPharmacies, normalizeBaseUrl } from "./api";
 import { DEFAULT_LOCATION, getDefaultLocationFallback } from "./location-policy";
 import { LOCAL_ESSENTIAL_MEDICINES, LOCAL_MEDICINES_NOTICE } from "./medicines-data";
@@ -14,8 +15,8 @@ const PREFERENCES_KEY = "pharmagarde:preferences:v1";
 const INITIAL_API_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? "";
 
 const DEFAULT_PREFERENCES: AppPreferences = {
-  mode: "Système",
-  language: "Français",
+  mode: "Clair",
+  language: "FR",
   mapType: "Standard",
   city: "Ouagadougou",
 };
@@ -82,13 +83,16 @@ function asSearchText(item: FavoriteItem) {
 }
 
 function normalizePreferences(value: Partial<AppPreferences> | null | undefined): AppPreferences {
-  return {
-    ...DEFAULT_PREFERENCES,
-    ...(value ?? {}),
-  };
+  const mode = value?.mode === "Sombre" ? "Sombre" : "Clair";
+  const language = value?.language === "EN" ? "EN" : "FR";
+  const mapType = value?.mapType === "Satellite" ? "Satellite" : "Standard";
+  const city = typeof value?.city === "string" && value.city.trim().length > 0 ? value.city.trim() : DEFAULT_PREFERENCES.city;
+
+  return { mode, language, mapType, city };
 }
 
 export function PharmaGardeProvider({ children }: PropsWithChildren) {
+  const { setColorScheme } = useThemeContext();
   const [apiBaseUrl, setApiBaseUrl] = useState(normalizeBaseUrl(INITIAL_API_URL));
   const [userLocation, setUserLocation] = useState<Coordinates | undefined>(DEFAULT_LOCATION);
   const [locationMessage, setLocationMessage] = useState<string | undefined>(undefined);
@@ -221,6 +225,10 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     refreshData();
   }, [refreshData]);
+
+  useEffect(() => {
+    setColorScheme(preferences.mode === "Sombre" ? "dark" : "light");
+  }, [preferences.mode, setColorScheme]);
 
   const updateApiBaseUrl = useCallback(async (value: string) => {
     const next = normalizeBaseUrl(value);

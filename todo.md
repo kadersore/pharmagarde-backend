@@ -74,3 +74,10 @@
 - [x] Remplacer le premier bloc de la page Carte par un titre de page et supprimer les éléments situés en bas de la carte.
 - [x] Appliquer la couleur verte au header de l’application.
 - [x] Améliorer les éléments visuels et logiques utiles tout en conservant les flux principaux.
+
+- [x] Refactoriser le drawer PharmaGarde en sections Références, Contribution, Informations et Services.
+- [x] Ajouter une icône, un effet de clic, un état actif et un espacement clair pour chaque élément du menu latéral.
+- [x] Rendre fonctionnels le mode clair/sombre, la langue FR/EN, le type de carte et le changement de ville depuis le drawer.
+- [x] Créer ou relier les écrans Nouvelle Pharmacie, Signaler un problème, pages informations et Abonnement.
+- [x] Ajouter une animation d’ouverture fluide du drawer sans casser la navigation mobile.
+- [x] Valider TypeScript et tests après refactorisation du drawer.

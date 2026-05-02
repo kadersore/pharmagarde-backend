@@ -1,151 +1,159 @@
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { useEffect, useRef } from "react";
+import { Animated, ScrollView, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
-import { MenuRow, StatusNotice } from "@/components/pharmagarde/app-ui";
 import { ScreenContainer } from "@/components/screen-container";
+import { DrawerActionRow, DrawerChoiceRow, DrawerFooter, DrawerHero, DrawerSection, drawerColors } from "@/components/pharmagarde/drawer-ui";
 import { usePharmaGarde } from "@/lib/pharmagarde/app-state";
-import { AppLanguage, AppMode, AppPreferences, MapPreference } from "@/lib/pharmagarde/types";
+import { AppLanguage, AppMode, MapPreference } from "@/lib/pharmagarde/types";
 
-type MenuItem = {
-  id: string;
-  icon: keyof typeof MaterialIcons.glyphMap;
-  title: string;
-  description: string;
-  action: () => void;
-};
+const MODE_OPTIONS: readonly AppMode[] = ["Clair", "Sombre"];
+const LANGUAGE_OPTIONS: readonly AppLanguage[] = ["FR", "EN"];
+const MAP_OPTIONS: readonly MapPreference[] = ["Standard", "Satellite"];
 
-type PreferenceOption<Key extends keyof AppPreferences> = {
-  key: Key;
-  label: string;
-  values: AppPreferences[Key][];
-};
-
-const PREFERENCE_OPTIONS: Array<PreferenceOption<"mode"> | PreferenceOption<"language"> | PreferenceOption<"mapType">> = [
-  { key: "mode", label: "Affichage", values: ["Clair", "Sombre", "Système"] satisfies AppMode[] },
-  { key: "language", label: "Langue", values: ["Français", "Mooré", "Dioula", "Fulfuldé"] satisfies AppLanguage[] },
-  { key: "mapType", label: "Carte", values: ["Standard", "Satellite"] satisfies MapPreference[] },
+const INFORMATION_ITEMS = [
+  {
+    id: "politique-confidentialite",
+    icon: "privacy-tip" as const,
+    title: "Politique de confidentialité",
+    description: "Gestion des données locales et permissions.",
+  },
+  {
+    id: "conditions-utilisation",
+    icon: "gavel" as const,
+    title: "Conditions d’utilisation",
+    description: "Règles d’usage de PharmaGarde BF.",
+  },
+  {
+    id: "aide-assistance",
+    icon: "support-agent" as const,
+    title: "Aide et assistance",
+    description: "Comprendre la recherche, la carte et les favoris.",
+  },
+  {
+    id: "contactez-nous",
+    icon: "alternate-email" as const,
+    title: "Contactez-nous",
+    description: "Canaux de contact pour l’équipe projet.",
+  },
+  {
+    id: "a-propos",
+    icon: "info" as const,
+    title: "À propos de nous",
+    description: "Mission, vision et approche communautaire.",
+  },
 ];
 
 export default function MenuScreen() {
   const router = useRouter();
-  const { preferences, updatePreference, locationMessage, refreshData, requestLocation } = usePharmaGarde();
+  const { preferences, updatePreference } = usePharmaGarde();
+  const drawerProgress = useRef(new Animated.Value(0)).current;
 
-  const items: MenuItem[] = [
-    { id: "home", icon: "home", title: "Accueil", description: "Voir les pharmacies proches", action: () => router.replace("/" as never) },
-    { id: "pharmacies", icon: "local-pharmacy", title: "Pharmacies proches", description: "Accéder directement à la liste d’accueil", action: () => router.replace("/" as never) },
-    { id: "clinics", icon: "local-hospital", title: "Cliniques et Centres de soins", description: "Consulter les structures sanitaires", action: () => router.replace("/(tabs)/cliniques" as never) },
-    { id: "medicines", icon: "medication", title: "Médicaments essentiels", description: "Voir les produits autorisés et prix indicatifs", action: () => router.replace("/(tabs)/medicaments" as never) },
-    { id: "map", icon: "map", title: "Carte", description: "Visualiser pharmacies et cliniques", action: () => router.replace("/(tabs)/carte" as never) },
-    { id: "favorites", icon: "favorite", title: "Favoris", description: "Retrouver les éléments sauvegardés", action: () => router.push("/pharmagarde/favoris" as never) },
-    { id: "search", icon: "search", title: "Recherche", description: "Rechercher pharmacies, cliniques et médicaments", action: () => router.push("/pharmagarde/search" as never) },
-  ];
+  useEffect(() => {
+    Animated.timing(drawerProgress, {
+      toValue: 1,
+      duration: 260,
+      useNativeDriver: true,
+    }).start();
+  }, [drawerProgress]);
 
-  const header = (
-    <View>
-      <View style={styles.topRow}>
-        <View>
-          <Text style={styles.kicker}>Menu</Text>
-          <Text style={styles.title}>PharmaGarde BF</Text>
-          <Text style={styles.subtitle}>Navigation et préférences locales</Text>
-        </View>
-        <TouchableOpacity accessibilityRole="button" style={styles.closeButton} onPress={() => router.back()}>
-          <Text style={styles.closeText}>Fermer</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>Préférences</Text>
-        <Text style={styles.sectionText}>Ces réglages sont conservés sur l’appareil et permettent d’adapter l’expérience sans compte utilisateur.</Text>
-        {PREFERENCE_OPTIONS.map((option) => (
-          <View key={option.key} style={styles.preferenceGroup}>
-            <Text style={styles.preferenceLabel}>{option.label}</Text>
-            <View style={styles.chipRow}>
-              {option.values.map((value) => {
-                const active = preferences[option.key] === value;
-                return (
-                  <TouchableOpacity
-                    key={value}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: active }}
-                    style={[styles.chip, active && styles.activeChip]}
-                    onPress={() => updatePreference(option.key, value as never)}
-                  >
-                    <Text style={[styles.chipText, active && styles.activeChipText]}>{value}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        ))}
-        <Text style={styles.preferenceLabel}>Ville de référence</Text>
-        <TextInput
-          value={preferences.city}
-          onChangeText={(value) => updatePreference("city", value)}
-          placeholder="Ouagadougou"
-          placeholderTextColor="#98A2B3"
-          autoCapitalize="words"
-          style={styles.input}
-        />
-      </View>
-
-      <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>Actions rapides</Text>
-        <View style={styles.actionsRow}>
-          <TouchableOpacity accessibilityRole="button" style={styles.primaryButton} onPress={refreshData}>
-            <MaterialIcons name="refresh" size={18} color="#FFFFFF" />
-            <Text style={styles.primaryText}>Actualiser</Text>
-          </TouchableOpacity>
-          <TouchableOpacity accessibilityRole="button" style={styles.secondaryButton} onPress={requestLocation}>
-            <MaterialIcons name="my-location" size={18} color="#03A63F" />
-            <Text style={styles.secondaryText}>Localiser</Text>
-          </TouchableOpacity>
-        </View>
-        <StatusNotice message={locationMessage} tone="success" />
-      </View>
-
-      <Text style={styles.navTitle}>Navigation</Text>
-    </View>
-  );
+  const animatedStyle = {
+    opacity: drawerProgress,
+    transform: [
+      {
+        translateX: drawerProgress.interpolate({
+          inputRange: [0, 1],
+          outputRange: [-34, 0],
+        }),
+      },
+    ],
+  };
 
   return (
-    <ScreenContainer>
-      <FlatList<MenuItem>
-        style={styles.page}
-        data={items}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <MenuRow icon={item.icon} title={item.title} description={item.description} onPress={item.action} />}
-        ListHeaderComponent={header}
-        contentContainerStyle={styles.content}
-      />
+    <ScreenContainer containerClassName="" safeAreaClassName="" edges={["top", "left", "right", "bottom"]}>
+      <Animated.View style={[styles.animated, animatedStyle]}>
+        <ScrollView style={styles.page} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <DrawerHero onClose={() => router.back()} />
+
+          <DrawerSection title="Références">
+            <DrawerChoiceRow
+              icon="dark-mode"
+              title="Mode"
+              description="Bascule immédiate entre thème clair et sombre."
+              options={MODE_OPTIONS}
+              value={preferences.mode}
+              onChange={(value) => updatePreference("mode", value)}
+            />
+            <DrawerChoiceRow
+              icon="translate"
+              title="Langue"
+              description="Préparé pour l’internationalisation FR / EN."
+              options={LANGUAGE_OPTIONS}
+              value={preferences.language}
+              onChange={(value) => updatePreference("language", value)}
+            />
+            <DrawerChoiceRow
+              icon="map"
+              title="Type de carte"
+              description="Change l’affichage Google Maps quand la carte est disponible."
+              options={MAP_OPTIONS}
+              value={preferences.mapType}
+              onChange={(value) => updatePreference("mapType", value)}
+            />
+            <DrawerActionRow
+              icon="location-city"
+              title="Changer de ville"
+              description="Sélectionner la ville de référence des recherches."
+              value={preferences.city}
+              onPress={() => router.push("/pharmagarde/ville" as never)}
+            />
+          </DrawerSection>
+
+          <DrawerSection title="Contribution">
+            <DrawerActionRow
+              icon="add-business"
+              title="Nouvelle Pharmacie"
+              description="Proposer une officine à vérifier et ajouter."
+              onPress={() => router.push("/pharmagarde/contribution/nouvelle-pharmacie" as never)}
+            />
+            <DrawerActionRow
+              icon="report-problem"
+              title="Signaler un problème"
+              description="Adresse, horaire, téléphone ou donnée incorrecte."
+              onPress={() => router.push("/pharmagarde/contribution/signaler-probleme" as never)}
+            />
+          </DrawerSection>
+
+          <DrawerSection title="Informations">
+            {INFORMATION_ITEMS.map((item) => (
+              <DrawerActionRow
+                key={item.id}
+                icon={item.icon}
+                title={item.title}
+                description={item.description}
+                onPress={() => router.push(`/pharmagarde/info/${item.id}` as never)}
+              />
+            ))}
+          </DrawerSection>
+
+          <DrawerSection title="Services">
+            <DrawerActionRow
+              icon="workspace-premium"
+              title="Abonnement"
+              description="Découvrir les options premium à venir."
+              onPress={() => router.push("/pharmagarde/abonnement" as never)}
+            />
+          </DrawerSection>
+
+          <DrawerFooter />
+        </ScrollView>
+      </Animated.View>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: "#F6FBF8" },
-  content: { paddingBottom: 30 },
-  topRow: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  kicker: { color: "#03A63F", fontSize: 12, lineHeight: 17, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.8 },
-  title: { color: "#102016", fontSize: 26, lineHeight: 32, fontWeight: "900", marginTop: 2 },
-  subtitle: { color: "#667085", fontSize: 13, lineHeight: 18, marginTop: 4, fontWeight: "700" },
-  closeButton: { minHeight: 40, paddingHorizontal: 16, borderRadius: 20, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#D6EBDD", alignItems: "center", justifyContent: "center" },
-  closeText: { color: "#03A63F", fontWeight: "900" },
-  sectionCard: { marginHorizontal: 16, marginTop: 12, padding: 16, borderRadius: 24, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#D6EBDD" },
-  sectionTitle: { color: "#102016", fontSize: 18, lineHeight: 24, fontWeight: "900" },
-  sectionText: { color: "#667085", fontSize: 13, lineHeight: 19, marginTop: 6, marginBottom: 4 },
-  preferenceGroup: { marginTop: 14 },
-  preferenceLabel: { color: "#102016", fontSize: 13, lineHeight: 18, fontWeight: "900", marginTop: 14, marginBottom: 8 },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { minHeight: 38, paddingHorizontal: 14, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: "#F6FBF8", borderWidth: 1, borderColor: "#D6EBDD" },
-  activeChip: { backgroundColor: "#03C04A", borderColor: "#03C04A" },
-  chipText: { color: "#102016", fontSize: 13, fontWeight: "800" },
-  activeChipText: { color: "#FFFFFF" },
-  input: { minHeight: 48, borderRadius: 16, borderWidth: 1, borderColor: "#D6EBDD", paddingHorizontal: 14, color: "#102016", backgroundColor: "#F6FBF8", fontWeight: "700" },
-  actionsRow: { flexDirection: "row", gap: 10, marginTop: 14 },
-  primaryButton: { flex: 1, minHeight: 46, borderRadius: 23, backgroundColor: "#03C04A", alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 7 },
-  primaryText: { color: "#FFFFFF", fontWeight: "900", fontSize: 13 },
-  secondaryButton: { flex: 1, minHeight: 46, borderRadius: 23, backgroundColor: "#EAF8EF", alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 7 },
-  secondaryText: { color: "#03A63F", fontWeight: "900", fontSize: 13 },
-  navTitle: { color: "#102016", fontSize: 18, lineHeight: 24, fontWeight: "900", marginHorizontal: 16, marginTop: 18, marginBottom: 4 },
+  animated: { flex: 1, backgroundColor: drawerColors.background },
+  page: { flex: 1, backgroundColor: drawerColors.background },
+  content: { paddingBottom: 28 },
 });

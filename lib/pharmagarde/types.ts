@@ -32,8 +32,8 @@ export type Medicine = {
   imageUrl?: string;
 };
 
-export type AppMode = "Clair" | "Sombre" | "Système";
-export type AppLanguage = "Français" | "Mooré" | "Dioula" | "Fulfuldé";
+export type AppMode = "Clair" | "Sombre";
+export type AppLanguage = "FR" | "EN";
 export type MapPreference = "Standard" | "Satellite";
 
 export type AppPreferences = {

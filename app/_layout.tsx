@@ -90,6 +90,11 @@ export default function RootLayout() {
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="pharmagarde/menu" options={{ presentation: "modal" }} />
+              <Stack.Screen name="pharmagarde/ville" options={{ presentation: "modal" }} />
+              <Stack.Screen name="pharmagarde/contribution/nouvelle-pharmacie" options={{ presentation: "modal" }} />
+              <Stack.Screen name="pharmagarde/contribution/signaler-probleme" options={{ presentation: "modal" }} />
+              <Stack.Screen name="pharmagarde/info/[id]/index" options={{ presentation: "modal" }} />
+              <Stack.Screen name="pharmagarde/abonnement" options={{ presentation: "modal" }} />
               <Stack.Screen name="pharmagarde/search" options={{ presentation: "modal" }} />
               <Stack.Screen name="pharmagarde/favoris" options={{ presentation: "modal" }} />
               <Stack.Screen name="oauth/callback" />

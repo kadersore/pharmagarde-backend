@@ -5,14 +5,14 @@ import { PharmaMap } from "@/components/pharmagarde/PharmaMap";
 import { usePharmaGarde } from "@/lib/pharmagarde/app-state";
 
 export default function MapScreen() {
-  const { pharmacies, clinics, userLocation } = usePharmaGarde();
+  const { pharmacies, clinics, userLocation, preferences } = usePharmaGarde();
   const places = [...pharmacies, ...clinics];
 
   return (
     <AppChrome subtitle="Carte">
       <View style={styles.content}>
         <Text style={styles.pageTitle}>Carte des pharmacies et cliniques</Text>
-        <PharmaMap places={places} userLocation={userLocation} />
+        <PharmaMap places={places} userLocation={userLocation} mapType={preferences.mapType} />
       </View>
     </AppChrome>
   );

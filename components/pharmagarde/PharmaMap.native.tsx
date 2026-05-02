@@ -1,7 +1,7 @@
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { StyleSheet, Text, View } from "react-native";
 
-import { Coordinates, HealthPlace } from "@/lib/pharmagarde/types";
+import { Coordinates, HealthPlace, MapPreference } from "@/lib/pharmagarde/types";
 
 const DEFAULT_REGION = {
   latitude: 12.3714,
@@ -10,7 +10,7 @@ const DEFAULT_REGION = {
   longitudeDelta: 0.12,
 };
 
-export function PharmaMap({ places, userLocation }: { places: HealthPlace[]; userLocation?: Coordinates }) {
+export function PharmaMap({ places, userLocation, mapType = "Standard" }: { places: HealthPlace[]; userLocation?: Coordinates; mapType?: MapPreference }) {
   const firstPlace = places.find((place) => place.latitude !== undefined && place.longitude !== undefined);
   const region = userLocation
     ? { latitude: userLocation.latitude, longitude: userLocation.longitude, latitudeDelta: 0.08, longitudeDelta: 0.08 }
@@ -20,7 +20,7 @@ export function PharmaMap({ places, userLocation }: { places: HealthPlace[]; use
 
   return (
     <View style={styles.wrapper}>
-      <MapView provider={PROVIDER_GOOGLE} style={styles.map} initialRegion={region} showsUserLocation={!!userLocation} showsMyLocationButton>
+      <MapView provider={PROVIDER_GOOGLE} style={styles.map} initialRegion={region} mapType={mapType === "Satellite" ? "satellite" : "standard"} showsUserLocation={!!userLocation} showsMyLocationButton>
         {places.map((place) => {
           if (place.latitude === undefined || place.longitude === undefined) return null;
           return (
