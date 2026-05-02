@@ -1,9 +1,8 @@
-import { StyleSheet, Text, View } from "react-native";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { haptic, usePremiumPalette } from "@/lib/pharmagarde/premium-ui";
 import { Coordinates, HealthPlace, MapPreference } from "@/lib/pharmagarde/types";
-
-const GREEN = "#03C04A";
-const BLUE = "#0B74DE";
 
 function positionFor(place: HealthPlace, index: number, total: number) {
   if (place.latitude === undefined || place.longitude === undefined) {
@@ -15,38 +14,72 @@ function positionFor(place: HealthPlace, index: number, total: number) {
   return { left: 14 + lng * 72, top: 14 + (1 - lat) * 72 };
 }
 
-export function PharmaMap({ places, userLocation, mapType = "Standard" }: { places: HealthPlace[]; userLocation?: Coordinates; mapType?: MapPreference }) {
+type PharmaMapProps = {
+  places: HealthPlace[];
+  userLocation?: Coordinates;
+  mapType?: MapPreference;
+  selectedPlaceId?: string;
+  onSelectPlace?: (place: HealthPlace) => void;
+};
+
+export function PharmaMap({ places, userLocation, mapType = "Standard", selectedPlaceId, onSelectPlace }: PharmaMapProps) {
+  const palette = usePremiumPalette();
+
   return (
-    <View style={styles.wrapper}>
-      {mapType === "Satellite" ? <View style={styles.satelliteOverlay} /> : null}
-      <View style={styles.gridLineHorizontal} />
-      <View style={styles.gridLineVertical} />
+    <View style={[styles.wrapper, { backgroundColor: palette.mapLand }]}> 
+      {mapType === "Satellite" ? <View style={[styles.satelliteOverlay, { backgroundColor: palette.dark ? "rgba(5, 24, 12, 0.3)" : "rgba(17, 64, 38, 0.16)" }]} /> : null}
+      <View style={[styles.road, styles.roadOne, { backgroundColor: palette.mapRoad }]} />
+      <View style={[styles.road, styles.roadTwo, { backgroundColor: palette.mapRoad }]} />
+      <View style={[styles.road, styles.roadThree, { backgroundColor: palette.mapRoad }]} />
       {userLocation ? (
-        <View style={styles.userDot}>
-          <Text style={styles.userDotText}>Vous</Text>
+        <View style={[styles.userDot, { backgroundColor: palette.text }]}> 
+          <Text style={[styles.userDotText, { color: palette.background }]}>Vous</Text>
         </View>
       ) : null}
       {places.map((place, index) => {
+        const key = `${place.type}-${place.id}`;
+        const active = selectedPlaceId === key;
         const pos = positionFor(place, index, places.length);
+        const accent = place.type === "pharmacy" ? palette.brand : palette.clinic;
         return (
-          <View key={`${place.type}-${place.id}`} style={[styles.pin, { left: `${pos.left}%`, top: `${pos.top}%`, backgroundColor: place.type === "pharmacy" ? GREEN : BLUE }]}>
-            <Text style={styles.pinText}>{place.type === "pharmacy" ? "P" : "C"}</Text>
-          </View>
+          <Pressable
+            key={key}
+            accessibilityRole="button"
+            accessibilityLabel={`Sélectionner ${place.name}`}
+            style={({ pressed }) => [
+              styles.pinWrap,
+              { left: `${pos.left}%`, top: `${pos.top}%`, transform: [{ scale: active ? 1.15 : pressed ? 0.96 : 1 }] },
+            ]}
+            onPress={() => {
+              haptic.selection();
+              onSelectPlace?.(place);
+            }}
+          >
+            <View style={[styles.pin, { backgroundColor: active ? accent : palette.card, borderColor: accent }]}> 
+              <MaterialIcons name={place.type === "pharmacy" ? "local-pharmacy" : "local-hospital"} size={active ? 20 : 18} color={active ? "#FFFFFF" : accent} />
+            </View>
+          </Pressable>
         );
       })}
-
+      <View style={[styles.brandPill, { backgroundColor: palette.glass, borderColor: palette.border }]}> 
+        <MaterialIcons name="map" size={16} color={palette.brand} />
+        <Text style={[styles.brandPillText, { color: palette.text }]}>Carte interactive</Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: { height: 360, margin: 16, borderRadius: 12, overflow: "hidden", backgroundColor: "#EAF8EF", borderWidth: 1, borderColor: "#CBE7D3", shadowColor: "#092A13", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
-  satelliteOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(17, 64, 38, 0.18)" },
-  gridLineHorizontal: { position: "absolute", left: 0, right: 0, top: "50%", height: 1, backgroundColor: "rgba(16,32,22,0.12)" },
-  gridLineVertical: { position: "absolute", top: 0, bottom: 0, left: "50%", width: 1, backgroundColor: "rgba(16,32,22,0.12)" },
-  pin: { position: "absolute", width: 34, height: 34, marginLeft: -17, marginTop: -17, borderRadius: 17, alignItems: "center", justifyContent: "center", borderWidth: 3, borderColor: "#FFFFFF", shadowColor: "#102016", shadowOpacity: 0.18, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
-  pinText: { color: "#FFFFFF", fontWeight: "900", fontSize: 13 },
-  userDot: { position: "absolute", left: "48%", top: "47%", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, backgroundColor: "#102016" },
-  userDotText: { color: "#FFFFFF", fontWeight: "800", fontSize: 12 },
-
+  wrapper: { flex: 1, minHeight: 420, overflow: "hidden" },
+  satelliteOverlay: { ...StyleSheet.absoluteFillObject },
+  road: { position: "absolute", borderRadius: 999, opacity: 0.88 },
+  roadOne: { width: "120%", height: 18, left: "-10%", top: "36%", transform: [{ rotate: "-18deg" }] },
+  roadTwo: { width: 18, height: "120%", left: "52%", top: "-10%", transform: [{ rotate: "12deg" }] },
+  roadThree: { width: "92%", height: 12, left: "5%", bottom: "24%", transform: [{ rotate: "8deg" }] },
+  pinWrap: { position: "absolute", width: 42, height: 42, marginLeft: -21, marginTop: -21, alignItems: "center", justifyContent: "center" },
+  pin: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", borderWidth: 2, shadowColor: "#102016", shadowOpacity: 0.16, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 7 },
+  userDot: { position: "absolute", left: "46%", top: "47%", paddingHorizontal: 11, paddingVertical: 7, borderRadius: 16 },
+  userDotText: { fontWeight: "900", fontSize: 12, lineHeight: 15 },
+  brandPill: { position: "absolute", left: 16, top: 16, minHeight: 34, borderRadius: 17, borderWidth: 1, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 7 },
+  brandPillText: { fontSize: 12, lineHeight: 15, fontWeight: "900" },
 });

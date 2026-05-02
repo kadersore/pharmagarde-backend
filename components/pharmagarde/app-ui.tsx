@@ -1,19 +1,13 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as WebBrowser from "expo-web-browser";
-import { PropsWithChildren, useState } from "react";
-import { Image, Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { PropsWithChildren } from "react";
+import { Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { useSegments } from "expo-router";
 
+import { GlobalAppShell } from "@/components/pharmagarde/app-shell";
 import { usePharmaGarde } from "@/lib/pharmagarde/app-state";
+import { haptic, usePremiumPalette } from "@/lib/pharmagarde/premium-ui";
 import { CombinedSearchItem, FavoriteItem, HealthPlace, Medicine, favoriteKey } from "@/lib/pharmagarde/types";
-
-const BRAND_GREEN = "#03C04A";
-const BRAND_BLUE = "#0B74DE";
-const BACKGROUND = "#F6FBF8";
-const FOREGROUND = "#102016";
-const MUTED = "#667085";
-const BORDER = "#D6EBDD";
-const SURFACE = "#FFFFFF";
-const ERROR = "#D92D20";
 
 function entityLabel(type: FavoriteItem["entityType"]) {
   if (type === "pharmacy") return "Pharmacie";
@@ -32,46 +26,58 @@ async function callPhone(phone?: string) {
   await Linking.openURL(`tel:${phone.replace(/\s+/g, "")}`);
 }
 
-export function AppChrome({ children }: PropsWithChildren<{ subtitle?: string }>) {
-  return <View style={styles.page}>{children}</View>;
+export function AppChrome({ children, subtitle }: PropsWithChildren<{ subtitle?: string }>) {
+  const segments = useSegments();
+  const isInsideTabs = segments[0] === "(tabs)";
+
+  if (isInsideTabs) {
+    return <>{children}</>;
+  }
+
+  return <GlobalAppShell subtitle={subtitle}>{children}</GlobalAppShell>;
 }
 
 export function EmptyState({ title, message, actionLabel, onAction }: { title: string; message: string; actionLabel?: string; onAction?: () => void }) {
+  const palette = usePremiumPalette();
   return (
     <View style={styles.emptyState}>
-      <View style={styles.emptyIcon}>
-        <MaterialIcons name="local-pharmacy" size={30} color={BRAND_GREEN} />
+      <View style={[styles.emptyIcon, { backgroundColor: palette.softGreen }]}> 
+        <MaterialIcons name="local-pharmacy" size={30} color={palette.brand} />
       </View>
-      <Text style={styles.emptyTitle}>{title}</Text>
-      <Text style={styles.emptyMessage}>{message}</Text>
+      <Text style={[styles.emptyTitle, { color: palette.text }]}>{title}</Text>
+      <Text style={[styles.emptyMessage, { color: palette.muted }]}>{message}</Text>
       {actionLabel && onAction ? (
-        <TouchableOpacity accessibilityRole="button" style={styles.primaryButton} onPress={onAction}>
+        <Pressable accessibilityRole="button" style={({ pressed }) => [styles.primaryButton, { backgroundColor: palette.brand }, pressed ? styles.pressedScale : undefined]} onPress={() => { haptic.light(); onAction(); }}>
           <Text style={styles.primaryButtonText}>{actionLabel}</Text>
-        </TouchableOpacity>
+        </Pressable>
       ) : null}
     </View>
   );
 }
 
 export function StatusNotice({ message, tone = "info" }: { message?: string; tone?: "info" | "error" | "success" }) {
+  const palette = usePremiumPalette();
   if (!message) return null;
+  const accent = tone === "error" ? palette.danger : tone === "success" ? palette.success : palette.clinic;
   return (
-    <View style={[styles.notice, tone === "error" ? styles.noticeError : tone === "success" ? styles.noticeSuccess : styles.noticeInfo]}>
-      <Text style={[styles.noticeText, tone === "error" ? styles.noticeTextError : undefined]}>{message}</Text>
+    <View style={[styles.notice, { backgroundColor: tone === "error" ? "rgba(225, 29, 72, 0.1)" : tone === "success" ? palette.softGreen : palette.card, borderColor: accent }]}> 
+      <MaterialIcons name={tone === "error" ? "error-outline" : tone === "success" ? "verified" : "info-outline"} size={18} color={accent} />
+      <Text style={[styles.noticeText, { color: tone === "error" ? palette.danger : palette.text }]}>{message}</Text>
     </View>
   );
 }
 
 export function SearchField({ value, onChangeText, placeholder = "Rechercher" }: { value: string; onChangeText: (value: string) => void; placeholder?: string }) {
+  const palette = usePremiumPalette();
   return (
-    <View style={styles.searchBox}>
-      <MaterialIcons name="search" size={21} color={MUTED} />
+    <View style={[styles.searchBox, { backgroundColor: palette.card, borderColor: palette.border }]}> 
+      <MaterialIcons name="search" size={21} color={palette.brand} />
       <TextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={MUTED}
-        style={styles.searchInput}
+        placeholderTextColor={palette.muted}
+        style={[styles.searchInput, { color: palette.text }]}
         returnKeyType="search"
       />
     </View>
@@ -80,6 +86,7 @@ export function SearchField({ value, onChangeText, placeholder = "Rechercher" }:
 
 export function PlaceCard({ place }: { place: HealthPlace }) {
   const { favoriteKeys, toggleFavorite } = usePharmaGarde();
+  const palette = usePremiumPalette();
   const favorite: FavoriteItem = {
     id: place.id,
     entityType: place.type,
@@ -91,41 +98,46 @@ export function PlaceCard({ place }: { place: HealthPlace }) {
     longitude: place.longitude,
   };
   const active = favoriteKeys.has(favoriteKey(favorite.entityType, favorite.id));
-  const accent = place.type === "pharmacy" ? BRAND_GREEN : BRAND_BLUE;
+  const accent = place.type === "pharmacy" ? palette.brand : palette.clinic;
   return (
-    <View style={styles.card}>
+    <Pressable style={({ pressed }) => [styles.card, { backgroundColor: palette.card, borderColor: palette.border }, pressed ? styles.pressedCard : undefined]} onPress={() => haptic.selection()}>
       <View style={styles.cardHeader}>
-        <View style={[styles.markerBadge, { backgroundColor: accent }]}>
+        <View style={[styles.markerBadge, { backgroundColor: accent }]}> 
           <MaterialIcons name={place.type === "pharmacy" ? "local-pharmacy" : "local-hospital"} size={20} color="#FFFFFF" />
         </View>
         <View style={styles.cardTitleArea}>
-          <Text style={styles.cardTitle}>{place.name}</Text>
-          <Text style={styles.cardSubtitle}>{place.address ?? place.city ?? "Adresse non renseignée"}</Text>
+          <Text style={[styles.cardTitle, { color: palette.text }]} numberOfLines={1}>{place.name}</Text>
+          <Text style={[styles.cardSubtitle, { color: palette.muted }]} numberOfLines={2}>{place.address ?? place.city ?? "Adresse non renseignée"}</Text>
         </View>
-        <TouchableOpacity accessibilityRole="button" style={styles.favoriteButton} onPress={() => toggleFavorite(favorite)}>
-          <MaterialIcons name={active ? "favorite" : "favorite-border"} size={23} color={active ? ERROR : MUTED} />
-        </TouchableOpacity>
+        <Pressable accessibilityRole="button" hitSlop={10} style={({ pressed }) => [styles.favoriteButton, pressed ? styles.pressedScale : undefined]} onPress={() => { haptic.light(); toggleFavorite(favorite); }}>
+          <MaterialIcons name={active ? "favorite" : "favorite-border"} size={23} color={active ? palette.danger : palette.muted} />
+        </Pressable>
       </View>
       <View style={styles.metaRow}>
-        <Text style={styles.metaPill}>{place.distanceKm !== undefined ? `${place.distanceKm.toFixed(1)} km` : "Distance inconnue"}</Text>
-        <Text style={styles.metaPill}>{place.isOpen === true ? "Ouvert" : place.isOpen === false ? "Fermé" : "Statut inconnu"}</Text>
+        <View style={[styles.metaPill, { backgroundColor: palette.cardMuted }]}> 
+          <Text style={[styles.metaText, { color: palette.text }]}>{place.distanceKm !== undefined ? `${place.distanceKm.toFixed(1)} km` : "Distance inconnue"}</Text>
+        </View>
+        <View style={[styles.metaPill, { backgroundColor: place.isOpen === false ? "rgba(225, 29, 72, 0.1)" : palette.softGreen }]}> 
+          <Text style={[styles.metaText, { color: place.isOpen === false ? palette.danger : palette.success }]}>{place.isOpen === true ? "Ouvert" : place.isOpen === false ? "Fermé" : "Statut inconnu"}</Text>
+        </View>
       </View>
       <View style={styles.cardActions}>
-        <TouchableOpacity accessibilityRole="button" style={[styles.secondaryButton, !place.phone ? styles.disabledButton : undefined]} disabled={!place.phone} onPress={() => callPhone(place.phone)}>
-          <MaterialIcons name="call" size={18} color={place.phone ? BRAND_GREEN : MUTED} />
-          <Text style={[styles.secondaryButtonText, !place.phone ? styles.disabledText : undefined]}>Appeler</Text>
-        </TouchableOpacity>
-        <TouchableOpacity accessibilityRole="button" style={[styles.secondaryButton, place.latitude === undefined || place.longitude === undefined ? styles.disabledButton : undefined]} disabled={place.latitude === undefined || place.longitude === undefined} onPress={() => openDirections(favorite)}>
-          <MaterialIcons name="directions" size={18} color={place.latitude !== undefined && place.longitude !== undefined ? BRAND_GREEN : MUTED} />
-          <Text style={[styles.secondaryButtonText, place.latitude === undefined || place.longitude === undefined ? styles.disabledText : undefined]}>Itinéraire</Text>
-        </TouchableOpacity>
+        <Pressable accessibilityRole="button" style={({ pressed }) => [styles.secondaryButton, { backgroundColor: palette.cardMuted, opacity: place.phone ? 1 : 0.46 }, pressed && place.phone ? styles.pressedScale : undefined]} disabled={!place.phone} onPress={() => { haptic.light(); callPhone(place.phone); }}>
+          <MaterialIcons name="call" size={18} color={place.phone ? accent : palette.muted} />
+          <Text style={[styles.secondaryButtonText, { color: place.phone ? palette.text : palette.muted }]}>Appeler</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" style={({ pressed }) => [styles.secondaryButton, { backgroundColor: palette.cardMuted, opacity: place.latitude === undefined || place.longitude === undefined ? 0.46 : 1 }, pressed && place.latitude !== undefined && place.longitude !== undefined ? styles.pressedScale : undefined]} disabled={place.latitude === undefined || place.longitude === undefined} onPress={() => { haptic.medium(); openDirections(favorite); }}>
+          <MaterialIcons name="directions" size={18} color={place.latitude !== undefined && place.longitude !== undefined ? accent : palette.muted} />
+          <Text style={[styles.secondaryButtonText, { color: place.latitude !== undefined && place.longitude !== undefined ? palette.text : palette.muted }]}>Itinéraire</Text>
+        </Pressable>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
 export function MedicineCard({ medicine }: { medicine: Medicine }) {
   const { favoriteKeys, toggleFavorite } = usePharmaGarde();
+  const palette = usePremiumPalette();
   const favorite: FavoriteItem = {
     id: medicine.id,
     entityType: "medicine",
@@ -135,129 +147,121 @@ export function MedicineCard({ medicine }: { medicine: Medicine }) {
   };
   const active = favoriteKeys.has(favoriteKey("medicine", medicine.id));
   return (
-    <View style={styles.card}>
+    <Pressable style={({ pressed }) => [styles.card, { backgroundColor: palette.card, borderColor: palette.border }, pressed ? styles.pressedCard : undefined]}>
       <View style={styles.cardHeader}>
-        {medicine.imageUrl ? <Image source={{ uri: medicine.imageUrl }} style={styles.medicineImage} /> : <View style={styles.medicineFallback}><MaterialIcons name="medication" size={23} color={BRAND_GREEN} /></View>}
+        {medicine.imageUrl ? <Image source={{ uri: medicine.imageUrl }} style={styles.medicineImage} /> : <View style={[styles.medicineFallback, { backgroundColor: palette.softGreen }]}><MaterialIcons name="medication" size={23} color={palette.brand} /></View>}
         <View style={styles.cardTitleArea}>
-          <Text style={styles.cardTitle}>{medicine.name}</Text>
-          <Text style={styles.cardSubtitle}>{medicine.category ?? "Catégorie non renseignée"}</Text>
+          <Text style={[styles.cardTitle, { color: palette.text }]}>{medicine.name}</Text>
+          <Text style={[styles.cardSubtitle, { color: palette.muted }]}>{medicine.category ?? "Catégorie non renseignée"}</Text>
         </View>
-        <TouchableOpacity accessibilityRole="button" style={styles.favoriteButton} onPress={() => toggleFavorite(favorite)}>
-          <MaterialIcons name={active ? "favorite" : "favorite-border"} size={23} color={active ? ERROR : MUTED} />
-        </TouchableOpacity>
+        <Pressable accessibilityRole="button" hitSlop={10} style={({ pressed }) => [styles.favoriteButton, pressed ? styles.pressedScale : undefined]} onPress={() => { haptic.light(); toggleFavorite(favorite); }}>
+          <MaterialIcons name={active ? "favorite" : "favorite-border"} size={23} color={active ? palette.danger : palette.muted} />
+        </Pressable>
       </View>
       <View style={styles.metaRow}>
-        <Text style={styles.metaPill}>{medicine.ageCategory ?? "Tous"}</Text>
-        <Text style={styles.metaPill}>{medicine.pharmaceuticalType ?? "Type inconnu"}</Text>
-        <Text style={styles.pricePill}>{medicine.priceApprox !== undefined ? `${medicine.priceApprox.toLocaleString("fr-FR")} FCFA` : "Prix variable"}</Text>
+        <View style={[styles.metaPill, { backgroundColor: palette.cardMuted }]}><Text style={[styles.metaText, { color: palette.text }]}>{medicine.ageCategory ?? "Tous"}</Text></View>
+        <View style={[styles.metaPill, { backgroundColor: palette.cardMuted }]}><Text style={[styles.metaText, { color: palette.text }]}>{medicine.pharmaceuticalType ?? "Type inconnu"}</Text></View>
+        <View style={[styles.pricePill, { backgroundColor: palette.softGreen }]}><Text style={[styles.priceText, { color: palette.brand }]}>{medicine.priceApprox !== undefined ? `${medicine.priceApprox.toLocaleString("fr-FR")} FCFA` : "Prix variable"}</Text></View>
       </View>
-      {medicine.description ? <Text style={styles.description}>{medicine.description}</Text> : null}
-    </View>
+      {medicine.description ? <Text style={[styles.description, { color: palette.muted }]}>{medicine.description}</Text> : null}
+    </Pressable>
   );
 }
 
 export function SearchResultRow({ item }: { item: CombinedSearchItem }) {
   const { favoriteKeys, toggleFavorite } = usePharmaGarde();
+  const palette = usePremiumPalette();
   const active = favoriteKeys.has(favoriteKey(item.entityType, item.id));
   return (
-    <View style={styles.resultRow}>
-      <View style={styles.resultIcon}>
-        <MaterialIcons name={item.entityType === "medicine" ? "medication" : item.entityType === "clinic" ? "local-hospital" : "local-pharmacy"} size={20} color={BRAND_GREEN} />
+    <Pressable style={({ pressed }) => [styles.resultRow, { backgroundColor: palette.card, borderColor: palette.border }, pressed ? styles.pressedCard : undefined]}>
+      <View style={[styles.resultIcon, { backgroundColor: palette.softGreen }]}> 
+        <MaterialIcons name={item.entityType === "medicine" ? "medication" : item.entityType === "clinic" ? "local-hospital" : "local-pharmacy"} size={20} color={palette.brand} />
       </View>
       <View style={styles.resultText}>
-        <Text style={styles.resultTitle}>{item.title}</Text>
-        <Text style={styles.resultSubtitle}>{item.sourceLabel}{item.subtitle ? ` · ${item.subtitle}` : ""}</Text>
+        <Text style={[styles.resultTitle, { color: palette.text }]}>{item.title}</Text>
+        <Text style={[styles.resultSubtitle, { color: palette.muted }]}>{item.sourceLabel}{item.subtitle ? ` · ${item.subtitle}` : ""}</Text>
       </View>
-      <TouchableOpacity accessibilityRole="button" style={styles.favoriteButton} onPress={() => toggleFavorite(item)}>
-        <MaterialIcons name={active ? "favorite" : "favorite-border"} size={22} color={active ? ERROR : MUTED} />
-      </TouchableOpacity>
-    </View>
+      <Pressable accessibilityRole="button" hitSlop={10} style={({ pressed }) => [styles.favoriteButton, pressed ? styles.pressedScale : undefined]} onPress={() => { haptic.light(); toggleFavorite(item); }}>
+        <MaterialIcons name={active ? "favorite" : "favorite-border"} size={22} color={active ? palette.danger : palette.muted} />
+      </Pressable>
+    </Pressable>
   );
 }
 
 export function FavoriteRow({ item }: { item: FavoriteItem }) {
   const { toggleFavorite } = usePharmaGarde();
+  const palette = usePremiumPalette();
   return (
-    <View style={styles.resultRow}>
-      <View style={styles.resultIcon}>
-        <MaterialIcons name={item.entityType === "medicine" ? "medication" : item.entityType === "clinic" ? "local-hospital" : "local-pharmacy"} size={20} color={BRAND_GREEN} />
+    <Pressable style={({ pressed }) => [styles.resultRow, { backgroundColor: palette.card, borderColor: palette.border }, pressed ? styles.pressedCard : undefined]}>
+      <View style={[styles.resultIcon, { backgroundColor: palette.softGreen }]}> 
+        <MaterialIcons name={item.entityType === "medicine" ? "medication" : item.entityType === "clinic" ? "local-hospital" : "local-pharmacy"} size={20} color={palette.brand} />
       </View>
       <View style={styles.resultText}>
-        <Text style={styles.resultTitle}>{item.title}</Text>
-        <Text style={styles.resultSubtitle}>{entityLabel(item.entityType)}{item.subtitle ? ` · ${item.subtitle}` : ""}</Text>
+        <Text style={[styles.resultTitle, { color: palette.text }]}>{item.title}</Text>
+        <Text style={[styles.resultSubtitle, { color: palette.muted }]}>{entityLabel(item.entityType)}{item.subtitle ? ` · ${item.subtitle}` : ""}</Text>
       </View>
-      <TouchableOpacity accessibilityRole="button" style={styles.favoriteButton} onPress={() => toggleFavorite(item)}>
-        <MaterialIcons name="favorite" size={22} color={ERROR} />
-      </TouchableOpacity>
-    </View>
+      <Pressable accessibilityRole="button" hitSlop={10} style={({ pressed }) => [styles.favoriteButton, pressed ? styles.pressedScale : undefined]} onPress={() => { haptic.light(); toggleFavorite(item); }}>
+        <MaterialIcons name="favorite" size={22} color={palette.danger} />
+      </Pressable>
+    </Pressable>
   );
 }
 
 export function MenuRow({ icon, title, description, onPress }: { icon: keyof typeof MaterialIcons.glyphMap; title: string; description: string; onPress?: () => void }) {
+  const palette = usePremiumPalette();
   return (
-    <TouchableOpacity accessibilityRole="button" style={styles.menuRow} onPress={onPress}>
-      <View style={styles.menuIcon}>
-        <MaterialIcons name={icon} size={21} color={BRAND_GREEN} />
+    <Pressable accessibilityRole="button" style={({ pressed }) => [styles.menuRow, { backgroundColor: palette.card, borderColor: palette.border }, pressed ? styles.pressedCard : undefined]} onPress={() => { haptic.light(); onPress?.(); }}>
+      <View style={[styles.menuIcon, { backgroundColor: palette.softGreen }]}> 
+        <MaterialIcons name={icon} size={21} color={palette.brand} />
       </View>
       <View style={styles.menuText}>
-        <Text style={styles.menuTitle}>{title}</Text>
-        <Text style={styles.menuDescription}>{description}</Text>
+        <Text style={[styles.menuTitle, { color: palette.text }]}>{title}</Text>
+        <Text style={[styles.menuDescription, { color: palette.muted }]}>{description}</Text>
       </View>
-      <MaterialIcons name="chevron-right" size={22} color={MUTED} />
-    </TouchableOpacity>
+      <MaterialIcons name="chevron-right" size={22} color={palette.muted} />
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: BACKGROUND },
-  topBar: { minHeight: 70, paddingHorizontal: 16, paddingBottom: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomColor: "rgba(255,255,255,0.24)", borderBottomWidth: 1, backgroundColor: BRAND_GREEN },
-  iconButton: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.18)" },
-  titleBlock: { flex: 1, alignItems: "center", paddingHorizontal: 8 },
-  title: { fontSize: 19, lineHeight: 24, fontWeight: "800", color: "#FFFFFF" },
-  subtitle: { fontSize: 12, lineHeight: 16, color: "#E8FFF0", marginTop: 2 },
-  actions: { flexDirection: "row", alignItems: "center", gap: 8 },
   emptyState: { flex: 1, alignItems: "center", justifyContent: "center", padding: 28 },
-  emptyIcon: { width: 58, height: 58, borderRadius: 14, backgroundColor: "#E6F8EC", alignItems: "center", justifyContent: "center", marginBottom: 14 },
-  emptyTitle: { fontSize: 18, lineHeight: 24, fontWeight: "800", color: FOREGROUND, textAlign: "center" },
-  emptyMessage: { fontSize: 14, lineHeight: 21, color: MUTED, textAlign: "center", marginTop: 8, marginBottom: 16 },
-  primaryButton: { minHeight: 46, paddingHorizontal: 20, borderRadius: 12, backgroundColor: BRAND_GREEN, alignItems: "center", justifyContent: "center" },
-  primaryButtonText: { color: "#FFFFFF", fontWeight: "800", fontSize: 15 },
-  notice: { marginHorizontal: 16, marginTop: 12, borderRadius: 12, padding: 12, borderWidth: 1 },
-  noticeInfo: { backgroundColor: "#EEF8FF", borderColor: "#B9E6FE" },
-  noticeSuccess: { backgroundColor: "#EAF8EF", borderColor: BORDER },
-  noticeError: { backgroundColor: "#FFF1F0", borderColor: "#FDA29B" },
-  noticeText: { color: FOREGROUND, fontSize: 13, lineHeight: 19 },
-  noticeTextError: { color: ERROR },
-  searchBox: { margin: 16, height: 48, borderRadius: 12, backgroundColor: SURFACE, borderColor: BORDER, borderWidth: 1, flexDirection: "row", alignItems: "center", paddingHorizontal: 15, gap: 10, shadowColor: "#092A13", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
-  searchInput: { flex: 1, fontSize: 15, color: FOREGROUND, paddingVertical: 8 },
-  card: { backgroundColor: SURFACE, borderRadius: 12, borderWidth: 1, borderColor: BORDER, marginHorizontal: 16, marginVertical: 8, padding: 16, shadowColor: "#092A13", shadowOpacity: 0.08, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  emptyIcon: { width: 62, height: 62, borderRadius: 20, alignItems: "center", justifyContent: "center", marginBottom: 16 },
+  emptyTitle: { fontSize: 19, lineHeight: 25, fontWeight: "900", textAlign: "center" },
+  emptyMessage: { fontSize: 14, lineHeight: 21, textAlign: "center", marginTop: 8, marginBottom: 18, fontWeight: "600" },
+  primaryButton: { minHeight: 48, paddingHorizontal: 22, borderRadius: 17, alignItems: "center", justifyContent: "center", shadowColor: "#03C04A", shadowOpacity: 0.18, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 5 },
+  primaryButtonText: { color: "#FFFFFF", fontWeight: "900", fontSize: 15, lineHeight: 19 },
+  notice: { marginHorizontal: 16, marginTop: 12, borderRadius: 18, padding: 12, borderWidth: 1, flexDirection: "row", alignItems: "flex-start", gap: 9 },
+  noticeText: { flex: 1, fontSize: 13, lineHeight: 19, fontWeight: "700" },
+  searchBox: { margin: 16, height: 52, borderRadius: 26, borderWidth: 1, flexDirection: "row", alignItems: "center", paddingHorizontal: 16, gap: 10, shadowColor: "#092A13", shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
+  searchInput: { flex: 1, fontSize: 15, lineHeight: 20, fontWeight: "700", paddingVertical: 0 },
+  card: { marginHorizontal: 16, marginTop: 12, borderRadius: 24, padding: 15, borderWidth: 1, shadowColor: "#092A13", shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 7 }, elevation: 4 },
+  pressedCard: { opacity: 0.92, transform: [{ scale: 0.985 }] },
+  pressedScale: { opacity: 0.86, transform: [{ scale: 0.97 }] },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
-  markerBadge: { width: 42, height: 42, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  markerBadge: { width: 46, height: 46, borderRadius: 17, alignItems: "center", justifyContent: "center" },
   cardTitleArea: { flex: 1 },
-  cardTitle: { fontSize: 16, lineHeight: 22, fontWeight: "800", color: FOREGROUND },
-  cardSubtitle: { fontSize: 13, lineHeight: 18, color: MUTED, marginTop: 2 },
-  favoriteButton: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "#F7F7F7" },
-  metaRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 14 },
-  metaPill: { overflow: "hidden", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, color: FOREGROUND, backgroundColor: "#EEF8F2", fontSize: 12, fontWeight: "700" },
-  pricePill: { overflow: "hidden", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, color: "#FFFFFF", backgroundColor: BRAND_GREEN, fontSize: 12, fontWeight: "900" },
-  cardActions: { flexDirection: "row", gap: 10, marginTop: 14 },
-  secondaryButton: { flex: 1, minHeight: 42, borderRadius: 10, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 7, backgroundColor: "#F5FBF7", borderWidth: 1, borderColor: BORDER },
-  secondaryButtonText: { color: BRAND_GREEN, fontSize: 14, fontWeight: "800" },
-  disabledButton: { opacity: 0.55 },
-  disabledText: { color: MUTED },
-  medicineImage: { width: 50, height: 50, borderRadius: 12, backgroundColor: "#EAF8EF" },
-  medicineFallback: { width: 50, height: 50, borderRadius: 12, backgroundColor: "#EAF8EF", alignItems: "center", justifyContent: "center" },
-  description: { marginTop: 12, color: MUTED, fontSize: 13, lineHeight: 20 },
-  resultRow: { marginHorizontal: 16, marginVertical: 6, padding: 14, borderRadius: 12, backgroundColor: SURFACE, borderWidth: 1, borderColor: BORDER, flexDirection: "row", alignItems: "center", gap: 12, shadowColor: "#092A13", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
-  resultIcon: { width: 40, height: 40, borderRadius: 10, backgroundColor: "#EAF8EF", alignItems: "center", justifyContent: "center" },
+  cardTitle: { fontSize: 16, lineHeight: 21, fontWeight: "900" },
+  cardSubtitle: { fontSize: 12, lineHeight: 18, fontWeight: "700", marginTop: 2 },
+  favoriteButton: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
+  metaRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 13 },
+  metaPill: { minHeight: 30, borderRadius: 15, paddingHorizontal: 10, alignItems: "center", justifyContent: "center" },
+  metaText: { fontSize: 12, lineHeight: 15, fontWeight: "900" },
+  pricePill: { minHeight: 30, borderRadius: 15, paddingHorizontal: 10, alignItems: "center", justifyContent: "center" },
+  priceText: { fontSize: 12, lineHeight: 15, fontWeight: "900" },
+  cardActions: { flexDirection: "row", gap: 9, marginTop: 13 },
+  secondaryButton: { flex: 1, minHeight: 43, borderRadius: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
+  secondaryButtonText: { fontSize: 13, lineHeight: 17, fontWeight: "900" },
+  medicineImage: { width: 48, height: 48, borderRadius: 17 },
+  medicineFallback: { width: 48, height: 48, borderRadius: 17, alignItems: "center", justifyContent: "center" },
+  description: { marginTop: 12, fontSize: 13, lineHeight: 20, fontWeight: "600" },
+  resultRow: { marginHorizontal: 16, marginTop: 10, borderRadius: 20, padding: 13, borderWidth: 1, flexDirection: "row", alignItems: "center", gap: 12, shadowColor: "#092A13", shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
+  resultIcon: { width: 42, height: 42, borderRadius: 15, alignItems: "center", justifyContent: "center" },
   resultText: { flex: 1 },
-  resultTitle: { color: FOREGROUND, fontSize: 15, lineHeight: 21, fontWeight: "800" },
-  resultSubtitle: { color: MUTED, fontSize: 12, lineHeight: 17, marginTop: 2 },
-  menuRow: { flexDirection: "row", alignItems: "center", marginHorizontal: 16, marginVertical: 6, padding: 14, borderRadius: 12, borderColor: BORDER, borderWidth: 1, backgroundColor: SURFACE, gap: 12, shadowColor: "#092A13", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
-  menuIcon: { width: 40, height: 40, borderRadius: 10, backgroundColor: "#EAF8EF", alignItems: "center", justifyContent: "center" },
+  resultTitle: { fontSize: 14, lineHeight: 19, fontWeight: "900" },
+  resultSubtitle: { fontSize: 12, lineHeight: 17, fontWeight: "700", marginTop: 2 },
+  menuRow: { borderRadius: 20, padding: 13, borderWidth: 1, flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 10 },
+  menuIcon: { width: 42, height: 42, borderRadius: 15, alignItems: "center", justifyContent: "center" },
   menuText: { flex: 1 },
-  menuTitle: { fontSize: 15, lineHeight: 20, color: FOREGROUND, fontWeight: "800" },
-  menuDescription: { fontSize: 12, lineHeight: 17, color: MUTED, marginTop: 2 },
+  menuTitle: { fontSize: 14, lineHeight: 18, fontWeight: "900" },
+  menuDescription: { fontSize: 12, lineHeight: 17, fontWeight: "700", marginTop: 2 },
 });
-
-export const pharmaStyles = styles;

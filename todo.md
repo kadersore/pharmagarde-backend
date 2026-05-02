@@ -117,3 +117,17 @@
 - [x] Ajouter ou adapter le cache côté client mobile pour limiter les appels au serveur
 - [x] Valider TypeScript, tests et état Expo après optimisation backend
 - [x] Sauvegarder un checkpoint de livraison après optimisation backend
+
+- [x] Refactoriser l’interface vers une architecture premium map-first inspirée de Google Maps et Uber
+- [x] Transformer la page Carte en carte plein écran entre header et footer avec overlays dynamiques
+- [x] Implémenter un bottom sheet draggable avec états minimisé, intermédiaire et plein écran
+- [x] Afficher pharmacies et cliniques dans le bottom sheet avec cartes modernes, scroll fluide et actions appel/itinéraire/favori
+- [x] Ajouter des marqueurs personnalisés, un marqueur actif sélectionné et des interactions de zoom/press fluides
+- [x] Remplacer le header par une barre de recherche premium avec bouton menu et favori
+- [x] Moderniser le menu latéral avec slide, overlay sombre, blur léger, icônes et espacements premium
+- [x] Appliquer un dark mode professionnel global avec palette sombre élégante et transition cohérente
+- [x] Ajouter micro-interactions globales : fade, scale, slide, feedback tactile et transitions rapides
+- [x] Ajouter skeleton loading, états de chargement et feedback d’erreur utilisateur
+- [x] Harmoniser typographie, espacements, arrondis, ombres et couleur principale #03C04A dans toute l’application
+- [x] Valider TypeScript, Vitest et état Expo après refonte UI/UX premium
+- [x] Sauvegarder un checkpoint de livraison après refonte UI/UX premium

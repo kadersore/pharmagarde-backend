@@ -1,26 +1,20 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { BlurView } from "expo-blur";
 import { usePathname, useRouter } from "expo-router";
 import { PropsWithChildren, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Animated, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ScreenContainer } from "@/components/screen-container";
 import { MenuContent } from "@/components/pharmagarde/menu-content";
+import { ScreenContainer } from "@/components/screen-container";
+import { haptic, usePremiumPalette } from "@/lib/pharmagarde/premium-ui";
 import { usePharmaGarde } from "@/lib/pharmagarde/app-state";
-
-const BRAND_GREEN = "#03C04A";
-const BACKGROUND = "#F6FBF8";
-const FOREGROUND = "#102016";
-const MUTED = "#667085";
-const BORDER = "#D6EBDD";
-const SURFACE = "#FFFFFF";
-const OVERLAY = "rgba(16, 32, 22, 0.46)";
 
 const FOOTER_ITEMS = [
   { key: "index", href: "/", label: "Accueil", icon: "home" },
   { key: "cliniques", href: "/cliniques", label: "Cliniques", icon: "local-hospital" },
   { key: "medicaments", href: "/medicaments", label: "Médicaments", icon: "medication" },
-  { key: "carte", href: "/carte", label: "Cartes", icon: "map" },
+  { key: "carte", href: "/carte", label: "Carte", icon: "map" },
 ] as const;
 
 type FooterItem = (typeof FOOTER_ITEMS)[number];
@@ -52,44 +46,57 @@ function isFooterActive(item: FooterItem, pathname: string) {
 
 function AppHeader({ title, onOpenMenu, rightAccessory }: { title: string; onOpenMenu: () => void; rightAccessory?: ReactNode }) {
   const router = useRouter();
-  const { loading } = usePharmaGarde();
+  const { loading, searchQuery } = usePharmaGarde();
+  const palette = usePremiumPalette();
+
+  const openSearch = () => {
+    haptic.selection();
+    router.push("/pharmagarde/search" as never);
+  };
 
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { backgroundColor: palette.background, borderBottomColor: palette.border }]}> 
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Ouvrir le menu"
-        android_ripple={{ color: "rgba(255,255,255,0.24)", borderless: true }}
-        style={({ pressed }) => [styles.headerButton, pressed ? styles.headerButtonPressed : undefined]}
-        onPress={onOpenMenu}
+        android_ripple={{ color: palette.softGreen, borderless: true }}
+        style={({ pressed }) => [styles.headerButton, { backgroundColor: palette.card, borderColor: palette.border }, pressed ? styles.pressedScale : undefined]}
+        onPress={() => {
+          haptic.light();
+          onOpenMenu();
+        }}
       >
-        <MaterialIcons name="menu" size={25} color="#FFFFFF" />
+        <MaterialIcons name="menu" size={24} color={palette.text} />
       </Pressable>
 
-      <View style={styles.headerTitleWrap} pointerEvents="none">
-        <Text style={styles.headerTitle} numberOfLines={1}>{title}</Text>
-      </View>
+      <Pressable
+        accessibilityRole="search"
+        accessibilityLabel="Ouvrir la recherche"
+        android_ripple={{ color: palette.softGreen }}
+        style={({ pressed }) => [styles.searchPill, { backgroundColor: palette.glass, borderColor: palette.border }, pressed ? styles.pressedScale : undefined]}
+        onPress={openSearch}
+      >
+        <MaterialIcons name="search" size={20} color={palette.brand} />
+        <View style={styles.searchTextWrap}>
+          <Text style={[styles.searchLabel, { color: palette.text }]} numberOfLines={1}>{searchQuery || "Rechercher pharmacies, cliniques"}</Text>
+          <Text style={[styles.searchHint, { color: palette.muted }]} numberOfLines={1}>{title === "Carte" ? "Autour de vous" : title}</Text>
+        </View>
+        {loading ? <ActivityIndicator color={palette.brand} size="small" /> : null}
+      </Pressable>
 
       <View style={styles.headerActions}>
-        {loading ? <ActivityIndicator color="#FFFFFF" size="small" /> : null}
         {rightAccessory ?? null}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Ouvrir les favoris"
-          android_ripple={{ color: "rgba(255,255,255,0.24)", borderless: true }}
-          style={({ pressed }) => [styles.headerButton, pressed ? styles.headerButtonPressed : undefined]}
-          onPress={() => router.push("/pharmagarde/favoris" as never)}
+          android_ripple={{ color: palette.softGreen, borderless: true }}
+          style={({ pressed }) => [styles.headerButton, { backgroundColor: palette.card, borderColor: palette.border }, pressed ? styles.pressedScale : undefined]}
+          onPress={() => {
+            haptic.selection();
+            router.push("/pharmagarde/favoris" as never);
+          }}
         >
-          <MaterialIcons name="favorite-border" size={23} color="#FFFFFF" />
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Ouvrir la recherche"
-          android_ripple={{ color: "rgba(255,255,255,0.24)", borderless: true }}
-          style={({ pressed }) => [styles.headerButton, pressed ? styles.headerButtonPressed : undefined]}
-          onPress={() => router.push("/pharmagarde/search" as never)}
-        >
-          <MaterialIcons name="search" size={24} color="#FFFFFF" />
+          <MaterialIcons name="favorite-border" size={23} color={palette.brand} />
         </Pressable>
       </View>
     </View>
@@ -100,10 +107,11 @@ function AppFooter() {
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  const palette = usePremiumPalette();
   const bottomPadding = Platform.OS === "web" ? 10 : Math.max(insets.bottom, 8);
 
   return (
-    <View style={[styles.footer, { paddingBottom: bottomPadding }]}> 
+    <View style={[styles.footer, { paddingBottom: bottomPadding, backgroundColor: palette.glass, borderTopColor: palette.border }]}> 
       {FOOTER_ITEMS.map((item) => {
         const active = isFooterActive(item, pathname);
         return (
@@ -111,12 +119,15 @@ function AppFooter() {
             key={item.key}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
-            android_ripple={{ color: "rgba(3,192,74,0.12)", borderless: false }}
-            style={({ pressed }) => [styles.footerItem, active ? styles.footerItemActive : undefined, pressed ? styles.footerItemPressed : undefined]}
-            onPress={() => router.replace(item.href as never)}
+            android_ripple={{ color: palette.softGreen, borderless: false }}
+            style={({ pressed }) => [styles.footerItem, active ? { backgroundColor: palette.softGreen } : undefined, pressed ? styles.footerItemPressed : undefined]}
+            onPress={() => {
+              haptic.light();
+              router.replace(item.href as never);
+            }}
           >
-            <MaterialIcons name={item.icon} size={23} color={active ? BRAND_GREEN : MUTED} />
-            <Text style={[styles.footerLabel, active ? styles.footerLabelActive : undefined]} numberOfLines={1}>{item.label}</Text>
+            <MaterialIcons name={item.icon} size={23} color={active ? palette.brand : palette.muted} />
+            <Text style={[styles.footerLabel, { color: active ? palette.brand : palette.muted }, active ? styles.footerLabelActive : undefined]} numberOfLines={1}>{item.label}</Text>
           </Pressable>
         );
       })}
@@ -126,32 +137,34 @@ function AppFooter() {
 
 function DrawerOverlay({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { width } = useWindowDimensions();
+  const palette = usePremiumPalette();
   const progress = useRef(new Animated.Value(0)).current;
   const [mounted, setMounted] = useState(visible);
-  const drawerWidth = Math.min(Math.max(width * 0.8 + 20, 308), width * 0.85, 412);
+  const drawerWidth = Math.min(Math.max(width * 0.82, 320), width * 0.88, 420);
 
   useEffect(() => {
     if (visible) {
       setMounted(true);
-      Animated.timing(progress, { toValue: 1, duration: 250, useNativeDriver: true }).start();
+      Animated.timing(progress, { toValue: 1, duration: 260, useNativeDriver: true }).start();
       return;
     }
-    Animated.timing(progress, { toValue: 0, duration: 210, useNativeDriver: true }).start(({ finished }) => {
+    Animated.timing(progress, { toValue: 0, duration: 220, useNativeDriver: true }).start(({ finished }) => {
       if (finished) setMounted(false);
     });
   }, [progress, visible]);
 
   const overlayOpacity = progress.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
-  const translateX = progress.interpolate({ inputRange: [0, 1], outputRange: [-drawerWidth, 0] });
+  const translateX = progress.interpolate({ inputRange: [0, 1], outputRange: [-drawerWidth - 18, 0] });
 
   if (!mounted) return null;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}> 
-        <Pressable accessibilityRole="button" accessibilityLabel="Fermer le menu" style={StyleSheet.absoluteFill} onPress={onClose} />
+        <BlurView intensity={palette.dark ? 24 : 18} tint={palette.dark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+        <Pressable accessibilityRole="button" accessibilityLabel="Fermer le menu" style={[StyleSheet.absoluteFill, { backgroundColor: palette.overlay }]} onPress={onClose} />
       </Animated.View>
-      <Animated.View style={[styles.drawerPanel, { width: drawerWidth, transform: [{ translateX }] }]}> 
+      <Animated.View style={[styles.drawerPanel, { width: drawerWidth, backgroundColor: palette.background, borderColor: palette.border, transform: [{ translateX }] }]}> 
         <MenuContent onClose={onClose} />
       </Animated.View>
     </View>
@@ -160,14 +173,21 @@ function DrawerOverlay({ visible, onClose }: { visible: boolean; onClose: () => 
 
 export function GlobalAppShell({ children, subtitle, showFooter = true, rightAccessory }: ShellProps) {
   const pathname = usePathname();
+  const palette = usePremiumPalette();
   const [drawerVisible, setDrawerVisible] = useState(false);
+  const contentOpacity = useRef(new Animated.Value(1)).current;
   const title = useMemo(() => titleForPath(pathname, subtitle), [pathname, subtitle]);
+
+  useEffect(() => {
+    contentOpacity.setValue(0.94);
+    Animated.timing(contentOpacity, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+  }, [contentOpacity, pathname]);
 
   return (
     <ScreenContainer edges={["top", "left", "right", "bottom"]} className="" containerClassName="">
-      <View style={styles.shell}>
+      <View style={[styles.shell, { backgroundColor: palette.background }]}> 
         <AppHeader title={title} onOpenMenu={() => setDrawerVisible(true)} rightAccessory={rightAccessory} />
-        <View style={styles.content}>{children}</View>
+        <Animated.View style={[styles.content, { backgroundColor: palette.background, opacity: contentOpacity }]}>{children}</Animated.View>
         {showFooter ? <AppFooter /> : null}
         <DrawerOverlay visible={drawerVisible} onClose={() => setDrawerVisible(false)} />
       </View>
@@ -180,73 +200,90 @@ export function AppChrome({ children, subtitle }: PropsWithChildren<{ subtitle?:
 }
 
 const styles = StyleSheet.create({
-  shell: { flex: 1, backgroundColor: BACKGROUND, overflow: "hidden" },
+  shell: { flex: 1, overflow: "hidden" },
   header: {
-    minHeight: 62,
+    minHeight: 72,
     paddingHorizontal: 14,
     paddingVertical: 10,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: BRAND_GREEN,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.22)",
+    gap: 10,
   },
   headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.18)",
+    borderWidth: 1,
+    shadowColor: "#092A13",
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 3,
   },
-  headerButtonPressed: { opacity: 0.82, transform: [{ scale: 0.97 }] },
-  headerTitleWrap: { position: "absolute", left: 118, right: 118, alignItems: "center" },
-  headerTitle: { color: "#FFFFFF", fontSize: 18, lineHeight: 23, fontWeight: "800", textAlign: "center" },
-  headerActions: { minWidth: 88, flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 8 },
-  content: { flex: 1, backgroundColor: BACKGROUND },
+  pressedScale: { opacity: 0.88, transform: [{ scale: 0.97 }] },
+  searchPill: {
+    flex: 1,
+    minHeight: 50,
+    borderRadius: 25,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    shadowColor: "#092A13",
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 7 },
+    elevation: 5,
+  },
+  searchTextWrap: { flex: 1 },
+  searchLabel: { fontSize: 14, lineHeight: 18, fontWeight: "900" },
+  searchHint: { fontSize: 11, lineHeight: 15, fontWeight: "700", marginTop: 1 },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  content: { flex: 1 },
   footer: {
-    minHeight: 64,
+    minHeight: 66,
     paddingTop: 8,
     paddingHorizontal: 10,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: SURFACE,
     borderTopWidth: 1,
-    borderTopColor: BORDER,
     shadowColor: "#092A13",
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: -3 },
-    elevation: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: -5 },
+    elevation: 12,
   },
   footerItem: {
     flex: 1,
     minHeight: 48,
-    borderRadius: 12,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
     gap: 2,
   },
-  footerItemActive: { backgroundColor: "#EAF8EF" },
-  footerItemPressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
-  footerLabel: { color: MUTED, fontSize: 11, lineHeight: 14, fontWeight: "700" },
-  footerLabelActive: { color: BRAND_GREEN, fontWeight: "900" },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: OVERLAY },
+  footerItemPressed: { opacity: 0.82, transform: [{ scale: 0.98 }] },
+  footerLabel: { fontSize: 11, lineHeight: 14, fontWeight: "800" },
+  footerLabelActive: { fontWeight: "900" },
+  overlay: { ...StyleSheet.absoluteFillObject },
   drawerPanel: {
     position: "absolute",
     left: 0,
     top: 0,
     bottom: 0,
-    backgroundColor: BACKGROUND,
-    borderTopRightRadius: 14,
-    borderBottomRightRadius: 14,
+    borderRightWidth: 1,
+    borderTopRightRadius: 28,
+    borderBottomRightRadius: 28,
     overflow: "hidden",
-    shadowColor: FOREGROUND,
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    shadowOffset: { width: 4, height: 0 },
-    elevation: 14,
+    shadowColor: "#020604",
+    shadowOpacity: 0.22,
+    shadowRadius: 24,
+    shadowOffset: { width: 8, height: 0 },
+    elevation: 18,
   },
 });
