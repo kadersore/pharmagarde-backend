@@ -13,6 +13,7 @@ import {
   startAutoRefresh,
   type PlaceResource,
 } from "../services/googlePlacesService";
+import { initializePharmaGardeCache, registerPharmaGardeCacheRoutes, startPharmaGardeSchedulers } from "../pharmagarde-cache";
 
 function parseCoordinates(query: { lat?: unknown; lng?: unknown }) {
   const lat = Number(query.lat);
@@ -47,6 +48,9 @@ function parseLimit(value: unknown) {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+
+  // Register PharmaGarde public REST routes immediately so /pharmacies and /healthcare remain reachable.
+  registerPharmaGardeCacheRoutes(app);
 
   app.use((req, res, next) => {
     const configuredOrigin = process.env.CORS_ORIGIN;
@@ -152,8 +156,10 @@ async function startServer() {
   registerClinicRoutes("/clinics", "clinics");
   registerClinicRoutes("/cliniques", "clinics");
 
+  await initializePharmaGardeCache();
   registerStorageProxy(app);
   registerOAuthRoutes(app);
+  startPharmaGardeSchedulers();
 
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, timestamp: Date.now() });

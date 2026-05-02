@@ -43,6 +43,18 @@ async function requestJson(path, expectedStatus = 200) {
   return text ? JSON.parse(text) : undefined;
 }
 
+function expectDataset(payload, key, path) {
+  if (!payload || typeof payload !== "object") {
+    throw new Error(`${path} must return a JSON object`);
+  }
+  if (!Array.isArray(payload[key]) || !Array.isArray(payload.data)) {
+    throw new Error(`${path} must return ${key} and data arrays`);
+  }
+  if (!payload.meta || typeof payload.meta !== "object") {
+    throw new Error(`${path} must return cache metadata`);
+  }
+}
+
 try {
   await waitForServer();
 
@@ -53,19 +65,25 @@ try {
   if (health.status !== "ok") throw new Error("/health payload is invalid");
 
   const pharmacies = await requestJson("/pharmacies");
-  if (!Array.isArray(pharmacies)) throw new Error("/pharmacies must return a JSON array");
+  expectDataset(pharmacies, "pharmacies", "/pharmacies");
+
+  const pharmaciesByCity = await requestJson("/pharmacies?city=Koudougou");
+  expectDataset(pharmaciesByCity, "pharmacies", "/pharmacies?city=Koudougou");
 
   const nearbyPharmacies = await requestJson("/pharmacies/nearby?lat=12.37&lng=-1.52");
-  if (!Array.isArray(nearbyPharmacies)) {
-    throw new Error("/pharmacies/nearby must return a JSON array");
-  }
+  expectDataset(nearbyPharmacies, "pharmacies", "/pharmacies/nearby");
+
+  const healthcare = await requestJson("/healthcare?city=Koudougou");
+  expectDataset(healthcare, "healthcare", "/healthcare?city=Koudougou");
 
   console.log(JSON.stringify({
     ok: true,
     root,
     health,
     pharmacies,
+    pharmaciesByCity,
     nearbyPharmacies,
+    healthcare,
   }, null, 2));
 } finally {
   server.kill("SIGTERM");

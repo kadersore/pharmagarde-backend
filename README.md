@@ -1,6 +1,6 @@
 # PharmaGarde BF Backend
 
-Ce dépôt contient le backend **Express/TypeScript** de PharmaGarde BF. Il expose des routes REST publiques directes pour les pharmacies, les cliniques et la recherche de proximité, tout en conservant les routes serveur historiques du projet.
+Ce dépôt contient le backend **Express/TypeScript** de PharmaGarde BF. Il expose des routes REST publiques directes pour les pharmacies, les structures de santé, les cliniques et la recherche de proximité, tout en conservant les routes serveur historiques du projet.
 
 ## Démarrage local
 
@@ -22,8 +22,9 @@ Les routes publiques sont déclarées directement avec Express avant les middlew
 |---|---|
 | `GET /` | Texte brut `API OK` |
 | `GET /health` | `{ "status": "ok" }` |
-| `GET /pharmacies` | Tableau JSON de pharmacies, vide si `GOOGLE_MAPS_API_KEY` n’est pas configurée. |
-| `GET /pharmacies/nearby?lat=12.3714&lng=-1.5197&limit=10` | Tableau JSON de pharmacies triées par distance croissante. |
+| `GET /pharmacies?city=Koudougou` | Objet JSON contenant `pharmacies`, `data` et `meta`, filtré strictement par ville si `city` ou `ville` est fourni. |
+| `GET /pharmacies/nearby?lat=12.3714&lng=-1.5197&limit=10` | Objet JSON contenant les pharmacies issues du cache PharmaGarde public. |
+| `GET /healthcare?city=Koudougou` | Objet JSON contenant `healthcare`, `data` et `meta`, filtré strictement par ville si `city` ou `ville` est fourni. |
 | `GET /clinics` | Tableau JSON de cliniques et hôpitaux, vide si `GOOGLE_MAPS_API_KEY` n’est pas configurée. |
 | `GET /clinics/nearby?lat=12.3714&lng=-1.5197&limit=10` | Tableau JSON de cliniques triées par distance croissante. |
 | `GET /cliniques` | Alias francophone de `GET /clinics`. |
@@ -37,7 +38,8 @@ L’archive `pharmagarde-backend-render-final.zip` a été intégrée dans la st
 |---|---|
 | Source pharmacies | Google Places `type=pharmacy` |
 | Source cliniques | Google Places `type=hospital` |
-| Villes couvertes par défaut | Ouagadougou et Bobo-Dioulasso |
+| Villes couvertes par le cache PharmaGarde | Ouagadougou, Bobo-Dioulasso, Koudougou, Ouahigouya, Kaya, Tenkodogo, Fada N'gourma, Dori, Gaoua, Banfora, Ziniaré, Dédougou et Manga |
+| Villes couvertes par l’ancien service `/clinics` | Ouagadougou et Bobo-Dioulasso |
 | Cache mémoire | TTL configuré par `CACHE_TTL_HOURS`, 24 heures par défaut |
 | Recherche nearby | Distance calculée en kilomètres avec tri croissant |
 | Repli sans clé API | Réponse tableau vide afin que Render et les tests restent disponibles |
@@ -51,6 +53,10 @@ Les fichiers `.env` réels sont exclus du dépôt pour éviter toute exposition 
 | `NODE_ENV` | Non | `production` sur Render | Mode d’exécution. |
 | `PORT` | Non | `3000` | Port HTTP du serveur. |
 | `GOOGLE_MAPS_API_KEY` | Oui pour les données réelles | Aucune | Clé Google Maps/Places utilisée par Nearby Search et Place Details. |
+| `GOOGLE_PLACES_API_KEY` | Non | `GOOGLE_MAPS_API_KEY` | Alias accepté par le cache public PharmaGarde. |
+| `PHARMAGARDE_CACHE_DIR` | Non | `server/.cache` | Répertoire local des caches JSON par ville. |
+| `PHARMAGARDE_GOOGLE_RADIUS_METERS` | Non | `15000` | Rayon de recherche du cache public PharmaGarde. |
+| `PHARMAGARDE_ADMIN_TOKEN` | Recommandé en production | Aucune | Jeton d’accès pour `POST /admin/update-data`. |
 | `CACHE_TTL_HOURS` | Non | `24` | Durée de validité du cache mémoire. |
 | `GOOGLE_PLACES_RADIUS_METERS` | Non | `25000` | Rayon de recherche autour des villes configurées. |
 | `GOOGLE_PLACES_MAX_PAGES` | Non | `1` | Nombre maximal de pages Nearby Search, limité à 3. |
