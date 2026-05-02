@@ -32,6 +32,9 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
+  // Register public REST routes immediately so /pharmacies and /healthcare cannot be masked by API middleware.
+  registerPharmaGardeCacheRoutes(app);
+
   // Enable CORS for all routes - reflect the request origin to support credentials
   app.use((req, res, next) => {
     const origin = req.headers.origin;
@@ -59,7 +62,6 @@ async function startServer() {
   await initializePharmaGardeCache();
   registerStorageProxy(app);
   registerOAuthRoutes(app);
-  registerPharmaGardeCacheRoutes(app);
   startPharmaGardeSchedulers();
 
   app.get("/api/health", (_req, res) => {

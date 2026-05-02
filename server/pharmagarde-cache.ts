@@ -398,7 +398,16 @@ function maybeUnrefTimer(timer: ReturnType<typeof setInterval>) {
   candidate.unref?.();
 }
 
-function withCacheHeaders(res: Response, kind: CacheKind) {
+function withPublicCorsHeaders(req: Request, res: Response) {
+  const origin = req.headers?.origin;
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+}
+
+function withCacheHeaders(req: Request, res: Response, kind: CacheKind) {
+  withPublicCorsHeaders(req, res);
   const state = memoryCache[kind];
   res.setHeader("Cache-Control", kind === "pharmacies" ? "public, max-age=300, stale-while-revalidate=86400" : "public, max-age=1800, stale-while-revalidate=604800");
   if (state.updatedAt) res.setHeader("Last-Modified", new Date(state.updatedAt).toUTCString());
@@ -419,7 +428,7 @@ function sendCachedDataset(req: Request, res: Response, kind: CacheKind, rootKey
 
   console.info(`[PharmaGardeCache] ${kind}: ville demandée=${responseCity ?? "toutes"}, résultats retournés=${items.length}`);
 
-  withCacheHeaders(res, kind);
+  withCacheHeaders(req, res, kind);
   res.json({
     [rootKey]: items,
     data: items,

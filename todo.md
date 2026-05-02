@@ -272,3 +272,12 @@
 - [x] Commiter la version corrigée des villes secondaires et de l’état vide client
 - [x] Pousser la version Expo corrigée sur GitHub
 - [x] Vérifier le lien GitHub et confirmer le push à l’utilisateur
+
+- [x] Corriger l’erreur `Cannot GET /healthcare` sur le serveur Express réellement exécuté
+- [x] Ajouter ou vérifier la route REST publique `GET /healthcare`
+- [x] Ajouter ou vérifier la route REST publique `GET /pharmacies`
+- [x] Confirmer que les routes REST sont déclarées avant tout middleware susceptible de les masquer
+- [x] Vérifier que le fichier principal exécuté contient bien ces routes
+- [x] Vérifier que le build génère `dist/index.js` avec les routes `/healthcare` et `/pharmacies`
+- [x] Tester localement les endpoints `/healthcare` et `/pharmacies` après build
+- [ ] Sauvegarder, pousser et confirmer la correction des routes REST publiques

@@ -99,11 +99,14 @@ describe("cache backend PharmaGarde", () => {
     await initializePharmaGardeCache();
     const routes = createRouteMap(registerPharmaGardeCacheRoutes as never);
 
+    expect(routes["GET /pharmacies"]).toBeTypeOf("function");
+    expect(routes["GET /healthcare"]).toBeTypeOf("function");
+
     const pharmaciesResponse = new FakeResponse();
     routes["GET /pharmacies"]?.({ header: () => undefined, query: {} }, pharmaciesResponse);
 
     const healthcareResponse = new FakeResponse();
-    routes["GET /healthcare"]?.({ header: () => undefined, query: {} }, healthcareResponse);
+    routes["GET /healthcare"]?.({ header: () => undefined, query: {}, headers: { origin: "https://preview.example" } } as never, healthcareResponse);
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(pharmaciesResponse.headers["X-PharmaGarde-Cache-Source"]).toBe("server-local-cache-by-city");
@@ -111,6 +114,8 @@ describe("cache backend PharmaGarde", () => {
       pharmacies: [{ id: "ph-1", name: "Pharmacie Centrale", city: "Ouagadougou" }],
       meta: { cache: "server-local-cache-by-city", kind: "pharmacies", itemCount: 1, totalItemCount: 1, stale: false },
     });
+    expect(healthcareResponse.headers["Access-Control-Allow-Origin"]).toBe("https://preview.example");
+    expect(healthcareResponse.headers["Access-Control-Allow-Credentials"]).toBe("true");
     expect(healthcareResponse.body).toMatchObject({
       healthcare: [{ id: "cl-1", name: "Clinique du Centre", city: "Ouagadougou" }],
       meta: { cache: "server-local-cache-by-city", kind: "healthcare", itemCount: 1, totalItemCount: 1, stale: false },
