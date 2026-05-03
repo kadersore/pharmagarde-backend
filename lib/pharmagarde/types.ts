@@ -14,6 +14,7 @@ export type HealthPlace = {
   phone?: string;
   rating?: number;
   distanceKm?: number;
+  distanceLabel?: string;
   latitude?: number;
   longitude?: number;
   isOpen?: boolean;

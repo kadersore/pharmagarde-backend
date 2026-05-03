@@ -87,7 +87,11 @@ describe("cartes pharmacies et cliniques", () => {
     expect(placeCard.indexOf("favorite-border")).toBeGreaterThan(placeCard.indexOf("{isExpanded ? ("));
     expect(mapPlaceCard).toContain("styles.placeHeaderMeta");
     expect(mapPlaceCard.indexOf("styles.placeHeaderMeta")).toBeLessThan(mapPlaceCard.indexOf("{isExpanded ? ("));
-    expect(mapPlaceCard).toContain("Distance inconnue");
+    expect(mapPlaceCard).toContain("place.distanceLabel");
+    expect(mapPlaceCard).toContain("Position à préciser");
+    expect(mapPlaceCard).not.toContain("Distance inconnue");
+    expect(placeCard).toContain("place.distanceLabel");
+    expect(placeCard).not.toContain("Distance inconnue");
     expect(mapPlaceCard).toContain("Statut inconnu");
     expect(mapPlaceCard).toContain("isExpanded: boolean");
     expect(mapPlaceCard).toContain("onToggle: () => void");
@@ -116,6 +120,23 @@ describe("cartes pharmacies et cliniques", () => {
 
     expect(index).toContain("data={pharmacies}");
     expect(index).not.toContain("pharmacies.slice(");
+  });
+
+  it("calcule localement les distances et utilise un fallback par ville sans dépendre du backend", () => {
+    const appState = read("lib/pharmagarde/app-state.tsx");
+    const locationPolicy = read("lib/pharmagarde/location-policy.ts");
+    const cityUtils = read("lib/pharmagarde/city-utils.ts");
+    const types = read("lib/pharmagarde/types.ts");
+
+    expect(appState).toContain("withLocalDistance");
+    expect(appState).toContain("distanceKm(origin");
+    expect(appState).toContain("distanceLabel: `${roundedDistanceKm.toFixed(1)} km`");
+    expect(appState).toContain("getDefaultLocationFallback(selectedCity).location");
+    expect(appState).toContain("useDefaultLocation(\"denied\")");
+    expect(locationPolicy).toContain("getDefaultLocationFallback(cityName");
+    expect(locationPolicy).toContain("Fallback par ville");
+    expect(cityUtils).toContain("export function distanceKm");
+    expect(types).toContain("distanceLabel?: string");
   });
 });
 

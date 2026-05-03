@@ -5,7 +5,7 @@ import { Platform } from "react-native";
 
 import { useThemeContext } from "@/lib/theme-provider";
 import { fetchClinics, fetchMedicines, fetchPharmacies, getDefaultApiBaseUrl, normalizeBaseUrl } from "./api";
-import { filterPlacesByCity, inferCityFromAddressParts, inferNearestKnownCity, normalizeCityName } from "./city-utils";
+import { distanceKm, filterPlacesByCity, inferCityFromAddressParts, inferNearestKnownCity, normalizeCityName } from "./city-utils";
 import { DEFAULT_LOCATION, getDefaultLocationFallback } from "./location-policy";
 import { LOCAL_ESSENTIAL_MEDICINES, LOCAL_MEDICINES_NOTICE } from "./medicines-data";
 import { sortPlacesByOpenThenDistance } from "./place-ordering";
@@ -62,7 +62,7 @@ function toFavoriteFromPlace(place: HealthPlace): FavoriteItem {
     entityType: place.type,
     title: place.name,
     subtitle: place.address ?? place.city,
-    metadata: place.distanceKm !== undefined ? `${place.distanceKm.toFixed(1)} km` : place.isOpen === true ? "Ouvert" : undefined,
+    metadata: place.distanceLabel ?? (place.isOpen === true ? "Ouvert" : undefined),
     phone: place.phone,
     rating: place.rating,
     latitude: place.latitude,
@@ -96,6 +96,29 @@ function normalizePreferences(value: Partial<AppPreferences> | null | undefined)
   const city = getSafeSelectedCity(value?.city);
 
   return { mode, language, mapType, city };
+}
+
+function hasUsableCoordinates(place: HealthPlace): place is HealthPlace & Required<Pick<HealthPlace, "latitude" | "longitude">> {
+  return Number.isFinite(place.latitude) && Number.isFinite(place.longitude);
+}
+
+function withLocalDistance(place: HealthPlace, origin: Coordinates): HealthPlace {
+  if (!hasUsableCoordinates(place)) {
+    const { distanceKm: _distanceKm, distanceLabel: _distanceLabel, ...placeWithoutBackendDistance } = place;
+    return placeWithoutBackendDistance;
+  }
+
+  const localDistanceKm = distanceKm(origin, { latitude: place.latitude, longitude: place.longitude });
+  const roundedDistanceKm = Math.round(localDistanceKm * 10) / 10;
+  return {
+    ...place,
+    distanceKm: roundedDistanceKm,
+    distanceLabel: `${roundedDistanceKm.toFixed(1)} km`,
+  };
+}
+
+function withLocalDistances(places: HealthPlace[], origin: Coordinates) {
+  return places.map((place) => withLocalDistance(place, origin));
 }
 
 export function PharmaGardeProvider({ children }: PropsWithChildren) {
@@ -181,25 +204,25 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
     setRefreshingLocation(true);
     setLocationMessage(undefined);
 
-    const useDefaultLocation = async () => {
-      const fallback = getDefaultLocationFallback();
+    const useDefaultLocation = async (reason: "denied" | "unavailable" | "unsupported") => {
+      const fallback = getDefaultLocationFallback(preferences.city, reason);
       setUserLocation(fallback.location);
-      await updateCityFromCoordinates(fallback.location, "fallback");
+      setLocationMessage(fallback.message);
     };
 
     try {
       if (Platform.OS === "web" && typeof navigator !== "undefined" && !navigator.geolocation) {
-        await useDefaultLocation();
+        await useDefaultLocation("unsupported");
         return;
       }
       const serviceEnabled = Platform.OS === "web" ? true : await Location.hasServicesEnabledAsync();
       if (!serviceEnabled) {
-        await useDefaultLocation();
+        await useDefaultLocation("unavailable");
         return;
       }
       const permission = await Location.requestForegroundPermissionsAsync();
       if (permission.status !== "granted") {
-        await useDefaultLocation();
+        await useDefaultLocation("denied");
         return;
       }
       const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
@@ -207,11 +230,11 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
       setUserLocation(coordinates);
       await updateCityFromCoordinates(coordinates, "manual");
     } catch {
-      await useDefaultLocation();
+      await useDefaultLocation("unavailable");
     } finally {
       setRefreshingLocation(false);
     }
-  }, [updateCityFromCoordinates]);
+  }, [preferences.city, updateCityFromCoordinates]);
 
   const refreshData = useCallback(async () => {
     if (!isApiConfigured) {
@@ -228,15 +251,16 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
     setLoading(true);
     const nextErrors: DataErrors = {};
     const selectedCity = getSafeSelectedCity(preferences.city);
+    const referenceLocation = userLocation ?? getDefaultLocationFallback(selectedCity).location;
     console.info("[PharmaGarde Frontend] Ville envoyée aux APIs", { selectedCity, pharmaciesEndpoint: `/pharmacies?city=${encodeURIComponent(selectedCity)}`, healthcareEndpoint: `/healthcare?city=${encodeURIComponent(selectedCity)}` });
     const [pharmacyResult, clinicResult, medicineResult] = await Promise.allSettled([
-      fetchPharmacies(apiBaseUrl, userLocation, selectedCity),
-      fetchClinics(apiBaseUrl, userLocation, selectedCity),
+      fetchPharmacies(apiBaseUrl, referenceLocation, selectedCity),
+      fetchClinics(apiBaseUrl, referenceLocation, selectedCity),
       fetchMedicines(apiBaseUrl),
     ]);
 
     if (pharmacyResult.status === "fulfilled") {
-      const nextPharmacies = sortPlacesByOpenThenDistance(filterPlacesByCity(pharmacyResult.value, selectedCity));
+      const nextPharmacies = sortPlacesByOpenThenDistance(withLocalDistances(filterPlacesByCity(pharmacyResult.value, selectedCity), referenceLocation));
       console.info("[PharmaGarde Frontend] Réponse pharmacies reçue", { selectedCity, receivedCount: pharmacyResult.value.length, displayedCount: nextPharmacies.length, pharmacies: nextPharmacies });
       setPharmacies(nextPharmacies);
     } else {
@@ -245,7 +269,7 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
     }
 
     if (clinicResult.status === "fulfilled") {
-      const nextClinics = sortPlacesByOpenThenDistance(filterPlacesByCity(clinicResult.value, selectedCity));
+      const nextClinics = sortPlacesByOpenThenDistance(withLocalDistances(filterPlacesByCity(clinicResult.value, selectedCity), referenceLocation));
       console.info("[PharmaGarde Frontend] Réponse healthcare reçue", { selectedCity, receivedCount: clinicResult.value.length, displayedCount: nextClinics.length });
       setClinics(nextClinics);
     } else {

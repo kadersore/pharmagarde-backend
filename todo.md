@@ -316,3 +316,13 @@
 - [x] Ajouter ou adapter un test de non-régression pour vérifier l’absence de limitation sur la liste d’accueil.
 - [x] Valider TypeScript, Vitest et état Expo après suppression de la limitation de la page d’accueil.
 - [x] Sauvegarder un checkpoint de livraison après affichage complet de la liste d’accueil.
+
+- [x] Récupérer la position utilisateur côté frontend avec permission de géolocalisation.
+- [x] Gérer le refus ou l’indisponibilité GPS avec un message clair et une position par défaut basée sur la ville sélectionnée.
+- [x] Calculer localement la distance Haversine entre la position de référence et chaque pharmacie ou structure de santé.
+- [x] Ajouter une distance formatée en kilomètres à chaque item affiché dans l’application.
+- [x] Supprimer l’affichage `Distance inconnue` lorsque la distance peut être calculée localement.
+- [x] Trier les listes par distance calculée quand les coordonnées sont disponibles.
+- [x] Ajouter ou adapter les tests de non-régression pour le calcul local des distances et le fallback hors connexion.
+- [x] Valider TypeScript, Vitest et l’état Expo après correction de l’affichage des distances.
+- [x] Sauvegarder un checkpoint de livraison après correction des distances locales.

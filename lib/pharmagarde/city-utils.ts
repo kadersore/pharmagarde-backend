@@ -47,7 +47,7 @@ function normalizeText(value?: string | null) {
     .trim();
 }
 
-function distanceKm(a: Coordinates, b: Coordinates) {
+export function distanceKm(a: Coordinates, b: Coordinates) {
   const radiusKm = 6371;
   const dLat = ((b.latitude - a.latitude) * Math.PI) / 180;
   const dLon = ((b.longitude - a.longitude) * Math.PI) / 180;
@@ -55,6 +55,12 @@ function distanceKm(a: Coordinates, b: Coordinates) {
   const lat2 = (b.latitude * Math.PI) / 180;
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
   return 2 * radiusKm * Math.asin(Math.sqrt(h));
+}
+
+export function getKnownCityCoordinates(cityName?: string | null): Coordinates {
+  const normalizedCityName = normalizeCityName(cityName);
+  const city = KNOWN_BURKINA_CITIES.find((knownCity) => knownCity.name === normalizedCityName) ?? KNOWN_BURKINA_CITIES[0];
+  return { latitude: city.latitude, longitude: city.longitude };
 }
 
 export function inferCityFromAddressParts(parts: Array<string | null | undefined>) {

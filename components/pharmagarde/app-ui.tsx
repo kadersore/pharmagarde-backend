@@ -88,7 +88,7 @@ export function PlaceCard({ place, isExpanded, onToggle }: { place: HealthPlace;
     entityType: place.type,
     title: place.name,
     subtitle: place.address ?? place.city,
-    metadata: place.distanceKm !== undefined ? `${place.distanceKm.toFixed(1)} km` : place.isOpen === true ? "Ouvert" : undefined,
+    metadata: place.distanceLabel ?? (place.isOpen === true ? "Ouvert" : undefined),
     phone: place.phone,
     rating: place.rating,
     latitude: place.latitude,
@@ -117,7 +117,7 @@ export function PlaceCard({ place, isExpanded, onToggle }: { place: HealthPlace;
         </View>
         <View style={styles.placeHeaderMeta}>
           <View style={[styles.metaPill, { backgroundColor: palette.cardMuted }]}> 
-            <Text style={[styles.metaText, { color: palette.text }]}>{place.distanceKm !== undefined ? `${place.distanceKm.toFixed(1)} km` : "Distance inconnue"}</Text>
+            <Text style={[styles.metaText, { color: palette.text }]}>{place.distanceLabel ?? (place.distanceKm !== undefined ? `${place.distanceKm.toFixed(1)} km` : "Position à préciser")}</Text>
           </View>
           <View style={[styles.metaPill, { backgroundColor: place.isOpen === false ? "rgba(225, 29, 72, 0.1)" : palette.softGreen }]}> 
             <Text style={[styles.metaText, { color: place.isOpen === false ? palette.danger : palette.success }]}>{place.isOpen === true ? "Ouvert" : place.isOpen === false ? "Fermé" : "Statut inconnu"}</Text>
