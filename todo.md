@@ -471,3 +471,10 @@
 - [x] Exécuter `pnpm db:push` après correction du schéma.
 - [x] Ajouter ou adapter un test de non-régression confirmant que l’insertion transaction utilise les bons noms de colonnes.
 - [x] Valider TypeScript, Vitest, état serveur, checkpoint et push GitHub vers `kadersore/pharmagarde-backend`.
+
+- [x] Corriger l’erreur « Cannot GET /pharmagarde/abonnement » après retour de paiement.
+- [x] Créer une route backend `GET /pharmagarde/abonnement` qui récupère `paymentReference`, `reference` et `mode`.
+- [x] Ajouter des logs backend de debug pour les paramètres reçus sur le retour paiement.
+- [x] Rediriger le retour paiement vers un deep link mobile valide ou afficher une page de succès fallback.
+- [x] Ajouter une non-régression garantissant qu’aucune URL de retour paiement ne pointe vers une route inexistante.
+- [x] Valider TypeScript, Vitest, état serveur, checkpoint et push GitHub vers `kadersore/pharmagarde-backend`.

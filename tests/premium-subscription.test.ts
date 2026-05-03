@@ -39,6 +39,7 @@ describe("abonnement premium backend", () => {
     const entry = read("server/_core/index.ts");
     const routers = read("server/routers.ts");
     expect(entry).toContain('app.post("/payment/init", initPremiumPayment)');
+    expect(entry).toContain('app.get("/pharmagarde/abonnement", handlePremiumPaymentReturn)');
     expect(entry).toContain('app.post("/payment/webhook", handleLigdiCashWebhook)');
     expect(routers).toContain("premium: router");
     expect(routers).toContain("status: protectedProcedure");
@@ -77,5 +78,16 @@ describe("abonnement premium backend", () => {
     expect(premium).toContain("sdk.authenticateRequest(req)");
     expect(premium).toContain("[PremiumAuth] Token reçu sur route protégée");
     expect(premium).toContain("hasBearerToken");
+  });
+
+  it("gère le retour GET /pharmagarde/abonnement sans route inexistante", () => {
+    const premium = read("server/premium.ts");
+    expect(premium).toContain("export async function handlePremiumPaymentReturn");
+    expect(premium).toContain("req.query.paymentReference");
+    expect(premium).toContain("req.query.reference");
+    expect(premium).toContain("req.query.mode");
+    expect(premium).toContain("[PremiumPaymentReturn] Retour paiement reçu");
+    expect(premium).toContain("PHARMAGARDE_PAYMENT_RETURN_DEEP_LINK");
+    expect(premium).toContain("Retour de paiement reçu");
   });
 });

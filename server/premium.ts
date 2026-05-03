@@ -226,6 +226,84 @@ export async function initPremiumPayment(req: Request, res: Response) {
   }
 }
 
+function firstQueryValue(value: unknown): string | undefined {
+  if (Array.isArray(value)) return firstQueryValue(value[0]);
+  if (typeof value === "string") return value.trim() || undefined;
+  if (typeof value === "number") return String(value);
+  return undefined;
+}
+
+function appendPaymentReturnParams(baseUrl: string, params: { paymentReference?: string; reference?: string; mode?: string }) {
+  const url = new URL(baseUrl);
+  for (const [key, value] of Object.entries(params)) {
+    if (value) url.searchParams.set(key, value);
+  }
+  return url.toString();
+}
+
+function renderPaymentReturnPage(params: { paymentReference?: string; reference?: string; mode?: string; status?: string }) {
+  const reference = params.paymentReference ?? params.reference ?? "Référence indisponible";
+  const status = params.status ?? "retour reçu";
+  return `<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Abonnement Premium PharmaGarde BF</title>
+  <style>
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f4fbf7; color: #102016; }
+    main { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+    section { width: min(440px, 100%); background: #fff; border-radius: 28px; box-shadow: 0 18px 50px rgba(10, 126, 80, .14); padding: 28px; text-align: center; }
+    .badge { width: 64px; height: 64px; margin: 0 auto 16px; border-radius: 22px; display: grid; place-items: center; background: #10c85a; color: #fff; font-size: 34px; font-weight: 800; }
+    h1 { font-size: 24px; line-height: 1.2; margin: 0 0 12px; }
+    p { color: #53645a; line-height: 1.55; margin: 0 0 14px; }
+    dl { margin: 18px 0 0; text-align: left; background: #f4fbf7; border-radius: 18px; padding: 16px; }
+    dt { font-size: 12px; color: #6b7b72; text-transform: uppercase; letter-spacing: .04em; }
+    dd { margin: 4px 0 14px; font-weight: 700; overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <main>
+    <section>
+      <div class="badge">✓</div>
+      <h1>Retour de paiement reçu</h1>
+      <p>Votre retour Ligdi Cash a été enregistré. Vous pouvez revenir dans PharmaGarde BF pour vérifier l’état de votre abonnement Premium.</p>
+      <dl>
+        <dt>Référence</dt><dd>${reference.replace(/[<>&"]/g, (char) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[char] ?? char)}</dd>
+        <dt>Statut</dt><dd>${status}</dd>
+        <dt>Mode</dt><dd>${params.mode ?? "non précisé"}</dd>
+      </dl>
+    </section>
+  </main>
+</body>
+</html>`;
+}
+
+export async function handlePremiumPaymentReturn(req: Request, res: Response) {
+  const paymentReference = firstQueryValue(req.query.paymentReference);
+  const reference = firstQueryValue(req.query.reference);
+  const mode = firstQueryValue(req.query.mode);
+  const resolvedReference = paymentReference ?? reference;
+
+  console.info("[PremiumPaymentReturn] Retour paiement reçu", { paymentReference, reference, mode });
+
+  const mobileReturnUrl = process.env.PHARMAGARDE_PAYMENT_RETURN_DEEP_LINK;
+  if (mobileReturnUrl) {
+    return res.redirect(302, appendPaymentReturnParams(mobileReturnUrl, { paymentReference, reference, mode }));
+  }
+
+  let status: string | undefined;
+  if (resolvedReference) {
+    const db = await getDb();
+    if (db) {
+      const found = await db.select().from(transactions).where(eq(transactions.merchantReference, resolvedReference)).limit(1);
+      status = found[0]?.status;
+    }
+  }
+
+  return res.status(200).type("html").send(renderPaymentReturnPage({ paymentReference, reference, mode, status }));
+}
+
 export async function handleLigdiCashWebhook(req: Request, res: Response) {
   try {
     const db = await getDb();
