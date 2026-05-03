@@ -383,4 +383,4 @@
 
 - [x] Corriger définitivement la séparation `selectedCity` / `userLocation` : ville uniquement pour filtrer, GPS prioritaire pour calculer les distances, fallback centre-ville seulement si GPS indisponible.
 - [x] Maintenir la géolocalisation active après changement de ville et valider les scénarios changement de ville / activation GPS / désactivation GPS.
-- [ ] Sauvegarder la correction locale et la déposer sur GitHub selon la règle active sans pousser vers `kadersore/Pharmagarde`.
+- [x] Sauvegarder la correction locale et la déposer sur GitHub selon la règle active sans pousser vers `kadersore/Pharmagarde`.
