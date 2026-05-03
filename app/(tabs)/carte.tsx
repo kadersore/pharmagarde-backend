@@ -1,6 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as WebBrowser from "expo-web-browser";
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Animated, FlatList, Linking, PanResponder, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
 import { AppChrome, googlePlaceTypeLabel } from "@/components/pharmagarde/app-ui";
@@ -85,7 +85,7 @@ function MapPlaceCard({ place, active, favorite, isExpanded, onSelect, onToggle,
         </View>
         <View style={styles.placeHeaderMeta}>
           <View style={[styles.metaPill, { backgroundColor: palette.cardMuted }]}> 
-            <Text style={[styles.metaText, { color: palette.text }]}>{place.distanceLabel ?? (place.distanceKm !== undefined ? `${place.distanceKm.toFixed(1)} km` : "Position à préciser")}</Text>
+            <Text style={[styles.metaText, { color: palette.text }]}>{place.distanceLabel ?? (place.distanceKm !== undefined ? `${place.distanceKm.toFixed(1)} km` : "Distance indisponible")}</Text>
           </View>
           <View style={[styles.metaPill, { backgroundColor: place.isOpen === false ? "rgba(225, 29, 72, 0.1)" : palette.softGreen }]}> 
             <Text style={[styles.metaText, { color: place.isOpen === false ? palette.danger : palette.success }]}>{place.isOpen === true ? "Ouvert" : place.isOpen === false ? "Fermé" : "Statut inconnu"}</Text>
@@ -172,9 +172,9 @@ export default function CarteScreen() {
 
   const selectedPlace = visiblePlaces.find((place) => keyFor(place) === selectedId) ?? visiblePlaces[0];
 
-  const animateTo = (toValue: number) => {
+  const animateTo = useCallback((toValue: number) => {
     Animated.timing(translateY, { toValue, duration: 240, useNativeDriver: true }).start();
-  };
+  }, [translateY]);
 
   const panResponder = useMemo(() => PanResponder.create({
     onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 8,
@@ -194,7 +194,7 @@ export default function CarteScreen() {
       haptic.light();
       animateTo(nearest);
     },
-  }), [snap.full, snap.mid, snap.min, translateY]);
+  }), [animateTo, snap.full, snap.mid, snap.min, translateY]);
 
   const selectPlace = (place: HealthPlace) => {
     setSelectedId(keyFor(place));

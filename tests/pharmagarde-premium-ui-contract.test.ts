@@ -94,10 +94,13 @@ describe("cartes pharmacies et cliniques", () => {
     expect(mapPlaceCard).toContain("styles.placeHeaderMeta");
     expect(mapPlaceCard.indexOf("styles.placeHeaderMeta")).toBeLessThan(mapPlaceCard.indexOf("{isExpanded ? ("));
     expect(mapPlaceCard).toContain("place.distanceLabel");
-    expect(mapPlaceCard).toContain("Position à préciser");
+    expect(mapPlaceCard).toContain("Distance indisponible");
     expect(mapPlaceCard).not.toContain("Distance inconnue");
+    expect(mapPlaceCard).not.toContain("Position à préciser");
     expect(placeCard).toContain("place.distanceLabel");
+    expect(placeCard).toContain("Distance indisponible");
     expect(placeCard).not.toContain("Distance inconnue");
+    expect(placeCard).not.toContain("Position à préciser");
     expect(mapPlaceCard).toContain("Statut inconnu");
     expect(mapPlaceCard).toContain("isExpanded: boolean");
     expect(mapPlaceCard).toContain("onToggle: () => void");
@@ -137,19 +140,29 @@ describe("cartes pharmacies et cliniques", () => {
     expect(index).not.toContain("pharmacies.slice(");
   });
 
-  it("calcule localement les distances et utilise un fallback par ville sans dépendre du backend", () => {
+  it("calcule localement les distances depuis une referenceLocation valide et affiche un fallback explicite", () => {
     const appState = read("lib/pharmagarde/app-state.tsx");
-    const locationPolicy = read("lib/pharmagarde/location-policy.ts");
+    const referenceLocation = read("lib/pharmagarde/reference-location.ts");
+    const cityCoordinates = read("lib/pharmagarde/city-coordinates.ts");
     const cityUtils = read("lib/pharmagarde/city-utils.ts");
     const types = read("lib/pharmagarde/types.ts");
 
-    expect(appState).toContain("withLocalDistance");
+    expect(appState).toContain("const referenceLocation = useMemo(() => resolveReferenceLocation");
+    expect(appState).toContain("fetchPharmacies(apiBaseUrl, referenceLocation, activeCity)");
+    expect(appState).toContain("fetchClinics(apiBaseUrl, referenceLocation, activeCity)");
+    expect(appState).toContain("withLocalDistances(filterPlacesByCity(pharmacyResult.value, activeCity), referenceLocation)");
     expect(appState).toContain("distanceKm(origin");
     expect(appState).toContain("distanceLabel: `${roundedDistanceKm.toFixed(1)} km`");
-    expect(appState).toContain("getDefaultLocationFallback(activeCity).location");
-    expect(appState).toContain("useDefaultLocation(\"denied\")");
-    expect(locationPolicy).toContain("getDefaultLocationFallback(cityName");
-    expect(locationPolicy).toContain("Fallback par ville");
+    expect(appState).toContain("DISTANCE_UNAVAILABLE_LABEL");
+    expect(appState).not.toContain("getDefaultLocationFallback(activeCity).location");
+    expect(referenceLocation).toContain("export function resolveReferenceLocation");
+    expect(referenceLocation).toContain("isManualCitySelection");
+    expect(referenceLocation).toContain("getKnownCityCoordinates(selectedCity)");
+    expect(referenceLocation).toContain("hasValidReferenceCoordinates(userLocation)");
+    expect(referenceLocation).toContain("DISTANCE_UNAVAILABLE_LABEL = \"Distance indisponible\"");
+    expect(cityCoordinates).toContain("Ouagadougou");
+    expect(cityCoordinates).toContain("Bobo-Dioulasso");
+    expect(cityCoordinates).toContain("Manga");
     expect(cityUtils).toContain("export function distanceKm");
     expect(types).toContain("distanceLabel?: string");
   });

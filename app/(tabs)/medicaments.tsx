@@ -1,11 +1,11 @@
 import { FlatList, StyleSheet, Text, View } from "react-native";
 
-import { AppChrome, EmptyState, MedicineCard, StatusNotice } from "@/components/pharmagarde/app-ui";
+import { AppChrome, EmptyState, MedicineCard } from "@/components/pharmagarde/app-ui";
 import { usePharmaGarde } from "@/lib/pharmagarde/app-state";
 import { Medicine } from "@/lib/pharmagarde/types";
 
 export default function MedicinesScreen() {
-  const { medicines, errors } = usePharmaGarde();
+  const { medicines } = usePharmaGarde();
 
   const header = (
     <View>

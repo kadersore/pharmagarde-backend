@@ -374,3 +374,6 @@
 - [x] Empêcher la géolocalisation d’écraser la ville lorsque `isManualCitySelection` vaut `true`.
 - [x] Ajouter l’action optionnelle « Utiliser ma position actuelle » pour repasser en mode géolocalisation.
 - [x] Vérifier que le changement manuel de ville reste stable après navigation, rechargement et redémarrage de l’application.
+
+- [x] Corriger le calcul des distances avec une referenceLocation basée sur la ville manuelle ou le GPS, coordonnées des villes burkinabè et fallback "Distance indisponible".
+- [x] Valider la correction des distances par tests TypeScript/Vitest, checkpoint et push GitHub.

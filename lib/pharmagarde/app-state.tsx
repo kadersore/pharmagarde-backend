@@ -6,7 +6,8 @@ import { Platform } from "react-native";
 import { useThemeContext } from "@/lib/theme-provider";
 import { fetchClinics, fetchMedicines, fetchPharmacies, getDefaultApiBaseUrl, normalizeBaseUrl } from "./api";
 import { distanceKm, filterPlacesByCity, inferCityFromAddressParts, inferNearestKnownCity, normalizeCityName } from "./city-utils";
-import { DEFAULT_LOCATION, getDefaultLocationFallback } from "./location-policy";
+import { getDefaultLocationFallback } from "./location-policy";
+import { DISTANCE_UNAVAILABLE_LABEL, resolveReferenceLocation } from "./reference-location";
 import { LOCAL_ESSENTIAL_MEDICINES, LOCAL_MEDICINES_NOTICE } from "./medicines-data";
 import { sortPlacesByOpenThenDistance } from "./place-ordering";
 import { AppPreferences, CombinedSearchItem, Coordinates, FavoriteItem, HealthPlace, Medicine, favoriteKey } from "./types";
@@ -37,6 +38,7 @@ type PharmaGardeContextValue = {
   isApiConfigured: boolean;
   updateApiBaseUrl: (value: string) => Promise<void>;
   userLocation?: Coordinates;
+  referenceLocation?: Coordinates;
   locationMessage?: string;
   pharmacies: HealthPlace[];
   clinics: HealthPlace[];
@@ -107,10 +109,17 @@ function hasUsableCoordinates(place: HealthPlace): place is HealthPlace & Requir
   return Number.isFinite(place.latitude) && Number.isFinite(place.longitude);
 }
 
-function withLocalDistance(place: HealthPlace, origin: Coordinates): HealthPlace {
-  if (!hasUsableCoordinates(place)) {
-    const { distanceKm: _distanceKm, distanceLabel: _distanceLabel, ...placeWithoutBackendDistance } = place;
-    return placeWithoutBackendDistance;
+function withUnavailableDistance(place: HealthPlace): HealthPlace {
+  return {
+    ...place,
+    distanceKm: undefined,
+    distanceLabel: DISTANCE_UNAVAILABLE_LABEL,
+  };
+}
+
+function withLocalDistance(place: HealthPlace, origin?: Coordinates): HealthPlace {
+  if (!origin || !hasUsableCoordinates(place)) {
+    return withUnavailableDistance(place);
   }
 
   const localDistanceKm = distanceKm(origin, { latitude: place.latitude, longitude: place.longitude });
@@ -122,14 +131,14 @@ function withLocalDistance(place: HealthPlace, origin: Coordinates): HealthPlace
   };
 }
 
-function withLocalDistances(places: HealthPlace[], origin: Coordinates) {
+function withLocalDistances(places: HealthPlace[], origin?: Coordinates) {
   return places.map((place) => withLocalDistance(place, origin));
 }
 
 export function PharmaGardeProvider({ children }: PropsWithChildren) {
   const { setColorScheme } = useThemeContext();
   const [apiBaseUrl, setApiBaseUrl] = useState(normalizeBaseUrl(INITIAL_API_URL));
-  const [userLocation, setUserLocation] = useState<Coordinates | undefined>(DEFAULT_LOCATION);
+  const [userLocation, setUserLocation] = useState<Coordinates | undefined>(undefined);
   const [locationMessage, setLocationMessage] = useState<string | undefined>(undefined);
   const [pharmacies, setPharmacies] = useState<HealthPlace[]>([]);
   const [clinics, setClinics] = useState<HealthPlace[]>([]);
@@ -244,11 +253,16 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
 
     const useDefaultLocation = async (reason: "denied" | "unavailable" | "unsupported") => {
       const fallback = getDefaultLocationFallback(selectedCity, reason);
-      setUserLocation(fallback.location);
+      setUserLocation(undefined);
       if (!isManualCitySelectionRef.current && mode === "auto") {
         await persistCitySelectionState(selectedCity, false);
       }
-      setLocationMessage(isManualCitySelectionRef.current ? `Ville sélectionnée manuellement : ${selectedCity}. ${fallback.message}` : fallback.message);
+      const unavailableMessage = reason === "denied"
+        ? "Localisation refusée. Distance indisponible sans position GPS."
+        : reason === "unsupported"
+          ? "Géolocalisation non prise en charge. Distance indisponible sans position GPS."
+          : "Localisation indisponible. Distance indisponible sans position GPS.";
+      setLocationMessage(isManualCitySelectionRef.current ? `Ville sélectionnée manuellement : ${selectedCity}. ${fallback.message}` : unavailableMessage);
     };
 
     try {
@@ -290,6 +304,8 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
     await detectLocation("current");
   }, [detectLocation]);
 
+  const referenceLocation = useMemo(() => resolveReferenceLocation({ selectedCity, isManualCitySelection, userLocation }), [isManualCitySelection, selectedCity, userLocation]);
+
   const refreshData = useCallback(async () => {
     if (!isApiConfigured) {
       setPharmacies([]);
@@ -305,8 +321,7 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
     setLoading(true);
     const nextErrors: DataErrors = {};
     const activeCity = getSafeSelectedCity(selectedCity);
-    const referenceLocation = isManualCitySelection ? getDefaultLocationFallback(activeCity).location : userLocation ?? getDefaultLocationFallback(activeCity).location;
-    console.info("[PharmaGarde Frontend] Ville envoyée aux APIs", { selectedCity: activeCity, isManualCitySelection, pharmaciesEndpoint: `/pharmacies?city=${encodeURIComponent(activeCity)}`, healthcareEndpoint: `/healthcare?city=${encodeURIComponent(activeCity)}` });
+    console.info("[PharmaGarde Frontend] Ville envoyée aux APIs", { selectedCity: activeCity, isManualCitySelection, hasReferenceLocation: Boolean(referenceLocation), pharmaciesEndpoint: `/pharmacies?city=${encodeURIComponent(activeCity)}`, healthcareEndpoint: `/healthcare?city=${encodeURIComponent(activeCity)}` });
     const [pharmacyResult, clinicResult, medicineResult] = await Promise.allSettled([
       fetchPharmacies(apiBaseUrl, referenceLocation, activeCity),
       fetchClinics(apiBaseUrl, referenceLocation, activeCity),
@@ -339,7 +354,7 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
 
     setErrors(nextErrors);
     setLoading(false);
-  }, [apiBaseUrl, isApiConfigured, isManualCitySelection, selectedCity, userLocation]);
+  }, [apiBaseUrl, isApiConfigured, isManualCitySelection, referenceLocation, selectedCity]);
 
   useEffect(() => {
     if (hasHydratedCitySelection && !hasRequestedInitialLocationRef.current && !isManualCitySelectionRef.current) {
@@ -438,6 +453,7 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
     isApiConfigured,
     updateApiBaseUrl,
     userLocation,
+    referenceLocation,
     locationMessage,
     pharmacies,
     clinics,
@@ -458,7 +474,7 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
     refreshData,
     toggleFavorite,
     searchResults,
-  }), [apiBaseUrl, clinics, errors, favoriteKeys, favorites, isApiConfigured, isManualCitySelection, loading, locationMessage, medicines, pharmacies, preferences, refreshingLocation, requestLocation, refreshData, searchQuery, searchResults, selectedCity, selectCityManually, toggleFavorite, updateApiBaseUrl, updatePreference, userLocation]);
+  }), [apiBaseUrl, clinics, errors, favoriteKeys, favorites, isApiConfigured, isManualCitySelection, loading, locationMessage, medicines, pharmacies, preferences, referenceLocation, refreshingLocation, requestLocation, refreshData, searchQuery, searchResults, selectedCity, selectCityManually, toggleFavorite, updateApiBaseUrl, updatePreference, userLocation]);
 
   return <PharmaGardeContext.Provider value={value}>{children}</PharmaGardeContext.Provider>;
 }
