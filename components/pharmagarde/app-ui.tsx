@@ -1,6 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as WebBrowser from "expo-web-browser";
-import { PropsWithChildren, useState } from "react";
+import { PropsWithChildren, RefObject, useState } from "react";
 import { Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { GlobalAppShell } from "@/components/pharmagarde/app-shell";
@@ -29,8 +29,8 @@ export function formatMedicinePrice(priceApprox?: number) {
   return priceApprox !== undefined ? `${priceApprox.toLocaleString("fr-FR")} FCFA` : "Prix variable";
 }
 
-export function AppChrome({ children, subtitle }: PropsWithChildren<{ subtitle?: string }>) {
-  return <GlobalAppShell subtitle={subtitle}>{children}</GlobalAppShell>;
+export function AppChrome({ children, subtitle, hideHeaderSearch }: PropsWithChildren<{ subtitle?: string; hideHeaderSearch?: boolean }>) {
+  return <GlobalAppShell subtitle={subtitle} hideHeaderSearch={hideHeaderSearch}>{children}</GlobalAppShell>;
 }
 
 export function EmptyState({ title, message, actionLabel, onAction }: { title: string; message: string; actionLabel?: string; onAction?: () => void }) {
@@ -63,12 +63,14 @@ export function StatusNotice({ message, tone = "info" }: { message?: string; ton
   );
 }
 
-export function SearchField({ value, onChangeText, placeholder = "Rechercher" }: { value: string; onChangeText: (value: string) => void; placeholder?: string }) {
+export function SearchField({ value, onChangeText, placeholder = "Rechercher", inputRef, autoFocus = false }: { value: string; onChangeText: (value: string) => void; placeholder?: string; inputRef?: RefObject<TextInput | null>; autoFocus?: boolean }) {
   const palette = usePremiumPalette();
   return (
     <View style={[styles.searchBox, { backgroundColor: palette.card, borderColor: palette.border }]}> 
       <MaterialIcons name="search" size={21} color={palette.brand} />
       <TextInput
+        ref={inputRef}
+        autoFocus={autoFocus}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}

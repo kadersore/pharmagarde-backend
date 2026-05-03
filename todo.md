@@ -332,3 +332,11 @@
 - [x] Ajouter ou adapter les tests de non-régression pour vérifier la présence et la position du type d’établissement.
 - [x] Valider TypeScript, Vitest et l’état Expo après ajout du type d’établissement dans les listes.
 - [x] Sauvegarder un checkpoint de livraison après ajout du type d’établissement dans les listes.
+
+- [x] Focaliser automatiquement le champ de recherche à l’ouverture de la page Recherche après clic sur la barre de recherche.
+- [x] Faire apparaître le clavier à l’ouverture de la page Recherche lorsque le champ est focalisé.
+- [x] Ne pas afficher la barre de recherche du header sur la page Recherche.
+- [x] Harmoniser les éléments de liste de recherche avec le type d’affichage utilisé sur les autres pages.
+- [x] Ajouter ou adapter les tests de non-régression pour le comportement et l’affichage de la page Recherche.
+- [x] Valider TypeScript, Vitest et l’état Expo après correction de la page Recherche.
+- [x] Sauvegarder un checkpoint de livraison après amélioration de la page Recherche.

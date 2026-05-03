@@ -39,7 +39,7 @@ describe("premium ui contract", () => {
     const appUi = read("components/pharmagarde/app-ui.tsx");
 
     expect(tabsLayout).not.toContain("GlobalAppShell");
-    expect(appUi).toContain("return <GlobalAppShell subtitle={subtitle}>{children}</GlobalAppShell>;");
+    expect(appUi).toContain("return <GlobalAppShell subtitle={subtitle} hideHeaderSearch={hideHeaderSearch}>{children}</GlobalAppShell>;");
   });
 
   it("centralise la palette et les haptics premium autour du vert PharmaGarde", () => {
@@ -167,5 +167,26 @@ describe("assets Expo et icônes locales", () => {
     expect(metroConfig).toContain("config.resolver.assetExts");
     expect(metroConfig).toContain("\"ttf\"");
     expect(packageJson).toContain("dev:metro:clean");
+  });
+});
+
+describe("page Recherche", () => {
+  it("ouvre le champ actif, masque la recherche du header et réutilise les cartes de liste", () => {
+    const search = read("app/pharmagarde/search.tsx");
+    const appUi = read("components/pharmagarde/app-ui.tsx");
+    const shell = read("components/pharmagarde/app-shell.tsx");
+
+    expect(search).toContain("const inputRef = useRef<TextInput | null>(null)");
+    expect(search).toContain("inputRef.current?.focus()");
+    expect(search).toContain("<SearchField inputRef={inputRef} autoFocus");
+    expect(search).toContain("<AppChrome subtitle=\"Recherche\" hideHeaderSearch>");
+    expect(search).toContain("<PlaceCard");
+    expect(search).toContain("<MedicineCard");
+    expect(search).not.toContain("SearchResultRow");
+    expect(appUi).toContain("autoFocus={autoFocus}");
+    expect(appUi).toContain("ref={inputRef}");
+    expect(shell).toContain("hideHeaderSearch?: boolean");
+    expect(shell).toContain("hideSearch ? (");
+    expect(shell).toContain("styles.headerTitleOnly");
   });
 });

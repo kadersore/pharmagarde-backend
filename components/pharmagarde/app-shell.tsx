@@ -23,6 +23,7 @@ type ShellProps = PropsWithChildren<{
   subtitle?: string;
   showFooter?: boolean;
   rightAccessory?: ReactNode;
+  hideHeaderSearch?: boolean;
 }>;
 
 function titleForPath(pathname: string, subtitle?: string) {
@@ -44,7 +45,7 @@ function isFooterActive(item: FooterItem, pathname: string) {
   return pathname.includes(item.key);
 }
 
-function AppHeader({ title, onOpenMenu, rightAccessory }: { title: string; onOpenMenu: () => void; rightAccessory?: ReactNode }) {
+function AppHeader({ title, onOpenMenu, rightAccessory, hideSearch = false }: { title: string; onOpenMenu: () => void; rightAccessory?: ReactNode; hideSearch?: boolean }) {
   const router = useRouter();
   const { loading, searchQuery } = usePharmaGarde();
   const palette = usePremiumPalette();
@@ -69,20 +70,26 @@ function AppHeader({ title, onOpenMenu, rightAccessory }: { title: string; onOpe
         <MaterialIcons name="menu" size={24} color={palette.brand} />
       </Pressable>
 
-      <Pressable
-        accessibilityRole="search"
-        accessibilityLabel="Ouvrir la recherche"
-        android_ripple={{ color: "rgba(3, 192, 74, 0.12)" }}
-        style={({ pressed }) => [styles.searchPill, styles.searchPillOnGreen, pressed ? styles.pressedScale : undefined]}
-        onPress={openSearch}
-      >
-        <MaterialIcons name="search" size={20} color={palette.brand} />
-        <View style={styles.searchTextWrap}>
-          <Text style={[styles.searchLabel, styles.searchLabelOnGreen]} numberOfLines={1}>{searchQuery || "Rechercher pharmacies, cliniques"}</Text>
-          <Text style={[styles.searchHint, styles.searchHintOnGreen]} numberOfLines={1}>{title === "Carte" ? "Autour de vous" : title}</Text>
+      {hideSearch ? (
+        <View style={styles.headerTitleOnly}>
+          <Text style={styles.headerTitleText} numberOfLines={1}>{title}</Text>
         </View>
-        {loading ? <ActivityIndicator color={palette.brand} size="small" /> : null}
-      </Pressable>
+      ) : (
+        <Pressable
+          accessibilityRole="search"
+          accessibilityLabel="Ouvrir la recherche"
+          android_ripple={{ color: "rgba(3, 192, 74, 0.12)" }}
+          style={({ pressed }) => [styles.searchPill, styles.searchPillOnGreen, pressed ? styles.pressedScale : undefined]}
+          onPress={openSearch}
+        >
+          <MaterialIcons name="search" size={20} color={palette.brand} />
+          <View style={styles.searchTextWrap}>
+            <Text style={[styles.searchLabel, styles.searchLabelOnGreen]} numberOfLines={1}>{searchQuery || "Rechercher pharmacies, cliniques"}</Text>
+            <Text style={[styles.searchHint, styles.searchHintOnGreen]} numberOfLines={1}>{title === "Carte" ? "Autour de vous" : title}</Text>
+          </View>
+          {loading ? <ActivityIndicator color={palette.brand} size="small" /> : null}
+        </Pressable>
+      )}
 
       <View style={styles.headerActions}>
         {rightAccessory ?? null}
@@ -179,7 +186,7 @@ function DrawerOverlay({ visible, onClose }: { visible: boolean; onClose: () => 
   );
 }
 
-export function GlobalAppShell({ children, subtitle, showFooter = true, rightAccessory }: ShellProps) {
+export function GlobalAppShell({ children, subtitle, showFooter = true, rightAccessory, hideHeaderSearch = false }: ShellProps) {
   const pathname = usePathname();
   const palette = usePremiumPalette();
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -194,7 +201,7 @@ export function GlobalAppShell({ children, subtitle, showFooter = true, rightAcc
   return (
     <ScreenContainer edges={["top", "left", "right", "bottom"]} className="" containerClassName="">
       <View style={[styles.shell, { backgroundColor: palette.background }]}> 
-        <AppHeader title={title} onOpenMenu={() => setDrawerVisible(true)} rightAccessory={rightAccessory} />
+        <AppHeader title={title} onOpenMenu={() => setDrawerVisible(true)} rightAccessory={rightAccessory} hideSearch={hideHeaderSearch} />
         <Animated.View style={[styles.content, { backgroundColor: palette.background, opacity: contentOpacity }]}>{children}</Animated.View>
         {showFooter ? <AppFooter /> : null}
         <DrawerOverlay visible={drawerVisible} onClose={() => setDrawerVisible(false)} />
@@ -203,8 +210,8 @@ export function GlobalAppShell({ children, subtitle, showFooter = true, rightAcc
   );
 }
 
-export function AppChrome({ children, subtitle }: PropsWithChildren<{ subtitle?: string }>) {
-  return <GlobalAppShell subtitle={subtitle}>{children}</GlobalAppShell>;
+export function AppChrome({ children, subtitle, hideHeaderSearch }: PropsWithChildren<{ subtitle?: string; hideHeaderSearch?: boolean }>) {
+  return <GlobalAppShell subtitle={subtitle} hideHeaderSearch={hideHeaderSearch}>{children}</GlobalAppShell>;
 }
 
 const styles = StyleSheet.create({
@@ -250,6 +257,8 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   searchPillOnGreen: { backgroundColor: "#DDFBE8", borderColor: "#B7F3CE" },
+  headerTitleOnly: { flex: 1, minHeight: 50, justifyContent: "center", paddingHorizontal: 8 },
+  headerTitleText: { color: "#FFFFFF", fontSize: 18, lineHeight: 23, fontWeight: "900", textAlign: "center" },
   searchTextWrap: { flex: 1 },
   searchLabel: { fontSize: 14, lineHeight: 18, fontWeight: "900" },
   searchLabelOnGreen: { color: "#0D2F19" },
