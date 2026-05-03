@@ -434,4 +434,4 @@
 - [x] Vérifier avant paiement Ligdi Cash que l’utilisateur est connecté, sinon rediriger vers Connexion.
 - [x] Ajouter les tests Vitest couvrant validation auth, register/login, stockage token, headers Authorization, routes premium et paiement.
 - [x] Exécuter TypeScript et Vitest pour vérifier que les fonctionnalités actuelles ne sont pas cassées.
-- [ ] Sauvegarder un checkpoint après validation complète du système d’authentification.
+- [x] Sauvegarder un checkpoint après validation complète du système d’authentification.
