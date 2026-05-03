@@ -1,0 +1,443 @@
+commit ad4acf02f9709c89149c6bf520fa7969ecc4ebc9
+Author:     Manus <dev-agent@manus.ai>
+AuthorDate: Sun May 3 04:04:26 2026 -0400
+Commit:     Manus <dev-agent@manus.ai>
+CommitDate: Sun May 3 04:04:26 2026 -0400
+
+    Checkpoint: Correction du calcul des distances PharmaGarde BF : ajout d’une base centralisée des coordonnées des 13 villes, résolution de referenceLocation selon sélection manuelle ou GPS, blocage des coordonnées invalides, fallback “Distance indisponible”, adaptation des appels API et des calculs locaux, tests Vitest de non-régression, TypeScript et lint validés.
+---
+ app/(tabs)/carte.tsx                          | 10 +++----
+ app/(tabs)/medicaments.tsx                    |  4 +--
+ components/pharmagarde/app-ui.tsx             |  2 +-
+ lib/pharmagarde/app-state.tsx                 | 42 ++++++++++++++++++---------
+ lib/pharmagarde/city-coordinates.ts           | 38 ++++++++++++++++++++++++
+ lib/pharmagarde/city-utils.ts                 | 38 ++----------------------
+ lib/pharmagarde/reference-location.ts         | 28 ++++++++++++++++++
+ tests/pharmagarde-premium-ui-contract.test.ts | 29 +++++++++++++-----
+ tests/reference-location.test.ts              | 38 ++++++++++++++++++++++++
+ 9 files changed, 164 insertions(+), 65 deletions(-)
+
+diff --git a/app/(tabs)/carte.tsx b/app/(tabs)/carte.tsx
+index 79ebaac..081e7c1 100644
+--- a/app/(tabs)/carte.tsx
++++ b/app/(tabs)/carte.tsx
+@@ -1,6 +1,6 @@
+ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+ import * as WebBrowser from "expo-web-browser";
+-import { useMemo, useRef, useState } from "react";
++import { useCallback, useMemo, useRef, useState } from "react";
+ import { Animated, FlatList, Linking, PanResponder, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+ 
+ import { AppChrome, googlePlaceTypeLabel } from "@/components/pharmagarde/app-ui";
+@@ -85,7 +85,7 @@ function MapPlaceCard({ place, active, favorite, isExpanded, onSelect, onToggle,
+         </View>
+         <View style={styles.placeHeaderMeta}>
+           <View style={[styles.metaPill, { backgroundColor: palette.cardMuted }]}> 
+-            <Text style={[styles.metaText, { color: palette.text }]}>{place.distanceLabel ?? (place.distanceKm !== undefined ? `${place.distanceKm.toFixed(1)} km` : "Position à préciser")}</Text>
++            <Text style={[styles.metaText, { color: palette.text }]}>{place.distanceLabel ?? (place.distanceKm !== undefined ? `${place.distanceKm.toFixed(1)} km` : "Distance indisponible")}</Text>
+           </View>
+           <View style={[styles.metaPill, { backgroundColor: place.isOpen === false ? "rgba(225, 29, 72, 0.1)" : palette.softGreen }]}> 
+             <Text style={[styles.metaText, { color: place.isOpen === false ? palette.danger : palette.success }]}>{place.isOpen === true ? "Ouvert" : place.isOpen === false ? "Fermé" : "Statut inconnu"}</Text>
+@@ -172,9 +172,9 @@ export default function CarteScreen() {
+ 
+   const selectedPlace = visiblePlaces.find((place) => keyFor(place) === selectedId) ?? visiblePlaces[0];
+ 
+-  const animateTo = (toValue: number) => {
++  const animateTo = useCallback((toValue: number) => {
+     Animated.timing(translateY, { toValue, duration: 240, useNativeDriver: true }).start();
+-  };
++  }, [translateY]);
+ 
+   const panResponder = useMemo(() => PanResponder.create({
+     onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 8,
+@@ -194,7 +194,7 @@ export default function CarteScreen() {
+       haptic.light();
+       animateTo(nearest);
+     },
+-  }), [snap.full, snap.mid, snap.min, translateY]);
++  }), [animateTo, snap.full, snap.mid, snap.min, translateY]);
+ 
+   const selectPlace = (place: HealthPlace) => {
+     setSelectedId(keyFor(place));
+diff --git a/app/(tabs)/medicaments.tsx b/app/(tabs)/medicaments.tsx
+index 5e396a6..148548c 100644
+--- a/app/(tabs)/medicaments.tsx
++++ b/app/(tabs)/medicaments.tsx
+@@ -1,11 +1,11 @@
+ import { FlatList, StyleSheet, Text, View } from "react-native";
+ 
+-import { AppChrome, EmptyState, MedicineCard, StatusNotice } from "@/components/pharmagarde/app-ui";
++import { AppChrome, EmptyState, MedicineCard } from "@/components/pharmagarde/app-ui";
+ import { usePharmaGarde } from "@/lib/pharmagarde/app-state";
+ import { Medicine } from "@/lib/pharmagarde/types";
+ 
+ export default function MedicinesScreen() {
+-  const { medicines, errors } = usePharmaGarde();
++  const { medicines } = usePharmaGarde();
+ 
+   const header = (
+     <View>
+diff --git a/components/pharmagarde/app-ui.tsx b/components/pharmagarde/app-ui.tsx
+index 1f0ebff..e35e789 100644
+--- a/components/pharmagarde/app-ui.tsx
++++ b/components/pharmagarde/app-ui.tsx
+@@ -139,7 +139,7 @@ export function PlaceCard({ place, isExpanded, onToggle }: { place: HealthPlace;
+         </View>
+         <View style={styles.placeHeaderMeta}>
+           <View style={[styles.metaPill, { backgroundColor: palette.cardMuted }]}> 
+-            <Text style={[styles.metaText, { color: palette.text }]}>{place.distanceLabel ?? (place.distanceKm !== undefined ? `${place.distanceKm.toFixed(1)} km` : "Position à préciser")}</Text>
++            <Text style={[styles.metaText, { color: palette.text }]}>{place.distanceLabel ?? (place.distanceKm !== undefined ? `${place.distanceKm.toFixed(1)} km` : "Distance indisponible")}</Text>
+           </View>
+           <View style={[styles.metaPill, { backgroundColor: place.isOpen === false ? "rgba(225, 29, 72, 0.1)" : palette.softGreen }]}> 
+             <Text style={[styles.metaText, { color: place.isOpen === false ? palette.danger : palette.success }]}>{place.isOpen === true ? "Ouvert" : place.isOpen === false ? "Fermé" : "Statut inconnu"}</Text>
+diff --git a/lib/pharmagarde/app-state.tsx b/lib/pharmagarde/app-state.tsx
+index d74dd26..0908a1b 100644
+--- a/lib/pharmagarde/app-state.tsx
++++ b/lib/pharmagarde/app-state.tsx
+@@ -6,7 +6,8 @@ import { Platform } from "react-native";
+ import { useThemeContext } from "@/lib/theme-provider";
+ import { fetchClinics, fetchMedicines, fetchPharmacies, getDefaultApiBaseUrl, normalizeBaseUrl } from "./api";
+ import { distanceKm, filterPlacesByCity, inferCityFromAddressParts, inferNearestKnownCity, normalizeCityName } from "./city-utils";
+-import { DEFAULT_LOCATION, getDefaultLocationFallback } from "./location-policy";
++import { getDefaultLocationFallback } from "./location-policy";
++import { DISTANCE_UNAVAILABLE_LABEL, resolveReferenceLocation } from "./reference-location";
+ import { LOCAL_ESSENTIAL_MEDICINES, LOCAL_MEDICINES_NOTICE } from "./medicines-data";
+ import { sortPlacesByOpenThenDistance } from "./place-ordering";
+ import { AppPreferences, CombinedSearchItem, Coordinates, FavoriteItem, HealthPlace, Medicine, favoriteKey } from "./types";
+@@ -37,6 +38,7 @@ type PharmaGardeContextValue = {
+   isApiConfigured: boolean;
+   updateApiBaseUrl: (value: string) => Promise<void>;
+   userLocation?: Coordinates;
++  referenceLocation?: Coordinates;
+   locationMessage?: string;
+   pharmacies: HealthPlace[];
+   clinics: HealthPlace[];
+@@ -107,10 +109,17 @@ function hasUsableCoordinates(place: HealthPlace): place is HealthPlace & Requir
+   return Number.isFinite(place.latitude) && Number.isFinite(place.longitude);
+ }
+ 
+-function withLocalDistance(place: HealthPlace, origin: Coordinates): HealthPlace {
+-  if (!hasUsableCoordinates(place)) {
+-    const { distanceKm: _distanceKm, distanceLabel: _distanceLabel, ...placeWithoutBackendDistance } = place;
+-    return placeWithoutBackendDistance;
++function withUnavailableDistance(place: HealthPlace): HealthPlace {
++  return {
++    ...place,
++    distanceKm: undefined,
++    distanceLabel: DISTANCE_UNAVAILABLE_LABEL,
++  };
++}
++
++function withLocalDistance(place: HealthPlace, origin?: Coordinates): HealthPlace {
++  if (!origin || !hasUsableCoordinates(place)) {
++    return withUnavailableDistance(place);
+   }
+ 
+   const localDistanceKm = distanceKm(origin, { latitude: place.latitude, longitude: place.longitude });
+@@ -122,14 +131,14 @@ function withLocalDistance(place: HealthPlace, origin: Coordinates): HealthPlace
+   };
+ }
+ 
+-function withLocalDistances(places: HealthPlace[], origin: Coordinates) {
++function withLocalDistances(places: HealthPlace[], origin?: Coordinates) {
+   return places.map((place) => withLocalDistance(place, origin));
+ }
+ 
+ export function PharmaGardeProvider({ children }: PropsWithChildren) {
+   const { setColorScheme } = useThemeContext();
+   const [apiBaseUrl, setApiBaseUrl] = useState(normalizeBaseUrl(INITIAL_API_URL));
+-  const [userLocation, setUserLocation] = useState<Coordinates | undefined>(DEFAULT_LOCATION);
++  const [userLocation, setUserLocation] = useState<Coordinates | undefined>(undefined);
+   const [locationMessage, setLocationMessage] = useState<string | undefined>(undefined);
+   const [pharmacies, setPharmacies] = useState<HealthPlace[]>([]);
+   const [clinics, setClinics] = useState<HealthPlace[]>([]);
+@@ -244,11 +253,16 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
+ 
+     const useDefaultLocation = async (reason: "denied" | "unavailable" | "unsupported") => {
+       const fallback = getDefaultLocationFallback(selectedCity, reason);
+-      setUserLocation(fallback.location);
++      setUserLocation(undefined);
+       if (!isManualCitySelectionRef.current && mode === "auto") {
+         await persistCitySelectionState(selectedCity, false);
+       }
+-      setLocationMessage(isManualCitySelectionRef.current ? `Ville sélectionnée manuellement : ${selectedCity}. ${fallback.message}` : fallback.message);
++      const unavailableMessage = reason === "denied"
++        ? "Localisation refusée. Distance indisponible sans position GPS."
++        : reason === "unsupported"
++          ? "Géolocalisation non prise en charge. Distance indisponible sans position GPS."
++          : "Localisation indisponible. Distance indisponible sans position GPS.";
++      setLocationMessage(isManualCitySelectionRef.current ? `Ville sélectionnée manuellement : ${selectedCity}. ${fallback.message}` : unavailableMessage);
+     };
+ 
+     try {
+@@ -290,6 +304,8 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
+     await detectLocation("current");
+   }, [detectLocation]);
+ 
++  const referenceLocation = useMemo(() => resolveReferenceLocation({ selectedCity, isManualCitySelection, userLocation }), [isManualCitySelection, selectedCity, userLocation]);
++
+   const refreshData = useCallback(async () => {
+     if (!isApiConfigured) {
+       setPharmacies([]);
+@@ -305,8 +321,7 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
+     setLoading(true);
+     const nextErrors: DataErrors = {};
+     const activeCity = getSafeSelectedCity(selectedCity);
+-    const referenceLocation = isManualCitySelection ? getDefaultLocationFallback(activeCity).location : userLocation ?? getDefaultLocationFallback(activeCity).location;
+-    console.info("[PharmaGarde Frontend] Ville envoyée aux APIs", { selectedCity: activeCity, isManualCitySelection, pharmaciesEndpoint: `/pharmacies?city=${encodeURIComponent(activeCity)}`, healthcareEndpoint: `/healthcare?city=${encodeURIComponent(activeCity)}` });
++    console.info("[PharmaGarde Frontend] Ville envoyée aux APIs", { selectedCity: activeCity, isManualCitySelection, hasReferenceLocation: Boolean(referenceLocation), pharmaciesEndpoint: `/pharmacies?city=${encodeURIComponent(activeCity)}`, healthcareEndpoint: `/healthcare?city=${encodeURIComponent(activeCity)}` });
+     const [pharmacyResult, clinicResult, medicineResult] = await Promise.allSettled([
+       fetchPharmacies(apiBaseUrl, referenceLocation, activeCity),
+       fetchClinics(apiBaseUrl, referenceLocation, activeCity),
+@@ -339,7 +354,7 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
+ 
+     setErrors(nextErrors);
+     setLoading(false);
+-  }, [apiBaseUrl, isApiConfigured, isManualCitySelection, selectedCity, userLocation]);
++  }, [apiBaseUrl, isApiConfigured, isManualCitySelection, referenceLocation, selectedCity]);
+ 
+   useEffect(() => {
+     if (hasHydratedCitySelection && !hasRequestedInitialLocationRef.current && !isManualCitySelectionRef.current) {
+@@ -438,6 +453,7 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
+     isApiConfigured,
+     updateApiBaseUrl,
+     userLocation,
++    referenceLocation,
+     locationMessage,
+     pharmacies,
+     clinics,
+@@ -458,7 +474,7 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
+     refreshData,
+     toggleFavorite,
+     searchResults,
+-  }), [apiBaseUrl, clinics, errors, favoriteKeys, favorites, isApiConfigured, isManualCitySelection, loading, locationMessage, medicines, pharmacies, preferences, refreshingLocation, requestLocation, refreshData, searchQuery, searchResults, selectedCity, selectCityManually, toggleFavorite, updateApiBaseUrl, updatePreference, userLocation]);
++  }), [apiBaseUrl, clinics, errors, favoriteKeys, favorites, isApiConfigured, isManualCitySelection, loading, locationMessage, medicines, pharmacies, preferences, referenceLocation, refreshingLocation, requestLocation, refreshData, searchQuery, searchResults, selectedCity, selectCityManually, toggleFavorite, updateApiBaseUrl, updatePreference, userLocation]);
+ 
+   return <PharmaGardeContext.Provider value={value}>{children}</PharmaGardeContext.Provider>;
+ }
+diff --git a/lib/pharmagarde/city-coordinates.ts b/lib/pharmagarde/city-coordinates.ts
+new file mode 100644
+index 0000000..23f722f
+--- /dev/null
++++ b/lib/pharmagarde/city-coordinates.ts
+@@ -0,0 +1,38 @@
++import { Coordinates } from "./types";
++
++export type KnownBurkinaCity = Coordinates & {
++  name: string;
++  aliases: string[];
++};
++
++export const PHARMAGARDE_CITIES = [
++  "Ouagadougou",
++  "Bobo-Dioulasso",
++  "Koudougou",
++  "Ouahigouya",
++  "Kaya",
++  "Tenkodogo",
++  "Fada N'gourma",
++  "Dori",
++  "Gaoua",
++  "Banfora",
++  "Ziniaré",
++  "Dédougou",
++  "Manga",
++] as const;
++
++export const KNOWN_BURKINA_CITIES: KnownBurkinaCity[] = [
++  { name: "Ouagadougou", latitude: 12.3714, longitude: -1.5197, aliases: ["ouagadougou", "ouaga", "kadiogo"] },
++  { name: "Bobo-Dioulasso", latitude: 11.1784, longitude: -4.2979, aliases: ["bobo-dioulasso", "bobo dioulasso", "bobo", "houet"] },
++  { name: "Koudougou", latitude: 12.2526, longitude: -2.3627, aliases: ["koudougou", "boulkiemde", "boulkiemdé"] },
++  { name: "Ouahigouya", latitude: 13.5828, longitude: -2.4216, aliases: ["ouahigouya", "yatenga"] },
++  { name: "Kaya", latitude: 13.0917, longitude: -1.0844, aliases: ["kaya", "sanmatenga"] },
++  { name: "Tenkodogo", latitude: 11.78, longitude: -0.3697, aliases: ["tenkodogo", "boulgou"] },
++  { name: "Fada N'gourma", latitude: 12.0616, longitude: 0.3589, aliases: ["fada n'gourma", "fada ngourma", "fada n’gourma", "fada", "gourma"] },
++  { name: "Dori", latitude: 14.0354, longitude: -0.0345, aliases: ["dori", "séno", "seno"] },
++  { name: "Gaoua", latitude: 10.325, longitude: -3.174, aliases: ["gaoua", "poni"] },
++  { name: "Banfora", latitude: 10.6333, longitude: -4.7667, aliases: ["banfora", "comoé", "comoe"] },
++  { name: "Ziniaré", latitude: 12.5822, longitude: -1.2972, aliases: ["ziniaré", "ziniare", "oubritenga"] },
++  { name: "Dédougou", latitude: 12.4634, longitude: -3.4608, aliases: ["dédougou", "dedougou", "mouhoun"] },
++  { name: "Manga", latitude: 11.6636, longitude: -1.0731, aliases: ["manga", "zoundwéogo", "zoundweogo"] },
++];
+diff --git a/lib/pharmagarde/city-utils.ts b/lib/pharmagarde/city-utils.ts
+index 77e9611..0118ec8 100644
+--- a/lib/pharmagarde/city-utils.ts
++++ b/lib/pharmagarde/city-utils.ts
+@@ -1,41 +1,7 @@
++import { KNOWN_BURKINA_CITIES, PHARMAGARDE_CITIES } from "./city-coordinates";
+ import { Coordinates, HealthPlace } from "./types";
+ 
+-type KnownCity = Coordinates & {
+-  name: string;
+-  aliases: string[];
+-};
+-
+-export const PHARMAGARDE_CITIES = [
+-  "Ouagadougou",
+-  "Bobo-Dioulasso",
+-  "Koudougou",
+-  "Ouahigouya",
+-  "Kaya",
+-  "Tenkodogo",
+-  "Fada N'gourma",
+-  "Dori",
+-  "Gaoua",
+-  "Banfora",
+-  "Ziniaré",
+-  "Dédougou",
+-  "Manga",
+-] as const;
+-
+-const KNOWN_BURKINA_CITIES: KnownCity[] = [
+-  { name: "Ouagadougou", latitude: 12.3714, longitude: -1.5197, aliases: ["ouagadougou", "ouaga", "kadiogo"] },
+-  { name: "Bobo-Dioulasso", latitude: 11.1784, longitude: -4.2979, aliases: ["bobo-dioulasso", "bobo dioulasso", "bobo", "houet"] },
+-  { name: "Koudougou", latitude: 12.2526, longitude: -2.3627, aliases: ["koudougou", "boulkiemde", "boulkiemdé"] },
+-  { name: "Ouahigouya", latitude: 13.5828, longitude: -2.4216, aliases: ["ouahigouya", "yatenga"] },
+-  { name: "Kaya", latitude: 13.0917, longitude: -1.0844, aliases: ["kaya", "sanmatenga"] },
+-  { name: "Tenkodogo", latitude: 11.7800, longitude: -0.3697, aliases: ["tenkodogo", "boulgou"] },
+-  { name: "Fada N'gourma", latitude: 12.0616, longitude: 0.3589, aliases: ["fada n'gourma", "fada ngourma", "fada n’gourma", "fada", "gourma"] },
+-  { name: "Dori", latitude: 14.0354, longitude: -0.0345, aliases: ["dori", "séno", "seno"] },
+-  { name: "Gaoua", latitude: 10.3250, longitude: -3.1740, aliases: ["gaoua", "poni"] },
+-  { name: "Banfora", latitude: 10.6333, longitude: -4.7667, aliases: ["banfora", "comoé", "comoe"] },
+-  { name: "Ziniaré", latitude: 12.5822, longitude: -1.2972, aliases: ["ziniaré", "ziniare", "oubritenga"] },
+-  { name: "Dédougou", latitude: 12.4634, longitude: -3.4608, aliases: ["dédougou", "dedougou", "mouhoun"] },
+-  { name: "Manga", latitude: 11.6636, longitude: -1.0731, aliases: ["manga", "zoundwéogo", "zoundweogo"] },
+-];
++export { PHARMAGARDE_CITIES };
+ 
+ function normalizeText(value?: string | null) {
+   return (value ?? "")
+diff --git a/lib/pharmagarde/reference-location.ts b/lib/pharmagarde/reference-location.ts
+new file mode 100644
+index 0000000..7e33c9d
+--- /dev/null
++++ b/lib/pharmagarde/reference-location.ts
+@@ -0,0 +1,28 @@
++import { getKnownCityCoordinates } from "./city-utils";
++import { Coordinates } from "./types";
++
++export const DISTANCE_UNAVAILABLE_LABEL = "Distance indisponible";
++
++type ReferenceLocationInput = {
++  selectedCity?: string | null;
++  isManualCitySelection: boolean;
++  userLocation?: Coordinates | null;
++};
++
++export function hasValidReferenceCoordinates(coordinates?: Coordinates | null): coordinates is Coordinates {
++  if (!coordinates) return false;
++  const { latitude, longitude } = coordinates;
++  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return false;
++  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return false;
++  return !(latitude === 0 && longitude === 0);
++}
++
++export function resolveReferenceLocation({ selectedCity, isManualCitySelection, userLocation }: ReferenceLocationInput): Coordinates | undefined {
++  if (isManualCitySelection) {
++    const cityCoordinates = getKnownCityCoordinates(selectedCity);
++    return hasValidReferenceCoordinates(cityCoordinates) ? cityCoordinates : undefined;
++  }
++
++  if (!hasValidReferenceCoordinates(userLocation)) return undefined;
++  return { latitude: userLocation.latitude, longitude: userLocation.longitude };
++}
+diff --git a/tests/pharmagarde-premium-ui-contract.test.ts b/tests/pharmagarde-premium-ui-contract.test.ts
+index fb819b4..739201c 100644
+--- a/tests/pharmagarde-premium-ui-contract.test.ts
++++ b/tests/pharmagarde-premium-ui-contract.test.ts
+@@ -94,10 +94,13 @@ describe("cartes pharmacies et cliniques", () => {
+     expect(mapPlaceCard).toContain("styles.placeHeaderMeta");
+     expect(mapPlaceCard.indexOf("styles.placeHeaderMeta")).toBeLessThan(mapPlaceCard.indexOf("{isExpanded ? ("));
+     expect(mapPlaceCard).toContain("place.distanceLabel");
+-    expect(mapPlaceCard).toContain("Position à préciser");
++    expect(mapPlaceCard).toContain("Distance indisponible");
+     expect(mapPlaceCard).not.toContain("Distance inconnue");
++    expect(mapPlaceCard).not.toContain("Position à préciser");
+     expect(placeCard).toContain("place.distanceLabel");
++    expect(placeCard).toContain("Distance indisponible");
+     expect(placeCard).not.toContain("Distance inconnue");
++    expect(placeCard).not.toContain("Position à préciser");
+     expect(mapPlaceCard).toContain("Statut inconnu");
+     expect(mapPlaceCard).toContain("isExpanded: boolean");
+     expect(mapPlaceCard).toContain("onToggle: () => void");
+@@ -137,19 +140,29 @@ describe("cartes pharmacies et cliniques", () => {
+     expect(index).not.toContain("pharmacies.slice(");
+   });
+ 
+-  it("calcule localement les distances et utilise un fallback par ville sans dépendre du backend", () => {
++  it("calcule localement les distances depuis une referenceLocation valide et affiche un fallback explicite", () => {
+     const appState = read("lib/pharmagarde/app-state.tsx");
+-    const locationPolicy = read("lib/pharmagarde/location-policy.ts");
++    const referenceLocation = read("lib/pharmagarde/reference-location.ts");
++    const cityCoordinates = read("lib/pharmagarde/city-coordinates.ts");
+     const cityUtils = read("lib/pharmagarde/city-utils.ts");
+     const types = read("lib/pharmagarde/types.ts");
+ 
+-    expect(appState).toContain("withLocalDistance");
++    expect(appState).toContain("const referenceLocation = useMemo(() => resolveReferenceLocation");
++    expect(appState).toContain("fetchPharmacies(apiBaseUrl, referenceLocation, activeCity)");
++    expect(appState).toContain("fetchClinics(apiBaseUrl, referenceLocation, activeCity)");
++    expect(appState).toContain("withLocalDistances(filterPlacesByCity(pharmacyResult.value, activeCity), referenceLocation)");
+     expect(appState).toContain("distanceKm(origin");
+     expect(appState).toContain("distanceLabel: `${roundedDistanceKm.toFixed(1)} km`");
+-    expect(appState).toContain("getDefaultLocationFallback(activeCity).location");
+-    expect(appState).toContain("useDefaultLocation(\"denied\")");
+-    expect(locationPolicy).toContain("getDefaultLocationFallback(cityName");
+-    expect(locationPolicy).toContain("Fallback par ville");
++    expect(appState).toContain("DISTANCE_UNAVAILABLE_LABEL");
++    expect(appState).not.toContain("getDefaultLocationFallback(activeCity).location");
++    expect(referenceLocation).toContain("export function resolveReferenceLocation");
++    expect(referenceLocation).toContain("isManualCitySelection");
++    expect(referenceLocation).toContain("getKnownCityCoordinates(selectedCity)");
++    expect(referenceLocation).toContain("hasValidReferenceCoordinates(userLocation)");
++    expect(referenceLocation).toContain("DISTANCE_UNAVAILABLE_LABEL = \"Distance indisponible\"");
++    expect(cityCoordinates).toContain("Ouagadougou");
++    expect(cityCoordinates).toContain("Bobo-Dioulasso");
++    expect(cityCoordinates).toContain("Manga");
+     expect(cityUtils).toContain("export function distanceKm");
+     expect(types).toContain("distanceLabel?: string");
+   });
+diff --git a/tests/reference-location.test.ts b/tests/reference-location.test.ts
+new file mode 100644
+index 0000000..5ded2d7
+--- /dev/null
++++ b/tests/reference-location.test.ts
+@@ -0,0 +1,38 @@
++import { describe, expect, it } from "vitest";
++
++import { DISTANCE_UNAVAILABLE_LABEL, hasValidReferenceCoordinates, resolveReferenceLocation } from "../lib/pharmagarde/reference-location";
++
++describe("referenceLocation", () => {
++  it("utilise les coordonnées de la ville sélectionnée quand la sélection manuelle est active", () => {
++    const referenceLocation = resolveReferenceLocation({
++      selectedCity: "Bobo-Dioulasso",
++      isManualCitySelection: true,
++      userLocation: { latitude: 12.3714, longitude: -1.5197 },
++    });
++
++    expect(referenceLocation).toEqual({ latitude: 11.1784, longitude: -4.2979 });
++  });
++
++  it("utilise uniquement la position GPS utilisateur quand la sélection manuelle est inactive", () => {
++    const gpsLocation = { latitude: 12.48, longitude: -1.56 };
++    const referenceLocation = resolveReferenceLocation({
++      selectedCity: "Koudougou",
++      isManualCitySelection: false,
++      userLocation: gpsLocation,
++    });
++
++    expect(referenceLocation).toEqual(gpsLocation);
++  });
++
++  it("renvoie undefined sans position GPS valide quand la sélection manuelle est inactive", () => {
++    expect(resolveReferenceLocation({ selectedCity: "Ouagadougou", isManualCitySelection: false })).toBeUndefined();
++    expect(resolveReferenceLocation({ selectedCity: "Ouagadougou", isManualCitySelection: false, userLocation: { latitude: 0, longitude: 0 } })).toBeUndefined();
++    expect(resolveReferenceLocation({ selectedCity: "Ouagadougou", isManualCitySelection: false, userLocation: { latitude: Number.NaN, longitude: -1.5 } })).toBeUndefined();
++  });
++
++  it("expose le libellé de fallback demandé lorsque la distance ne peut pas être calculée", () => {
++    expect(DISTANCE_UNAVAILABLE_LABEL).toBe("Distance indisponible");
++    expect(hasValidReferenceCoordinates({ latitude: 91, longitude: -1.5 })).toBe(false);
++    expect(hasValidReferenceCoordinates({ latitude: 12.3714, longitude: -1.5197 })).toBe(true);
++  });
++});
