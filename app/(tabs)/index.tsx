@@ -19,7 +19,7 @@ export default function HomeScreen() {
   return (
     <AppChrome subtitle="Accueil">
       <FlatList<HealthPlace>
-        data={pharmacies.slice(0, 6)}
+        data={pharmacies}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => {
           const itemKey = `${item.type}-${item.id}`;

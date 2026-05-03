@@ -311,3 +311,8 @@
 - [x] Nettoyer les données existantes et forcer la reconstruction du cache backend.
 - [x] Valider que `/pharmacies` retourne uniquement des pharmacies et que `/healthcare` ne retourne aucune pharmacie.
 - [x] Pousser la correction source vers `https://github.com/kadersore/pharmagarde-backend`.
+
+- [x] Afficher tous les éléments disponibles de la liste sur la page d’accueil sans limitation.
+- [x] Ajouter ou adapter un test de non-régression pour vérifier l’absence de limitation sur la liste d’accueil.
+- [x] Valider TypeScript, Vitest et état Expo après suppression de la limitation de la page d’accueil.
+- [x] Sauvegarder un checkpoint de livraison après affichage complet de la liste d’accueil.

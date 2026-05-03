@@ -110,6 +110,13 @@ describe("cartes pharmacies et cliniques", () => {
       expect(source).toContain("setExpandedPlaceId((current) => current === itemKey ? undefined : itemKey)");
     }
   });
+
+  it("affiche toutes les pharmacies disponibles sur l’accueil sans limitation artificielle", () => {
+    const index = read("app/(tabs)/index.tsx");
+
+    expect(index).toContain("data={pharmacies}");
+    expect(index).not.toContain("pharmacies.slice(");
+  });
 });
 
 describe("assets Expo et icônes locales", () => {
