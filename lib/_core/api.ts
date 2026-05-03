@@ -1,4 +1,3 @@
-import { Platform } from "react-native";
 import { getApiBaseUrl } from "@/constants/oauth";
 import * as Auth from "./auth";
 
@@ -13,24 +12,13 @@ export async function apiCall<T>(endpoint: string, options: RequestInit = {}): P
     ...((options.headers as Record<string, string>) || {}),
   };
 
-  // Determine the auth method:
-  // - Native platform: use stored session token as Bearer auth
-  // - Web (including iframe): use cookie-based auth (browser handles automatically)
-  //   Cookie is set on backend domain via POST /api/auth/session after receiving token via postMessage
-  if (Platform.OS !== "web") {
-    const sessionToken = await Auth.getSessionToken();
-    console.log("[API] apiCall:", {
-      endpoint,
-      hasToken: !!sessionToken,
-      method: options.method || "GET",
-    });
-    if (sessionToken) {
-      headers["Authorization"] = `Bearer ${sessionToken}`;
-      console.log("[API] Authorization header added");
-    }
-  } else {
-    console.log("[API] apiCall:", { endpoint, platform: "web", method: options.method || "GET" });
-  }
+  const authHeaders = await Auth.getAuthorizationHeader();
+  Object.assign(headers, authHeaders);
+  console.log("[API] apiCall:", {
+    endpoint,
+    hasToken: Boolean(authHeaders.Authorization),
+    method: options.method || "GET",
+  });
 
   const baseUrl = getApiBaseUrl();
   // Ensure no double slashes between baseUrl and endpoint

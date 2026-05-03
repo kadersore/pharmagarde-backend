@@ -74,7 +74,7 @@ export function registerOAuthRoutes(app: Express) {
     try {
       const tokenResponse = await sdk.exchangeCodeForToken(code, state);
       const userInfo = await sdk.getUserInfo(tokenResponse.accessToken);
-      await syncUser(userInfo);
+      const user = await syncUser(userInfo);
       const sessionToken = await sdk.createSessionToken(userInfo.openId!, {
         name: userInfo.name || "",
         expiresInMs: ONE_YEAR_MS,
@@ -83,13 +83,20 @@ export function registerOAuthRoutes(app: Express) {
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
-      // Redirect to the frontend URL (Expo web on port 8081)
-      // Cookie is set with parent domain so it works across both 3000 and 8081 subdomains
+      // Redirect to the frontend callback route with the session token so the app can
+      // persist it and attach Authorization: Bearer <token> to every protected tRPC call.
+      // The cookie remains set as a compatibility fallback for browser-based sessions.
       const frontendUrl =
         process.env.EXPO_WEB_PREVIEW_URL ||
         process.env.EXPO_PACKAGER_PROXY_URL ||
         "http://localhost:8081";
-      res.redirect(302, frontendUrl);
+      const callbackUrl = new URL("/oauth/callback", frontendUrl);
+      callbackUrl.searchParams.set("sessionToken", sessionToken);
+      callbackUrl.searchParams.set(
+        "user",
+        Buffer.from(JSON.stringify(buildUserResponse(user)), "utf-8").toString("base64"),
+      );
+      res.redirect(302, callbackUrl.toString());
     } catch (error) {
       console.error("[OAuth] Callback failed", error);
       res.status(500).json({ error: "OAuth callback failed" });

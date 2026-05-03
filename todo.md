@@ -409,3 +409,8 @@
 - [x] Masquer la publicité pour les utilisateurs premium côté frontend.
 - [x] Ajouter les tests sécurité, expiration, paiement, webhook et restrictions premium.
 - [x] Valider TypeScript/tests, sauvegarder un checkpoint et pousser les modifications premium sur GitHub.
+
+- [x] Corriger l’erreur UNAUTHORIZED tRPC en envoyant automatiquement le token utilisateur dans les headers API.
+- [x] Persister le token utilisateur après login dans AsyncStorage.
+- [x] Ajouter `Authorization: Bearer TOKEN` dans le client tRPC pour toutes les requêtes protégées.
+- [x] Valider que les requêtes premium et autres routes protégées reçoivent le token côté backend.
