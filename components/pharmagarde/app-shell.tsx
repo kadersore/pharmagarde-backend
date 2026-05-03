@@ -115,12 +115,14 @@ function AppFooter() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const palette = usePremiumPalette();
+  const { isPremium } = usePharmaGarde();
   const bottomPadding = Platform.OS === "web" ? 10 : Math.max(insets.bottom, 8);
 
   return (
     <View style={[styles.footer, { paddingBottom: bottomPadding, backgroundColor: palette.glass, borderTopColor: palette.border }]}> 
       {FOOTER_ITEMS.map((item) => {
         const active = isFooterActive(item, pathname);
+        const locked = item.key === "medicaments" && !isPremium;
         return (
           <Pressable
             key={item.key}
@@ -130,11 +132,14 @@ function AppFooter() {
             style={({ pressed }) => [styles.footerItem, active ? { backgroundColor: palette.softGreen } : undefined, pressed ? styles.footerItemPressed : undefined]}
             onPress={() => {
               haptic.light();
-              router.replace(item.href as never);
+              router.replace((locked ? "/pharmagarde/abonnement" : item.href) as never);
             }}
           >
-            <MaterialIcons name={item.icon} size={23} color={active ? palette.brand : palette.muted} />
-            <Text style={[styles.footerLabel, { color: active ? palette.brand : palette.muted }, active ? styles.footerLabelActive : undefined]} numberOfLines={1}>{item.label}</Text>
+            <View style={styles.footerIconWrap}>
+              <MaterialIcons name={item.icon} size={23} color={active ? palette.brand : palette.muted} />
+              {locked ? <MaterialIcons name="lock" size={11} color={palette.muted} style={styles.footerLock} /> : null}
+            </View>
+            <Text style={[styles.footerLabel, { color: active ? palette.brand : palette.muted }, active ? styles.footerLabelActive : undefined]} numberOfLines={1}>{locked ? "Médicaments+" : item.label}</Text>
           </Pressable>
         );
       })}
@@ -289,6 +294,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   footerItemPressed: { opacity: 0.82, transform: [{ scale: 0.98 }] },
+  footerIconWrap: { minHeight: 24, minWidth: 28, alignItems: "center", justifyContent: "center" },
+  footerLock: { position: "absolute", right: 0, top: -1 },
   footerLabel: { fontSize: 11, lineHeight: 14, fontWeight: "800" },
   footerLabelActive: { fontWeight: "900" },
   overlay: { ...StyleSheet.absoluteFillObject },

@@ -103,10 +103,10 @@ describe("cache backend PharmaGarde", () => {
     expect(routes["GET /healthcare"]).toBeTypeOf("function");
 
     const pharmaciesResponse = new FakeResponse();
-    routes["GET /pharmacies"]?.({ header: () => undefined, query: {} }, pharmaciesResponse);
+    await routes["GET /pharmacies"]?.({ header: () => undefined, query: {} }, pharmaciesResponse);
 
     const healthcareResponse = new FakeResponse();
-    routes["GET /healthcare"]?.({ header: () => undefined, query: {}, headers: { origin: "https://preview.example" } } as never, healthcareResponse);
+    await routes["GET /healthcare"]?.({ header: () => undefined, query: {}, headers: { origin: "https://preview.example" } } as never, healthcareResponse);
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(pharmaciesResponse.headers["X-PharmaGarde-Cache-Source"]).toBe("server-local-cache-by-city");
@@ -171,19 +171,19 @@ describe("cache backend PharmaGarde", () => {
     const routes = createRouteMap(registerPharmaGardeCacheRoutes as never);
 
     const koudougouResponse = new FakeResponse();
-    routes["GET /pharmacies"]?.({ header: () => undefined, query: { city: "kOuDoUgOu" } }, koudougouResponse);
+    await routes["GET /pharmacies"]?.({ header: () => undefined, query: { city: "kOuDoUgOu" } }, koudougouResponse);
 
     const kayaResponse = new FakeResponse();
-    routes["GET /pharmacies"]?.({ header: () => undefined, query: { city: "Kaya" } }, kayaResponse);
+    await routes["GET /pharmacies"]?.({ header: () => undefined, query: { city: "Kaya" } }, kayaResponse);
 
     const allPharmaciesResponse = new FakeResponse();
-    routes["GET /pharmacies"]?.({ header: () => undefined, query: {} }, allPharmaciesResponse);
+    await routes["GET /pharmacies"]?.({ header: () => undefined, query: {} }, allPharmaciesResponse);
 
     const unsupportedCityResponse = new FakeResponse();
-    routes["GET /pharmacies"]?.({ header: () => undefined, query: { city: "Ville Introuvable" } }, unsupportedCityResponse);
+    await routes["GET /pharmacies"]?.({ header: () => undefined, query: { city: "Ville Introuvable" } }, unsupportedCityResponse);
 
     const healthcareResponse = new FakeResponse();
-    routes["GET /healthcare"]?.({ header: () => undefined, query: { city: "Ziniare" } }, healthcareResponse);
+    await routes["GET /healthcare"]?.({ header: () => undefined, query: { city: "Ziniare" } }, healthcareResponse);
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(koudougouResponse.body).toMatchObject({
@@ -198,7 +198,7 @@ describe("cache backend PharmaGarde", () => {
       meta: { city: "Kaya", cityKey: "kaya", itemCount: 1, totalItemCount: 4 },
     });
     expect(allPharmaciesResponse.body).toMatchObject({
-      meta: { city: null, itemCount: 4, totalItemCount: 4 },
+      meta: { city: null, itemCount: 3, unrestrictedItemCount: 4, totalItemCount: 4, premiumRequiredForFullResults: true, freeResultLimit: 3 },
     });
     expect(unsupportedCityResponse.body).toMatchObject({
       pharmacies: [],
@@ -208,10 +208,10 @@ describe("cache backend PharmaGarde", () => {
       healthcare: [{ id: "cl-ziniare", city: "Ziniaré" }],
       meta: { city: "Ziniaré", cityKey: "ziniare", itemCount: 1, totalItemCount: 3 },
     });
-    expect(infoSpy).toHaveBeenCalledWith("[PharmaGardeCache] pharmacies: ville demandée=Koudougou, résultats retournés=1");
-    expect(infoSpy).toHaveBeenCalledWith("[PharmaGardeCache] pharmacies: ville demandée=toutes, résultats retournés=4");
-    expect(infoSpy).toHaveBeenCalledWith("[PharmaGardeCache] pharmacies: ville demandée=Ville Introuvable, résultats retournés=0");
-    expect(infoSpy).toHaveBeenCalledWith("[PharmaGardeCache] healthcare: ville demandée=Ziniaré, résultats retournés=1");
+    expect(infoSpy).toHaveBeenCalledWith("[PharmaGardeCache] pharmacies: ville demandée=Koudougou, premium=false, résultats retournés=1/1");
+    expect(infoSpy).toHaveBeenCalledWith("[PharmaGardeCache] pharmacies: ville demandée=toutes, premium=false, résultats retournés=3/4");
+    expect(infoSpy).toHaveBeenCalledWith("[PharmaGardeCache] pharmacies: ville demandée=Ville Introuvable, premium=false, résultats retournés=0/0");
+    expect(infoSpy).toHaveBeenCalledWith("[PharmaGardeCache] healthcare: ville demandée=Ziniaré, premium=false, résultats retournés=1/1");
   });
 
   it("ignore complètement l’ancien cache plat version 1", async () => {
@@ -238,7 +238,7 @@ describe("cache backend PharmaGarde", () => {
     await initializePharmaGardeCache();
     const routes = createRouteMap(registerPharmaGardeCacheRoutes as never);
     const response = new FakeResponse();
-    routes["GET /pharmacies"]?.({ header: () => undefined, query: { city: "Ouagadougou" } }, response);
+    await routes["GET /pharmacies"]?.({ header: () => undefined, query: { city: "Ouagadougou" } }, response);
 
     expect(response.body).toMatchObject({
       pharmacies: [],

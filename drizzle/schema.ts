@@ -17,12 +17,30 @@ export const users = mysqlTable("users", {
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  /** Subscription end date. A user is premium only when this value is in the future. */
+  subscriptionEnd: timestamp("subscriptionEnd"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
+export const transactions = mysqlTable("transactions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id),
+  provider: varchar("provider", { length: 64 }).default("ligdicash").notNull(),
+  providerTransactionId: varchar("providerTransactionId", { length: 128 }),
+  merchantReference: varchar("merchantReference", { length: 128 }).notNull().unique(),
+  planId: varchar("planId", { length: 32 }).notNull(),
+  amount: int("amount").notNull(),
+  currency: varchar("currency", { length: 8 }).default("XOF").notNull(),
+  status: mysqlEnum("status", ["pending", "success", "failed", "cancelled"]).default("pending").notNull(),
+  paymentUrl: text("paymentUrl"),
+  rawProviderPayload: text("rawProviderPayload"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
-
-// TODO: Add your tables here
+export type Transaction = typeof transactions.$inferSelect;
+export type InsertTransaction = typeof transactions.$inferInsert;

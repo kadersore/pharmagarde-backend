@@ -397,3 +397,15 @@
 - [x] Dédupliquer les résultats Google Places par place_id puis fusionner et sauvegarder localement.
 - [x] Ajouter ou adapter les tests couvrant la nouvelle stratégie de récupération pharmacies.
 - [x] Valider TypeScript/tests, sauvegarder un checkpoint et pousser les modifications sur GitHub.
+
+- [x] Définir les offres premium : 1 semaine à 200 F, 1 mois à 400 F, 3 mois à 1000 F et 6 mois à 2000 F.
+- [x] Ajouter le stockage backend de l’abonnement utilisateur avec calcul de date d’expiration et vérification d’abonnement actif.
+- [x] Ajouter ou migrer les tables nécessaires : users avec subscriptionEnd et transactions pour les paiements.
+- [x] Intégrer Ligdi Cash avec une route /payment/init pour initialiser le paiement premium.
+- [x] Intégrer le webhook /payment/webhook et activer l’abonnement uniquement après succès confirmé.
+- [x] Appliquer les contrôles d’accès premium côté backend, sans faire confiance au frontend.
+- [x] Limiter les résultats à 3 pour les utilisateurs gratuits via contrôle serveur.
+- [x] Bloquer l’accès à la page Médicaments pour les utilisateurs gratuits avec validation backend.
+- [x] Masquer la publicité pour les utilisateurs premium côté frontend.
+- [x] Ajouter les tests sécurité, expiration, paiement, webhook et restrictions premium.
+- [ ] Valider TypeScript/tests, sauvegarder un checkpoint et pousser les modifications premium sur GitHub.

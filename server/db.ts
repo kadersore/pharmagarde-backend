@@ -52,6 +52,10 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       values.lastSignedIn = user.lastSignedIn;
       updateSet.lastSignedIn = user.lastSignedIn;
     }
+    if (user.subscriptionEnd !== undefined) {
+      values.subscriptionEnd = user.subscriptionEnd;
+      updateSet.subscriptionEnd = user.subscriptionEnd;
+    }
     if (user.role !== undefined) {
       values.role = user.role;
       updateSet.role = user.role;
@@ -88,5 +92,3 @@ export async function getUserByOpenId(openId: string) {
 
   return result.length > 0 ? result[0] : undefined;
 }
-
-// TODO: add feature queries here as your schema grows.

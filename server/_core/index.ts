@@ -8,6 +8,7 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { initializePharmaGardeCache, registerPharmaGardeCacheRoutes, startPharmaGardeSchedulers } from "../pharmagarde-cache";
+import { handleLigdiCashWebhook, initPremiumPayment } from "../premium";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -62,6 +63,8 @@ async function startServer() {
   await initializePharmaGardeCache();
   registerStorageProxy(app);
   registerOAuthRoutes(app);
+  app.post("/payment/init", initPremiumPayment);
+  app.post("/payment/webhook", handleLigdiCashWebhook);
   startPharmaGardeSchedulers();
 
   app.get("/api/health", (_req, res) => {

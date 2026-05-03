@@ -1,11 +1,37 @@
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { router } from "expo-router";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { AppChrome, EmptyState, MedicineCard } from "@/components/pharmagarde/app-ui";
 import { usePharmaGarde } from "@/lib/pharmagarde/app-state";
 import { Medicine } from "@/lib/pharmagarde/types";
 
+const BRAND_GREEN = "#03C04A";
+
 export default function MedicinesScreen() {
-  const { medicines } = usePharmaGarde();
+  const { isPremium, medicines, premiumLoading } = usePharmaGarde();
+
+  if (!isPremium) {
+    return (
+      <AppChrome subtitle="Médicaments">
+        <View style={styles.paywallPage}>
+          <View style={styles.paywallCard}>
+            <View style={styles.lockBadge}>
+              <MaterialIcons name="lock" size={30} color="#FFFFFF" />
+            </View>
+            <Text style={styles.paywallKicker}>Réservé Premium</Text>
+            <Text style={styles.paywallTitle}>Accès réservé aux abonnés</Text>
+            <Text style={styles.paywallDescription}>Le catalogue des médicaments essentiels est protégé afin de garantir un accès contrôlé côté serveur. Passez à PharmaGarde Plus pour consulter les médicaments, formes, catégories et prix indicatifs.</Text>
+            <Pressable accessibilityRole="button" onPress={() => router.push("/pharmagarde/abonnement")} style={({ pressed }) => [styles.subscribeButton, pressed && styles.pressed]}>
+              <MaterialIcons name="workspace-premium" size={20} color="#FFFFFF" />
+              <Text style={styles.subscribeButtonText}>{premiumLoading ? "Vérification…" : "S’abonner"}</Text>
+            </Pressable>
+            <Text style={styles.securityNote}>Les données médicaments restent aussi protégées par le backend pour éviter tout contournement côté application.</Text>
+          </View>
+        </View>
+      </AppChrome>
+    );
+  }
 
   const header = (
     <View>
@@ -37,5 +63,14 @@ const styles = StyleSheet.create({
   kicker: { color: "#03A63F", fontSize: 12, lineHeight: 17, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.6 },
   title: { color: "#102016", fontSize: 22, lineHeight: 28, fontWeight: "900", marginTop: 6 },
   description: { color: "#667085", fontSize: 14, lineHeight: 21, marginTop: 8 },
-
+  paywallPage: { flex: 1, backgroundColor: "#F6FBF8", padding: 16, justifyContent: "center" },
+  paywallCard: { borderRadius: 18, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#D6EBDD", padding: 20, alignItems: "center", shadowColor: "#092A13", shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
+  lockBadge: { width: 64, height: 64, borderRadius: 32, backgroundColor: "#102016", alignItems: "center", justifyContent: "center", marginBottom: 14 },
+  paywallKicker: { color: BRAND_GREEN, fontSize: 12, lineHeight: 17, fontWeight: "900", letterSpacing: 0.7, textTransform: "uppercase" },
+  paywallTitle: { color: "#102016", fontSize: 24, lineHeight: 30, fontWeight: "900", textAlign: "center", marginTop: 6 },
+  paywallDescription: { color: "#667085", fontSize: 15, lineHeight: 23, textAlign: "center", marginTop: 10 },
+  subscribeButton: { minHeight: 52, borderRadius: 12, backgroundColor: BRAND_GREEN, alignSelf: "stretch", alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, marginTop: 18 },
+  subscribeButtonText: { color: "#FFFFFF", fontSize: 16, lineHeight: 22, fontWeight: "900" },
+  securityNote: { color: "#667085", fontSize: 12, lineHeight: 18, textAlign: "center", marginTop: 12 },
+  pressed: { opacity: 0.86, transform: [{ scale: 0.99 }] },
 });

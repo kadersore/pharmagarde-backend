@@ -10,6 +10,7 @@ import { getDefaultLocationFallback } from "./location-policy";
 import { DISTANCE_UNAVAILABLE_LABEL, resolveReferenceLocation } from "./reference-location";
 import { LOCAL_ESSENTIAL_MEDICINES, LOCAL_MEDICINES_NOTICE } from "./medicines-data";
 import { sortPlacesByOpenThenDistance } from "./place-ordering";
+import { fetchPremiumStatus, initPremiumPayment, limitFreeResults, type PaymentInitResponse, type PremiumPlanId } from "./premium";
 import { AppPreferences, CombinedSearchItem, Coordinates, FavoriteItem, HealthPlace, Medicine, favoriteKey } from "./types";
 
 const FAVORITES_KEY = "pharmagarde:favorites:v1";
@@ -43,6 +44,11 @@ type PharmaGardeContextValue = {
   pharmacies: HealthPlace[];
   clinics: HealthPlace[];
   medicines: Medicine[];
+  isPremium: boolean;
+  subscriptionEnd: string | null;
+  premiumLoading: boolean;
+  refreshPremiumStatus: () => Promise<void>;
+  initSubscription: (planId: PremiumPlanId) => Promise<PaymentInitResponse>;
   favorites: FavoriteItem[];
   favoriteKeys: Set<string>;
   errors: DataErrors;
@@ -143,6 +149,9 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
   const [pharmacies, setPharmacies] = useState<HealthPlace[]>([]);
   const [clinics, setClinics] = useState<HealthPlace[]>([]);
   const [medicines, setMedicines] = useState<Medicine[]>(LOCAL_ESSENTIAL_MEDICINES);
+  const [isPremium, setIsPremium] = useState(false);
+  const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
+  const [premiumLoading, setPremiumLoading] = useState(false);
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [errors, setErrors] = useState<DataErrors>({});
   const [loading, setLoading] = useState(false);
@@ -157,6 +166,39 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
   const hasRequestedInitialLocationRef = useRef(false);
 
   const isApiConfigured = apiBaseUrl.length > 0;
+
+  const refreshPremiumStatus = useCallback(async () => {
+    if (!isApiConfigured) {
+      setIsPremium(false);
+      setSubscriptionEnd(null);
+      return;
+    }
+
+    setPremiumLoading(true);
+    try {
+      const status = await fetchPremiumStatus();
+      setIsPremium(status.isPremium);
+      setSubscriptionEnd(status.subscriptionEnd);
+    } catch (error) {
+      console.warn("[PharmaGarde Premium] Impossible de récupérer le statut premium", error);
+      setIsPremium(false);
+      setSubscriptionEnd(null);
+    } finally {
+      setPremiumLoading(false);
+    }
+  }, [isApiConfigured]);
+
+  const initSubscription = useCallback(async (planId: PremiumPlanId) => {
+    const response = await initPremiumPayment(planId);
+    await refreshPremiumStatus().catch((error) => {
+      console.warn("[PharmaGarde Premium] Rafraîchissement du statut après paiement initialisé impossible", error);
+    });
+    return response;
+  }, [refreshPremiumStatus]);
+
+  useEffect(() => {
+    refreshPremiumStatus();
+  }, [refreshPremiumStatus]);
 
   useEffect(() => {
     let mounted = true;
@@ -326,8 +368,9 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
 
     if (pharmacyResult.status === "fulfilled") {
       const nextPharmacies = sortPlacesByOpenThenDistance(withLocalDistances(filterPlacesByCity(pharmacyResult.value, activeCity), referenceLocation));
-      console.info("[PharmaGarde Frontend] Réponse pharmacies reçue", { selectedCity: activeCity, receivedCount: pharmacyResult.value.length, displayedCount: nextPharmacies.length, pharmacies: nextPharmacies });
-      setPharmacies(nextPharmacies);
+      const displayedPharmacies = limitFreeResults(nextPharmacies, isPremium);
+      console.info("[PharmaGarde Frontend] Réponse pharmacies reçue", { selectedCity: activeCity, receivedCount: pharmacyResult.value.length, displayedCount: displayedPharmacies.length, isPremium, pharmacies: displayedPharmacies });
+      setPharmacies(displayedPharmacies);
     } else {
       setPharmacies([]);
       nextErrors.pharmacies = pharmacyResult.reason instanceof Error ? pharmacyResult.reason.message : "Erreur de chargement des pharmacies.";
@@ -335,14 +378,17 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
 
     if (clinicResult.status === "fulfilled") {
       const nextClinics = sortPlacesByOpenThenDistance(withLocalDistances(filterPlacesByCity(clinicResult.value, activeCity), referenceLocation));
-      console.info("[PharmaGarde Frontend] Réponse healthcare reçue", { selectedCity: activeCity, receivedCount: clinicResult.value.length, displayedCount: nextClinics.length });
-      setClinics(nextClinics);
+      const displayedClinics = limitFreeResults(nextClinics, isPremium);
+      console.info("[PharmaGarde Frontend] Réponse healthcare reçue", { selectedCity: activeCity, receivedCount: clinicResult.value.length, displayedCount: displayedClinics.length, isPremium });
+      setClinics(displayedClinics);
     } else {
       setClinics([]);
       nextErrors.clinics = clinicResult.reason instanceof Error ? clinicResult.reason.message : "Erreur de chargement des cliniques.";
     }
 
-    if (medicineResult.status === "fulfilled" && medicineResult.value.length > 0) setMedicines(medicineResult.value);
+    if (!isPremium) {
+      setMedicines([]);
+    } else if (medicineResult.status === "fulfilled" && medicineResult.value.length > 0) setMedicines(medicineResult.value);
     else {
       setMedicines(LOCAL_ESSENTIAL_MEDICINES);
       nextErrors.medicines = medicineResult.status === "rejected" && medicineResult.reason instanceof Error ? `${medicineResult.reason.message} ${LOCAL_MEDICINES_NOTICE}` : LOCAL_MEDICINES_NOTICE;
@@ -350,7 +396,7 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
 
     setErrors(nextErrors);
     setLoading(false);
-  }, [apiBaseUrl, isApiConfigured, isManualCitySelection, referenceLocation, selectedCity]);
+  }, [apiBaseUrl, isApiConfigured, isManualCitySelection, isPremium, referenceLocation, selectedCity]);
 
   useEffect(() => {
     if (hasHydratedCitySelection && !hasRequestedInitialLocationRef.current) {
@@ -454,6 +500,11 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
     pharmacies,
     clinics,
     medicines,
+    isPremium,
+    subscriptionEnd,
+    premiumLoading,
+    refreshPremiumStatus,
+    initSubscription,
     favorites,
     favoriteKeys,
     errors,
@@ -470,7 +521,7 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
     refreshData,
     toggleFavorite,
     searchResults,
-  }), [apiBaseUrl, clinics, errors, favoriteKeys, favorites, isApiConfigured, isManualCitySelection, loading, locationMessage, medicines, pharmacies, preferences, referenceLocation, refreshingLocation, requestLocation, refreshData, searchQuery, searchResults, selectedCity, selectCityManually, toggleFavorite, updateApiBaseUrl, updatePreference, userLocation]);
+  }), [apiBaseUrl, clinics, errors, favoriteKeys, favorites, initSubscription, isApiConfigured, isManualCitySelection, isPremium, loading, locationMessage, medicines, pharmacies, preferences, premiumLoading, referenceLocation, refreshData, refreshPremiumStatus, refreshingLocation, requestLocation, searchQuery, searchResults, selectedCity, selectCityManually, subscriptionEnd, toggleFavorite, updateApiBaseUrl, updatePreference, userLocation]);
 
   return <PharmaGardeContext.Provider value={value}>{children}</PharmaGardeContext.Provider>;
 }

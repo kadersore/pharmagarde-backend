@@ -1,7 +1,9 @@
+import { TRPCError } from "@trpc/server";
 import { COOKIE_NAME } from "../shared/const.js";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { getPremiumStatus, getRecentTransactions, PREMIUM_PLANS, requirePremium } from "./premium";
 
 export const appRouter = router({
   // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -16,13 +18,18 @@ export const appRouter = router({
       } as const;
     }),
   }),
-
-  // TODO: add feature routers here, e.g.
-  // todo: router({
-  //   list: protectedProcedure.query(({ ctx }) =>
-  //     db.getUserTodos(ctx.user.id)
-  //   ),
-  // }),
+  premium: router({
+    plans: publicProcedure.query(() => Object.values(PREMIUM_PLANS)),
+    status: protectedProcedure.query(async ({ ctx }) => getPremiumStatus(ctx.user.openId)),
+    transactions: protectedProcedure.query(async ({ ctx }) => getRecentTransactions(ctx.user.openId)),
+    assertAccess: protectedProcedure.query(async ({ ctx }) => {
+      try {
+        return await requirePremium(ctx.user.openId);
+      } catch (error) {
+        throw new TRPCError({ code: "FORBIDDEN", message: error instanceof Error ? error.message : "Abonnement Premium requis." });
+      }
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

@@ -2,6 +2,8 @@ import type { Express, Request, Response } from "express";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { getAuthenticatedDbUser, getPremiumStatusForUser } from "./premium";
+
 export type CacheKind = "pharmacies" | "healthcare";
 export type CachedPlaceCategory = "pharmacy" | "healthcare";
 export type LocalEstablishmentType = "Pharmacie" | "CHU" | "CHR" | "CMA" | "CSPS" | "Clinique" | "Hôpital" | "Centre de santé";
@@ -85,6 +87,7 @@ const DEFAULT_RADIUS_METERS = 15000;
 const GOOGLE_PAGE_DELAY_MS = Number(process.env.PHARMAGARDE_GOOGLE_PAGE_DELAY_MS ?? 2000);
 const CACHE_DIR = process.env.PHARMAGARDE_CACHE_DIR ?? path.join(process.cwd(), "server", ".cache");
 const GOOGLE_API_KEY = process.env.GOOGLE_PLACES_API_KEY ?? process.env.GOOGLE_MAPS_API_KEY ?? "";
+const PREMIUM_RESULT_LIMIT = 3;
 
 const TEXT_SEARCH_TERMS = ["pharmacie", "hôpital", "clinique", "CSPS", "centre médical", "dispensaire"] as const;
 const PHARMACY_TEXT_SEARCH_TEMPLATES = [
@@ -666,15 +669,24 @@ function selectItemsByCity(state: CacheState, cityFilter: RequestedCityFilter) {
   return flattenBuckets(state.byCity);
 }
 
-function sendCachedDataset(req: Request, res: Response, kind: CacheKind, rootKey: "pharmacies" | "healthcare" | "cliniques") {
+async function getPremiumAccessFromRequest(req: Request) {
+  const user = await getAuthenticatedDbUser(req);
+  return getPremiumStatusForUser(user ?? null).isPremium;
+}
+
+async function sendCachedDataset(req: Request, res: Response, kind: CacheKind, rootKey: "pharmacies" | "healthcare" | "cliniques") {
   const state = memoryCache[kind];
   const cityFilter = getRequestedCityFilter(req);
-  const items = selectItemsByCity(state, cityFilter);
+  const allItems = selectItemsByCity(state, cityFilter);
+  const isPremium = await getPremiumAccessFromRequest(req);
+  const items = isPremium ? allItems : allItems.slice(0, PREMIUM_RESULT_LIMIT);
   const responseCity = cityFilter.supportedCity?.name ?? cityFilter.rawCity ?? null;
 
-  console.info(`[PharmaGardeCache] ${kind}: ville demandée=${responseCity ?? "toutes"}, résultats retournés=${items.length}`);
+  console.info(`[PharmaGardeCache] ${kind}: ville demandée=${responseCity ?? "toutes"}, premium=${isPremium}, résultats retournés=${items.length}/${allItems.length}`);
 
   withCacheHeaders(req, res, kind);
+  res.setHeader("X-PharmaGarde-Premium", isPremium ? "true" : "false");
+  if (!isPremium) res.setHeader("X-PharmaGarde-Free-Limit", String(PREMIUM_RESULT_LIMIT));
   res.json({
     [rootKey]: items,
     data: items,
@@ -685,12 +697,33 @@ function sendCachedDataset(req: Request, res: Response, kind: CacheKind, rootKey
       cityKey: cityFilter.key ?? null,
       supportedCities: SUPPORTED_CITIES.map((city) => city.name),
       itemCount: items.length,
+      unrestrictedItemCount: allItems.length,
       totalItemCount: countBuckets(state.byCity),
+      premiumRequiredForFullResults: !isPremium,
+      freeResultLimit: isPremium ? null : PREMIUM_RESULT_LIMIT,
       updatedAt: state.updatedAt,
       expiresAt: state.expiresAt,
       stale: !isCacheFresh(kind),
       lastError: state.lastError,
     },
+  });
+}
+
+async function sendMedicinesDataset(req: Request, res: Response) {
+  const isPremium = await getPremiumAccessFromRequest(req);
+  withPublicCorsHeaders(req, res);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("X-PharmaGarde-Premium", isPremium ? "true" : "false");
+  if (!isPremium) {
+    res.status(403).json({ error: "PREMIUM_REQUIRED", message: "Abonnement Premium requis pour consulter les médicaments." });
+    return;
+  }
+
+  res.json({
+    medicaments: [],
+    medicines: [],
+    data: [],
+    meta: { premiumRequired: true, itemCount: 0 },
   });
 }
 
@@ -707,6 +740,8 @@ export function registerPharmaGardeCacheRoutes(app: Express) {
 
   app.get("/healthcare", (req, res) => sendCachedDataset(req, res, "healthcare", "healthcare"));
   app.get("/cliniques/nearby", (req, res) => sendCachedDataset(req, res, "healthcare", "cliniques"));
+  app.get("/medicaments", (req, res) => sendMedicinesDataset(req, res));
+  app.get("/medicines", (req, res) => sendMedicinesDataset(req, res));
 
   app.post("/admin/update-data", async (req, res) => {
     if (!isAdminRequest(req)) {
