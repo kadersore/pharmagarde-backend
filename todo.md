@@ -362,3 +362,5 @@
 - [x] Ajouter ou adapter les tests de non-régression pour la collecte multi-requêtes, la pagination, la déduplication, le filtrage qualité et la classification.
 - [x] Valider TypeScript, Vitest et l’état Expo après implémentation de la base Google Places enrichie.
 - [x] Sauvegarder un checkpoint de livraison après implémentation de la collecte Google Places enrichie.
+
+- [x] Synchroniser les 10 commits locaux manquants vers GitHub (`kadersore/Pharmagarde`) et vérifier que `github/main` pointe sur `816e55fa`.
