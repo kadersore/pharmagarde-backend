@@ -12,6 +12,29 @@ export type User = {
   lastSignedIn: Date;
 };
 
+type SessionTokenListener = (token: string | null) => void;
+
+let cachedSessionToken: string | null | undefined;
+let sessionTokenHydrationPromise: Promise<string | null> | null = null;
+const sessionTokenListeners = new Set<SessionTokenListener>();
+
+function notifySessionTokenListeners(token: string | null) {
+  for (const listener of sessionTokenListeners) {
+    try {
+      listener(token);
+    } catch (error) {
+      console.error("[Auth] Session token listener failed:", error);
+    }
+  }
+}
+
+export function subscribeSessionTokenChanges(listener: SessionTokenListener): () => void {
+  sessionTokenListeners.add(listener);
+  return () => {
+    sessionTokenListeners.delete(listener);
+  };
+}
+
 async function getSecureStoreToken(): Promise<string | null> {
   if (Platform.OS === "web") return null;
 
@@ -43,13 +66,14 @@ async function removeSecureStoreToken(): Promise<void> {
   }
 }
 
-export async function getSessionToken(): Promise<string | null> {
+async function hydrateSessionTokenFromStorage(): Promise<string | null> {
   try {
-    console.log("[Auth] Getting session token...");
+    console.log("[Auth] Hydrating session token...");
 
     const asyncStorageToken = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
     if (asyncStorageToken) {
       console.log("[Auth] Session token retrieved from AsyncStorage");
+      cachedSessionToken = asyncStorageToken;
       return asyncStorageToken;
     }
 
@@ -57,24 +81,48 @@ export async function getSessionToken(): Promise<string | null> {
     if (secureStoreToken) {
       console.log("[Auth] Session token recovered from SecureStore and mirrored to AsyncStorage");
       await AsyncStorage.setItem(SESSION_TOKEN_KEY, secureStoreToken);
+      cachedSessionToken = secureStoreToken;
       return secureStoreToken;
     }
 
     console.log("[Auth] No session token found");
+    cachedSessionToken = null;
     return null;
   } catch (error) {
-    console.error("[Auth] Failed to get session token:", error);
+    console.error("[Auth] Failed to hydrate session token:", error);
+    cachedSessionToken = null;
     return null;
   }
 }
 
+export async function getSessionToken(): Promise<string | null> {
+  if (cachedSessionToken !== undefined) {
+    return cachedSessionToken;
+  }
+
+  if (!sessionTokenHydrationPromise) {
+    sessionTokenHydrationPromise = hydrateSessionTokenFromStorage().finally(() => {
+      sessionTokenHydrationPromise = null;
+    });
+  }
+
+  return sessionTokenHydrationPromise;
+}
+
+export async function hasSessionToken(): Promise<boolean> {
+  return Boolean(await getSessionToken());
+}
+
 export async function setSessionToken(token: string): Promise<void> {
   try {
-    if (!token) throw new Error("Session token is required");
+    const normalizedToken = token.trim();
+    if (!normalizedToken) throw new Error("Session token is required");
 
     console.log("[Auth] Setting session token...");
-    await AsyncStorage.setItem(SESSION_TOKEN_KEY, token);
-    await setSecureStoreToken(token);
+    cachedSessionToken = normalizedToken;
+    await AsyncStorage.setItem(SESSION_TOKEN_KEY, normalizedToken);
+    await setSecureStoreToken(normalizedToken);
+    notifySessionTokenListeners(normalizedToken);
     console.log("[Auth] Session token stored successfully");
   } catch (error) {
     console.error("[Auth] Failed to set session token:", error);
@@ -85,8 +133,10 @@ export async function setSessionToken(token: string): Promise<void> {
 export async function removeSessionToken(): Promise<void> {
   try {
     console.log("[Auth] Removing session token...");
+    cachedSessionToken = null;
     await AsyncStorage.removeItem(SESSION_TOKEN_KEY);
     await removeSecureStoreToken();
+    notifySessionTokenListeners(null);
     console.log("[Auth] Session token removed successfully");
   } catch (error) {
     console.error("[Auth] Failed to remove session token:", error);

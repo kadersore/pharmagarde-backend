@@ -33,7 +33,8 @@ vi.mock("@/constants/oauth", () => ({
 describe("auth token headers", () => {
   beforeEach(() => {
     storage.clear();
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
+    vi.resetModules();
   });
 
   it("persiste le token utilisateur dans AsyncStorage et construit Authorization: Bearer TOKEN", async () => {
@@ -75,5 +76,16 @@ describe("auth token headers", () => {
     expect(source).toContain("async headers() {");
     expect(source).toContain("return Auth.getAuthorizationHeader();");
     expect(source).not.toContain("Platform.OS !== \"web\"");
+  });
+
+  it("n’appelle pas la route tRPC premium.status tant qu’aucun Bearer token n’est disponible", async () => {
+    const { fetchPremiumStatus } = await import("../lib/pharmagarde/premium");
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("fetch should not be called without a token"));
+
+    await expect(fetchPremiumStatus()).resolves.toMatchObject({
+      isPremium: false,
+      subscriptionEnd: null,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

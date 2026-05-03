@@ -3,6 +3,7 @@ import * as Location from "expo-location";
 import { PropsWithChildren, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Platform } from "react-native";
 
+import { subscribeSessionTokenChanges } from "@/lib/_core/auth";
 import { useThemeContext } from "@/lib/theme-provider";
 import { fetchClinics, fetchMedicines, fetchPharmacies, getDefaultApiBaseUrl, normalizeBaseUrl } from "./api";
 import { distanceKm, filterPlacesByCity, inferCityFromAddressParts, inferNearestKnownCity, normalizeCityName } from "./city-utils";
@@ -198,6 +199,14 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     refreshPremiumStatus();
+    return subscribeSessionTokenChanges((token) => {
+      if (token) {
+        refreshPremiumStatus();
+        return;
+      }
+      setIsPremium(false);
+      setSubscriptionEnd(null);
+    });
   }, [refreshPremiumStatus]);
 
   useEffect(() => {

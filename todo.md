@@ -414,3 +414,9 @@
 - [x] Persister le token utilisateur après login dans AsyncStorage.
 - [x] Ajouter `Authorization: Bearer TOKEN` dans le client tRPC pour toutes les requêtes protégées.
 - [x] Valider que les requêtes premium et autres routes protégées reçoivent le token côté backend.
+
+- [x] Revérifier l’erreur `Please login (401)` sur les requêtes tRPC protégées.
+- [x] Confirmer que le token est récupéré après login et stocké dans AsyncStorage.
+- [x] Confirmer que le client tRPC ajoute `Authorization: Bearer TOKEN` sur chaque requête protégée.
+- [x] Ajouter ou adapter les tests pour prouver que le Bearer token est envoyé systématiquement.
+- [ ] Sauvegarder un checkpoint de livraison après validation de la correction 401 tRPC.

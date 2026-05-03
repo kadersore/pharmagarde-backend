@@ -1,4 +1,5 @@
-import { apiCall } from "@/lib/_core/api";
+import { apiCall } from "../_core/api";
+import { hasSessionToken } from "../_core/auth";
 
 export type PremiumPlanId = "week" | "month" | "quarter" | "semester";
 
@@ -32,6 +33,15 @@ export const PREMIUM_PLANS: PremiumPlan[] = [
 ];
 
 export async function fetchPremiumStatus() {
+  const tokenAvailable = await hasSessionToken();
+  if (!tokenAvailable) {
+    return {
+      isPremium: false,
+      subscriptionEnd: null,
+      serverTime: new Date().toISOString(),
+    } satisfies PremiumStatus;
+  }
+
   const response = await apiCall<{ result?: { data?: PremiumStatus }; isPremium?: boolean; subscriptionEnd?: string | null; serverTime?: string }>("/api/trpc/premium.status?batch=1&input=%7B%7D");
   const data = response.result?.data ?? response;
   return {
