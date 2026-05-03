@@ -3,7 +3,7 @@ import * as WebBrowser from "expo-web-browser";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Animated, FlatList, Linking, PanResponder, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
-import { AppChrome, googlePlaceTypeLabel } from "@/components/pharmagarde/app-ui";
+import { AppChrome, localPlaceTypeLabel } from "@/components/pharmagarde/app-ui";
 import { PharmaMap } from "@/components/pharmagarde/PharmaMap";
 import { haptic, usePremiumPalette } from "@/lib/pharmagarde/premium-ui";
 import { sortPlacesByOpenThenDistance } from "@/lib/pharmagarde/place-ordering";
@@ -62,7 +62,7 @@ function MapPlaceCard({ place, active, favorite, isExpanded, onSelect, onToggle,
   const canNavigate = place.latitude !== undefined && place.longitude !== undefined;
   const ratingLabel = place.rating !== undefined ? `${place.rating.toFixed(1)}/5` : "Note inconnue";
   const phoneLabel = place.phone ?? "Téléphone indisponible";
-  const typeLabel = googlePlaceTypeLabel(place);
+  const typeLabel = localPlaceTypeLabel(place);
 
   return (
     <Pressable

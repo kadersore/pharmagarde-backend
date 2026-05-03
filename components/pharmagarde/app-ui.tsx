@@ -14,23 +14,8 @@ function entityLabel(type: FavoriteItem["entityType"]) {
   return "Médicament";
 }
 
-const GOOGLE_PLACE_TYPE_LABELS: Record<string, string> = {
-  pharmacy: "Pharmacie",
-  drugstore: "Parapharmacie",
-  hospital: "Hôpital",
-  doctor: "Médecin",
-  health: "Santé",
-  physiotherapist: "Kinésithérapie",
-  dentist: "Dentiste",
-  veterinary_care: "Vétérinaire",
-  establishment: "Établissement",
-  point_of_interest: "Lieu référencé",
-};
-
-export function googlePlaceTypeLabel(place: HealthPlace) {
-  const primaryType = place.googlePrimaryType ?? place.googlePlaceTypes?.find((type) => !["establishment", "point_of_interest", "health"].includes(type));
-  if (!primaryType) return "Type Google indisponible";
-  return GOOGLE_PLACE_TYPE_LABELS[primaryType] ?? primaryType.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+export function localPlaceTypeLabel(_place: HealthPlace) {
+  return "Type local";
 }
 
 async function openDirections(item: { latitude?: number; longitude?: number; title: string }) {
@@ -119,7 +104,7 @@ export function PlaceCard({ place, isExpanded, onToggle }: { place: HealthPlace;
   const accent = place.type === "pharmacy" ? palette.brand : palette.clinic;
   const ratingLabel = place.rating !== undefined ? `${place.rating.toFixed(1)}/5` : "Note inconnue";
   const phoneLabel = place.phone ?? "Téléphone indisponible";
-  const typeLabel = googlePlaceTypeLabel(place);
+  const typeLabel = localPlaceTypeLabel(place);
   const canNavigate = place.latitude !== undefined && place.longitude !== undefined;
 
   return (

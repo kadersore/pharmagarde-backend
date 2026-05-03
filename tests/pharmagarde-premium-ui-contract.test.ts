@@ -87,8 +87,9 @@ describe("cartes pharmacies et cliniques", () => {
     expect(placeCard).toContain("local-pharmacy");
     expect(placeCard).toContain("local-hospital");
     expect(placeCard.indexOf("favorite-border")).toBeGreaterThan(placeCard.indexOf("{isExpanded ? ("));
-    expect(placeCard).toContain("googlePlaceTypeLabel(place)");
-    expect(placeCard).toContain("const typeLabel = googlePlaceTypeLabel(place)");
+    expect(placeCard).toContain("localPlaceTypeLabel(place)");
+    expect(placeCard).toContain("const typeLabel = localPlaceTypeLabel(place)");
+    expect(appUi).toContain('return "Type local";');
     expect(placeCard.indexOf("{typeLabel}")).toBeGreaterThan(placeCard.indexOf("favorite-border"));
     expect(placeCard.indexOf("{typeLabel}")).toBeLessThan(placeCard.indexOf('name="star"'));
     expect(mapPlaceCard).toContain("styles.placeHeaderMeta");
@@ -108,13 +109,13 @@ describe("cartes pharmacies et cliniques", () => {
     expect(mapPlaceCard).toContain("styles.placeInfoRow");
     expect(mapPlaceCard).toContain("ratingLabel");
     expect(mapPlaceCard).toContain("phoneLabel");
-    expect(mapPlaceCard).toContain("googlePlaceTypeLabel(place)");
-    expect(mapPlaceCard).toContain("const typeLabel = googlePlaceTypeLabel(place)");
+    expect(mapPlaceCard).toContain("localPlaceTypeLabel(place)");
+    expect(mapPlaceCard).toContain("const typeLabel = localPlaceTypeLabel(place)");
     expect(mapPlaceCard).toContain("local-pharmacy");
     expect(mapPlaceCard).toContain("local-hospital");
     expect(mapPlaceCard.indexOf("{typeLabel}")).toBeGreaterThan(mapPlaceCard.indexOf("favorite-border"));
     expect(mapPlaceCard.indexOf("{typeLabel}")).toBeLessThan(mapPlaceCard.indexOf('name="star"'));
-    expect(appUi).toContain("googlePlaceTypeLabel(place: HealthPlace)");
+    expect(appUi).toContain("localPlaceTypeLabel(_place: HealthPlace)");
     expect(appUi).toContain("compactInfoText: { fontSize: 10, lineHeight: 12");
     expect(appUi).toContain("typeInfoPill: { flexShrink: 1, maxWidth: 108 }");
     expect(carte).toContain("compactInfoText: { fontSize: 10, lineHeight: 12");
