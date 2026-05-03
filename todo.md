@@ -446,3 +446,8 @@
 - [x] Garantir que la réponse d’inscription retourne `{ user, token }`.
 - [x] Corriger l’écran/frontend d’inscription pour envoyer correctement `phone` et `password`.
 - [x] Valider l’inscription fonctionnelle par tests, TypeScript et état serveur avant checkpoint.
+
+- [ ] Retenir que le dépôt GitHub correct pour ce projet est `pharmagarde-backend`, et non `Pharmagarde`.
+- [ ] Configurer le remote Git local vers le dépôt GitHub `pharmagarde-backend` si nécessaire.
+- [ ] Pousser le correctif d’inscription et les migrations vers `pharmagarde-backend`.
+- [ ] Vérifier que la branche distante de `pharmagarde-backend` pointe sur le dernier commit local.
