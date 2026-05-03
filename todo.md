@@ -291,3 +291,8 @@
 - [x] Valider les tests ou le build disponibles dans `pharmagarde-backend`
 - [x] Pousser la correction sur `https://github.com/kadersore/pharmagarde-backend`
 - [x] Confirmer à l’utilisateur le dernier commit du dépôt backend correct
+
+- [x] Diagnostiquer pourquoi les pharmacies ne s’affichent que pour Ouagadougou et Bobo-Dioulasso malgré la sélection d’autres villes.
+- [x] Corriger la récupération ou le filtrage backend/mobile des pharmacies pour toutes les villes supportées.
+- [x] Valider que `/pharmacies?city=Koudougou` et d’autres villes hors Ouaga/Bobo retournent les pharmacies attendues si Google Places fournit des résultats.
+- [x] Pousser la correction vers `https://github.com/kadersore/pharmagarde-backend` si le bug est côté backend.
