@@ -24,8 +24,10 @@ export type CachedHealthPlace = {
 type CacheKind = "pharmacies" | "healthcare";
 type CacheBuckets = Record<string, CachedHealthPlace[]>;
 
+const CACHE_VERSION = 3;
+
 type CacheState = {
-  version: 2;
+  version: typeof CACHE_VERSION;
   kind: CacheKind;
   byCity: CacheBuckets;
   updatedAt: string | null;
@@ -101,7 +103,7 @@ function createEmptyBuckets(): CacheBuckets {
 
 function createEmptyState(kind: CacheKind): CacheState {
   return {
-    version: 2,
+    version: CACHE_VERSION,
     kind,
     byCity: createEmptyBuckets(),
     updatedAt: null,
@@ -238,16 +240,12 @@ function countBuckets(byCity: CacheBuckets) {
   return flattenBuckets(byCity).length;
 }
 
-async function callGoogleNearby(city: SupportedCity, type: "pharmacy" | "hospital" | "doctor") {
+async function fetchGooglePlaces(url: URL) {
   if (!GOOGLE_API_KEY) {
     throw new Error("GOOGLE_PLACES_API_KEY ou GOOGLE_MAPS_API_KEY non configurée.");
   }
 
-  const url = new URL("https://maps.googleapis.com/maps/api/place/nearbysearch/json");
   url.searchParams.set("key", GOOGLE_API_KEY);
-  url.searchParams.set("location", `${city.latitude},${city.longitude}`);
-  url.searchParams.set("radius", String(Number(process.env.PHARMAGARDE_GOOGLE_RADIUS_METERS ?? DEFAULT_RADIUS_METERS)));
-  url.searchParams.set("type", type);
   url.searchParams.set("language", "fr");
 
   const response = await fetch(url.toString(), { headers: { accept: "application/json" } });
@@ -263,10 +261,32 @@ async function callGoogleNearby(city: SupportedCity, type: "pharmacy" | "hospita
   return Array.isArray(payload.results) ? payload.results.filter(isRecord) : [];
 }
 
+async function callGoogleNearby(city: SupportedCity, type: "pharmacy" | "hospital" | "doctor", keyword?: string) {
+  const url = new URL("https://maps.googleapis.com/maps/api/place/nearbysearch/json");
+  url.searchParams.set("location", `${city.latitude},${city.longitude}`);
+  url.searchParams.set("radius", String(Number(process.env.PHARMAGARDE_GOOGLE_RADIUS_METERS ?? DEFAULT_RADIUS_METERS)));
+  url.searchParams.set("type", type);
+  if (keyword) url.searchParams.set("keyword", keyword);
+  return fetchGooglePlaces(url);
+}
+
+async function callGoogleTextSearch(query: string) {
+  const url = new URL("https://maps.googleapis.com/maps/api/place/textsearch/json");
+  url.searchParams.set("query", query);
+  return fetchGooglePlaces(url);
+}
+
 async function fetchGoogleItemsForCity(kind: CacheKind, city: SupportedCity) {
   if (kind === "pharmacies") {
-    const results = await callGoogleNearby(city, "pharmacy");
-    return results.map((item, index) => normalizeGooglePlace(item, "pharmacy", city, index)).filter((item): item is CachedHealthPlace => item !== null);
+    const batches = await Promise.all([
+      callGoogleNearby(city, "pharmacy"),
+      callGoogleNearby(city, "pharmacy", "pharmacie"),
+      callGoogleTextSearch(`pharmacie ${city.name} Burkina Faso`),
+      callGoogleTextSearch(`pharmacy ${city.name} Burkina Faso`),
+    ]);
+    return dedupePlaces(
+      batches.flat().map((item, index) => normalizeGooglePlace(item, "pharmacy", city, index)).filter((item): item is CachedHealthPlace => item !== null),
+    );
   }
 
   const [hospitals, doctors] = await Promise.all([callGoogleNearby(city, "hospital"), callGoogleNearby(city, "doctor")]);
@@ -304,9 +324,9 @@ async function loadState(kind: CacheKind) {
   try {
     const raw = await readFile(fileFor(kind), "utf8");
     const parsed = JSON.parse(raw) as Partial<CacheState> & { version?: number; byCity?: unknown };
-    if (parsed.version === 2 && parsed.kind === kind && isRecord(parsed.byCity)) {
+    if (parsed.version === CACHE_VERSION && parsed.kind === kind && isRecord(parsed.byCity)) {
       memoryCache[kind] = {
-        version: 2,
+        version: CACHE_VERSION,
         kind,
         byCity: normalizeBuckets(parsed.byCity),
         updatedAt: parsed.updatedAt ?? null,
@@ -350,7 +370,7 @@ export async function updateCachedDataset(kind: CacheKind, force = false): Promi
       const byCity = await fetchGoogleItemsByCity(kind);
       const updatedAt = nowIso();
       const next: CacheState = {
-        version: 2,
+        version: CACHE_VERSION,
         kind,
         byCity,
         updatedAt,
