@@ -8,3 +8,5 @@
 - [x] Committer et pousser sur GitHub la correction complète du routing Express direct.
 
 - [x] Intégrer l’archive uploadée pharmagarde-backend-render-final.zip dans le dépôt GitHub pharmagarde-backend et pousser la mise à jour sur main.
+
+- [x] Consigner que le dépôt GitHub de référence pour le backend PharmaGarde est `kadersore/pharmagarde-backend` et qu’il ne faut pas utiliser `kadersore/Pharmagarde` pour les corrections backend.
