@@ -447,10 +447,10 @@
 - [x] Corriger l’écran/frontend d’inscription pour envoyer correctement `phone` et `password`.
 - [x] Valider l’inscription fonctionnelle par tests, TypeScript et état serveur avant checkpoint.
 
-- [ ] Retenir que le dépôt GitHub correct pour ce projet est `pharmagarde-backend`, et non `Pharmagarde`.
-- [ ] Configurer le remote Git local vers le dépôt GitHub `pharmagarde-backend` si nécessaire.
-- [ ] Pousser le correctif d’inscription et les migrations vers `pharmagarde-backend`.
-- [ ] Vérifier que la branche distante de `pharmagarde-backend` pointe sur le dernier commit local.
+- [x] Retenir que le dépôt GitHub correct pour ce projet est `pharmagarde-backend`, et non `Pharmagarde`.
+- [x] Configurer le remote Git local vers le dépôt GitHub `pharmagarde-backend` si nécessaire.
+- [x] Pousser le correctif d’inscription et les migrations vers `pharmagarde-backend`.
+- [x] Vérifier que la branche distante de `pharmagarde-backend` pointe sur le dernier commit local.
 
-- [ ] Synchroniser par force prudente la branche `main` locale vers `kadersore/pharmagarde-backend` après confirmation utilisateur de l’option 1.
-- [ ] Vérifier que `kadersore/pharmagarde-backend` pointe bien sur le commit local après le push forcé.
+- [x] Synchroniser par force prudente la branche `main` locale vers `kadersore/pharmagarde-backend` après confirmation utilisateur de l’option 1.
+- [x] Vérifier que `kadersore/pharmagarde-backend` pointe bien sur le commit local après le push forcé.
