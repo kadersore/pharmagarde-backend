@@ -72,6 +72,8 @@ describe("cartes pharmacies et cliniques", () => {
   it("place la distance en haut à droite et replie favori, note, téléphone et boutons jusqu’au clic", () => {
     const appUi = read("components/pharmagarde/app-ui.tsx");
     const carte = read("app/(tabs)/carte.tsx");
+    const api = read("lib/pharmagarde/api.ts");
+    const types = read("lib/pharmagarde/types.ts");
     const placeCard = appUi.slice(appUi.indexOf("export function PlaceCard"), appUi.indexOf("export function MedicineCard"));
     const mapPlaceCard = carte.slice(carte.indexOf("function MapPlaceCard"), carte.indexOf("export default function CarteScreen"));
 
@@ -89,7 +91,8 @@ describe("cartes pharmacies et cliniques", () => {
     expect(placeCard.indexOf("favorite-border")).toBeGreaterThan(placeCard.indexOf("{isExpanded ? ("));
     expect(placeCard).toContain("localPlaceTypeLabel(place)");
     expect(placeCard).toContain("const typeLabel = localPlaceTypeLabel(place)");
-    expect(appUi).toContain('return "Type local";');
+    expect(appUi).toContain("return place.establishmentType ??");
+    expect(appUi).not.toContain('return "Type local";');
     expect(placeCard.indexOf("{typeLabel}")).toBeGreaterThan(placeCard.indexOf("favorite-border"));
     expect(placeCard.indexOf("{typeLabel}")).toBeLessThan(placeCard.indexOf('name="star"'));
     expect(mapPlaceCard).toContain("styles.placeHeaderMeta");
@@ -115,7 +118,9 @@ describe("cartes pharmacies et cliniques", () => {
     expect(mapPlaceCard).toContain("local-hospital");
     expect(mapPlaceCard.indexOf("{typeLabel}")).toBeGreaterThan(mapPlaceCard.indexOf("favorite-border"));
     expect(mapPlaceCard.indexOf("{typeLabel}")).toBeLessThan(mapPlaceCard.indexOf('name="star"'));
-    expect(appUi).toContain("localPlaceTypeLabel(_place: HealthPlace)");
+    expect(appUi).toContain("localPlaceTypeLabel(place: HealthPlace)");
+    expect(api).toContain('establishmentType: getString(raw, ["establishmentType", "establishment_type", "typeEtablissement", "type_etablissement", "localType", "local_type", "type"])');
+    expect(types).toContain("establishmentType?: string");
     expect(appUi).toContain("compactInfoText: { fontSize: 10, lineHeight: 12");
     expect(appUi).toContain("typeInfoPill: { flexShrink: 1, maxWidth: 108 }");
     expect(carte).toContain("compactInfoText: { fontSize: 10, lineHeight: 12");

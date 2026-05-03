@@ -14,8 +14,8 @@ function entityLabel(type: FavoriteItem["entityType"]) {
   return "Médicament";
 }
 
-export function localPlaceTypeLabel(_place: HealthPlace) {
-  return "Type local";
+export function localPlaceTypeLabel(place: HealthPlace) {
+  return place.establishmentType ?? (place.type === "pharmacy" ? "Pharmacie" : "Centre de santé");
 }
 
 async function openDirections(item: { latitude?: number; longitude?: number; title: string }) {

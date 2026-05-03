@@ -115,6 +115,7 @@ function normalizePlace(raw: Record<string, unknown>, type: "pharmacy" | "clinic
     latitude: getNumber(raw, ["latitude", "lat"]),
     longitude: getNumber(raw, ["longitude", "lng", "lon"]),
     isOpen: getBoolean(raw, ["isOpen", "open", "ouvert", "garde", "onDuty"]),
+    establishmentType: getString(raw, ["establishmentType", "establishment_type", "typeEtablissement", "type_etablissement", "localType", "local_type", "type"]),
     googlePlaceTypes: getStringArray(raw, ["googlePlaceTypes", "google_place_types", "placeTypes", "types"]),
     googlePrimaryType: getString(raw, ["googlePrimaryType", "google_primary_type", "primaryType", "primary_type"]),
   };

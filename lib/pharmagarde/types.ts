@@ -18,6 +18,8 @@ export type HealthPlace = {
   latitude?: number;
   longitude?: number;
   isOpen?: boolean;
+  /** Type métier enregistré après récupération Google : Pharmacie, CHU, CSPS, CMA, etc. */
+  establishmentType?: string;
   googlePlaceTypes?: string[];
   googlePrimaryType?: string;
 };

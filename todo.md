@@ -386,3 +386,5 @@
 - [x] Sauvegarder la correction locale et la déposer sur GitHub selon la règle active sans pousser vers `kadersore/Pharmagarde`.
 
 - [x] Remplacer le libellé « Type fourni par Google » par « Type local » dans toutes les listes d’éléments concernées.
+
+- [x] Corriger l’affichage du type dans les listes : utiliser le type d’établissement enregistré après récupération depuis Google (Pharmacie, CHU, CSPS, CMA, etc.) au lieu du texte fixe « Type local ».
