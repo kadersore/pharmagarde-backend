@@ -8,6 +8,20 @@
       "when": 1763372440610,
       "tag": "0000_elite_eternals",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1777831400000,
+      "tag": "0001_local_auth_credentials",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1777842400000,
+      "tag": "0002_user_subscription_end",
+      "breakpoints": true
     }
   ]
 }

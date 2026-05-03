@@ -119,10 +119,16 @@ export async function exchangeOAuthCode(
   };
 }
 
-export async function register(payload: { phone: string; email?: string | null; password: string; confirmPassword: string }): Promise<AuthApiResponse> {
+export async function register(payload: { phone: string; email?: string | null; password: string; confirmPassword?: string }): Promise<AuthApiResponse> {
+  const body = {
+    phone: payload.phone,
+    password: payload.password,
+    ...(payload.email ? { email: payload.email } : {}),
+  };
+
   return apiCall<AuthApiResponse>("/api/auth/register", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   });
 }
 

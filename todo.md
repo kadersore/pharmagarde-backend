@@ -439,3 +439,10 @@
 - [x] Vérifier si le dernier système d’authentification locale est déjà poussé sur GitHub.
 - [x] Committer et pousser les changements d’authentification locale vers le dépôt GitHub approprié si nécessaire.
 - [x] Vérifier que le commit distant contient bien les changements d’authentification et clôturer la demande.
+
+- [x] Corriger l’erreur `Impossible de créer le compte` sur `POST /auth/register`.
+- [x] Vérifier que `POST /auth/register` valide explicitement `phone` obligatoire et `password` obligatoire.
+- [x] Ajouter des logs serveur utiles pour l’inscription : `console.log(req.body)` et `console.error(e)` sans masquer l’erreur réelle.
+- [x] Garantir que la réponse d’inscription retourne `{ user, token }`.
+- [x] Corriger l’écran/frontend d’inscription pour envoyer correctement `phone` et `password`.
+- [x] Valider l’inscription fonctionnelle par tests, TypeScript et état serveur avant checkpoint.

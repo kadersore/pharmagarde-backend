@@ -67,6 +67,7 @@ export function registerOAuthRoutes(app: Express) {
 
   const registerLocalAuthRoutes = (path: string) => {
     app.post(`${path}/register`, async (req: Request, res: Response) => {
+      console.log("[Auth] register req.body", req.body);
       const validation = validateRegisterPayload(req.body);
       if (!validation.ok) {
         res.status(400).json({ error: "Validation échouée", errors: validation.errors });
@@ -107,10 +108,11 @@ export function registerOAuthRoutes(app: Express) {
         const cookieOptions = getSessionCookieOptions(req);
         res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
         res.status(201).json({ token, user: buildUserResponse(user) });
-      } catch (error) {
-        console.error("[Auth] register failed", error);
-        const message = error instanceof Error && error.message === "DATABASE_UNAVAILABLE" ? "Base de données indisponible." : "Impossible de créer le compte.";
-        res.status(error instanceof Error && error.message === "DATABASE_UNAVAILABLE" ? 503 : 500).json({ error: message });
+      } catch (e) {
+        console.error(e);
+        console.error("[Auth] register failed", e);
+        const message = e instanceof Error && e.message === "DATABASE_UNAVAILABLE" ? "Base de données indisponible." : "Impossible de créer le compte.";
+        res.status(e instanceof Error && e.message === "DATABASE_UNAVAILABLE" ? 503 : 500).json({ error: message });
       }
     });
 
