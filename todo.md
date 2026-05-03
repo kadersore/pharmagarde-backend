@@ -408,4 +408,4 @@
 - [x] Bloquer l’accès à la page Médicaments pour les utilisateurs gratuits avec validation backend.
 - [x] Masquer la publicité pour les utilisateurs premium côté frontend.
 - [x] Ajouter les tests sécurité, expiration, paiement, webhook et restrictions premium.
-- [ ] Valider TypeScript/tests, sauvegarder un checkpoint et pousser les modifications premium sur GitHub.
+- [x] Valider TypeScript/tests, sauvegarder un checkpoint et pousser les modifications premium sur GitHub.
