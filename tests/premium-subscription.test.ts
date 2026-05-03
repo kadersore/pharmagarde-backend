@@ -53,4 +53,13 @@ describe("abonnement premium backend", () => {
     expect(schema).toContain("merchantReference: varchar(\"merchantReference\"");
     expect(schema).toContain("status: mysqlEnum(\"status\", [\"pending\", \"success\", \"failed\", \"cancelled\"])");
   });
+
+  it("valide /payment/init avec le header Authorization Bearer avant de refuser l’abonnement", () => {
+    const premium = read("server/premium.ts");
+    expect(premium).toContain("req.headers.authorization");
+    expect(premium).toContain("extractBearerToken(req)");
+    expect(premium).toContain("sdk.authenticateRequest(req)");
+    expect(premium).toContain("[PremiumAuth] Token reçu sur route protégée");
+    expect(premium).toContain("hasBearerToken");
+  });
 });

@@ -454,3 +454,12 @@
 
 - [x] Synchroniser par force prudente la branche `main` locale vers `kadersore/pharmagarde-backend` après confirmation utilisateur de l’option 1.
 - [x] Vérifier que `kadersore/pharmagarde-backend` pointe bien sur le commit local après le push forcé.
+
+- [x] Corriger l’erreur « Connexion requise pour souscrire à Premium » malgré utilisateur connecté.
+- [x] Vérifier côté frontend la récupération du token depuis le stockage persistant avant l’abonnement Premium.
+- [x] Garantir l’envoi du header `Authorization: Bearer TOKEN` sur l’abonnement Premium et toutes les routes protégées.
+- [x] Vérifier côté backend la lecture de `req.headers.authorization`, l’extraction du Bearer token et la validation utilisateur.
+- [x] Ajouter des logs backend utiles affichant la présence du token reçu sans exposer d’information sensible excessive.
+- [x] Autoriser l’initialisation d’abonnement Premium lorsque le token est valide.
+- [x] Ajouter ou adapter les tests de non-régression pour le header Authorization et la route Premium protégée.
+- [x] Valider TypeScript, Vitest, état serveur, checkpoint et push GitHub vers `kadersore/pharmagarde-backend`.

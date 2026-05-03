@@ -1,5 +1,5 @@
 import { apiCall } from "../_core/api";
-import { hasSessionToken } from "../_core/auth";
+import { getAuthorizationHeader, hasSessionToken } from "../_core/auth";
 
 export type PremiumPlanId = "week" | "month" | "quarter" | "semester";
 
@@ -52,13 +52,14 @@ export async function fetchPremiumStatus() {
 }
 
 export async function initPremiumPayment(planId: PremiumPlanId) {
-  const tokenAvailable = await hasSessionToken();
-  if (!tokenAvailable) {
+  const authHeaders = await getAuthorizationHeader();
+  if (!authHeaders.Authorization) {
     throw new Error("Connexion requise avant d’initialiser le paiement premium.");
   }
 
   return apiCall<PaymentInitResponse>("/payment/init", {
     method: "POST",
+    headers: authHeaders,
     body: JSON.stringify({ planId }),
   });
 }

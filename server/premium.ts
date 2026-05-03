@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { transactions, users, type InsertTransaction, type User } from "../drizzle/schema";
 import { getDb } from "./db";
+import { sdk } from "./_core/sdk";
 
 export type PremiumPlanId = "week" | "month" | "quarter" | "semester";
 
@@ -71,7 +72,43 @@ function isSuccessfulLigdiCashStatus(payload: z.infer<typeof webhookSchema>) {
   return ["completed", "complete", "success", "successful", "paid", "approved"].includes(status) || ["00", "0", "success"].includes(code);
 }
 
+function readAuthorizationHeader(req: Request): string | undefined {
+  const rawHeader = req.headers.authorization;
+  if (Array.isArray(rawHeader)) return rawHeader[0];
+  if (typeof rawHeader === "string") return rawHeader;
+  return req.header("authorization") ?? undefined;
+}
+
+function extractBearerToken(req: Request): string | undefined {
+  const header = readAuthorizationHeader(req);
+  if (!header) return undefined;
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  return match?.[1]?.trim() || undefined;
+}
+
+function maskTokenForLogs(token?: string): string | null {
+  if (!token) return null;
+  if (token.length <= 18) return `${token.slice(0, 4)}…${token.slice(-4)} (${token.length} chars)`;
+  return `${token.slice(0, 12)}…${token.slice(-6)} (${token.length} chars)`;
+}
+
 export async function getAuthenticatedDbUser(req: Request) {
+  const authHeader = readAuthorizationHeader(req);
+  const bearerToken = extractBearerToken(req);
+  console.info("[PremiumAuth] Token reçu sur route protégée", {
+    hasAuthorizationHeader: Boolean(authHeader),
+    hasBearerToken: Boolean(bearerToken),
+    token: maskTokenForLogs(bearerToken),
+  });
+
+  if (bearerToken) {
+    try {
+      return await sdk.authenticateRequest(req);
+    } catch (error) {
+      console.warn("[PremiumAuth] Échec de validation du Bearer token", error instanceof Error ? error.message : String(error));
+    }
+  }
+
   const authUser = (req as Request & { user?: User }).user;
   if (authUser?.id) return authUser;
 
