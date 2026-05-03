@@ -266,10 +266,6 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
     };
 
     try {
-      if (mode === "auto" && isManualCitySelectionRef.current) {
-        setLocationMessage(`Ville sélectionnée manuellement : ${selectedCity}. La géolocalisation ne la remplace pas.`);
-        return;
-      }
       if (Platform.OS === "web" && typeof navigator !== "undefined" && !navigator.geolocation) {
         await useDefaultLocation("unsupported");
         return;
@@ -304,7 +300,7 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
     await detectLocation("current");
   }, [detectLocation]);
 
-  const referenceLocation = useMemo(() => resolveReferenceLocation({ selectedCity, isManualCitySelection, userLocation }), [isManualCitySelection, selectedCity, userLocation]);
+  const referenceLocation = useMemo(() => resolveReferenceLocation({ selectedCity, userLocation }), [selectedCity, userLocation]);
 
   const refreshData = useCallback(async () => {
     if (!isApiConfigured) {
@@ -357,7 +353,7 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
   }, [apiBaseUrl, isApiConfigured, isManualCitySelection, referenceLocation, selectedCity]);
 
   useEffect(() => {
-    if (hasHydratedCitySelection && !hasRequestedInitialLocationRef.current && !isManualCitySelectionRef.current) {
+    if (hasHydratedCitySelection && !hasRequestedInitialLocationRef.current) {
       hasRequestedInitialLocationRef.current = true;
       detectLocation("auto");
     }
@@ -411,7 +407,7 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
     const normalizedCity = getSafeSelectedCity(city);
     lastAutoCityRef.current = undefined;
     await persistCitySelectionState(normalizedCity, true);
-    setLocationMessage(`Ville sélectionnée manuellement : ${normalizedCity}.`);
+    setLocationMessage(`Ville sélectionnée manuellement : ${normalizedCity}. Les résultats sont filtrés par ville, les distances restent basées sur votre GPS si disponible.`);
   }, [persistCitySelectionState]);
 
   const updatePreference = useCallback(async <Key extends keyof AppPreferences>(key: Key, value: AppPreferences[Key]) => {

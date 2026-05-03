@@ -22,7 +22,7 @@ export default function CitySelectionScreen() {
     <AppChrome subtitle="Ville">
       <View style={styles.content}>
         <Text style={styles.title}>Changer de ville</Text>
-        <Text style={styles.description}>Choisissez la ville qui servira de référence pour la carte, les recherches et les suggestions locales.</Text>
+        <Text style={styles.description}>Choisissez la ville pour filtrer les résultats locaux. Les distances restent calculées depuis votre position GPS quand elle est disponible.</Text>
         <Pressable
           accessibilityRole="button"
           disabled={refreshingLocation}

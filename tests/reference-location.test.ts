@@ -3,31 +3,27 @@ import { describe, expect, it } from "vitest";
 import { DISTANCE_UNAVAILABLE_LABEL, hasValidReferenceCoordinates, resolveReferenceLocation } from "../lib/pharmagarde/reference-location";
 
 describe("referenceLocation", () => {
-  it("utilise les coordonnées de la ville sélectionnée quand la sélection manuelle est active", () => {
+  it("utilise toujours la position GPS utilisateur même quand une ville est sélectionnée", () => {
+    const gpsLocation = { latitude: 12.3714, longitude: -1.5197 };
     const referenceLocation = resolveReferenceLocation({
       selectedCity: "Bobo-Dioulasso",
-      isManualCitySelection: true,
-      userLocation: { latitude: 12.3714, longitude: -1.5197 },
-    });
-
-    expect(referenceLocation).toEqual({ latitude: 11.1784, longitude: -4.2979 });
-  });
-
-  it("utilise uniquement la position GPS utilisateur quand la sélection manuelle est inactive", () => {
-    const gpsLocation = { latitude: 12.48, longitude: -1.56 };
-    const referenceLocation = resolveReferenceLocation({
-      selectedCity: "Koudougou",
-      isManualCitySelection: false,
       userLocation: gpsLocation,
     });
 
     expect(referenceLocation).toEqual(gpsLocation);
   });
 
-  it("renvoie undefined sans position GPS valide quand la sélection manuelle est inactive", () => {
-    expect(resolveReferenceLocation({ selectedCity: "Ouagadougou", isManualCitySelection: false })).toBeUndefined();
-    expect(resolveReferenceLocation({ selectedCity: "Ouagadougou", isManualCitySelection: false, userLocation: { latitude: 0, longitude: 0 } })).toBeUndefined();
-    expect(resolveReferenceLocation({ selectedCity: "Ouagadougou", isManualCitySelection: false, userLocation: { latitude: Number.NaN, longitude: -1.5 } })).toBeUndefined();
+  it("garde la ville uniquement comme fallback si aucune position GPS valide n’est disponible", () => {
+    const referenceLocation = resolveReferenceLocation({
+      selectedCity: "Koudougou",
+    });
+
+    expect(referenceLocation).toEqual({ latitude: 12.2526, longitude: -2.3627 });
+  });
+
+  it("ignore les coordonnées GPS invalides et revient au centre de la ville sélectionnée", () => {
+    expect(resolveReferenceLocation({ selectedCity: "Ouagadougou", userLocation: { latitude: 0, longitude: 0 } })).toEqual({ latitude: 12.3714, longitude: -1.5197 });
+    expect(resolveReferenceLocation({ selectedCity: "Ouagadougou", userLocation: { latitude: Number.NaN, longitude: -1.5 } })).toEqual({ latitude: 12.3714, longitude: -1.5197 });
   });
 
   it("expose le libellé de fallback demandé lorsque la distance ne peut pas être calculée", () => {

@@ -5,7 +5,6 @@ export const DISTANCE_UNAVAILABLE_LABEL = "Distance indisponible";
 
 type ReferenceLocationInput = {
   selectedCity?: string | null;
-  isManualCitySelection: boolean;
   userLocation?: Coordinates | null;
 };
 
@@ -17,12 +16,11 @@ export function hasValidReferenceCoordinates(coordinates?: Coordinates | null): 
   return !(latitude === 0 && longitude === 0);
 }
 
-export function resolveReferenceLocation({ selectedCity, isManualCitySelection, userLocation }: ReferenceLocationInput): Coordinates | undefined {
-  if (isManualCitySelection) {
-    const cityCoordinates = getKnownCityCoordinates(selectedCity);
-    return hasValidReferenceCoordinates(cityCoordinates) ? cityCoordinates : undefined;
+export function resolveReferenceLocation({ selectedCity, userLocation }: ReferenceLocationInput): Coordinates | undefined {
+  if (hasValidReferenceCoordinates(userLocation)) {
+    return { latitude: userLocation.latitude, longitude: userLocation.longitude };
   }
 
-  if (!hasValidReferenceCoordinates(userLocation)) return undefined;
-  return { latitude: userLocation.latitude, longitude: userLocation.longitude };
+  const cityCoordinates = getKnownCityCoordinates(selectedCity);
+  return hasValidReferenceCoordinates(cityCoordinates) ? cityCoordinates : undefined;
 }

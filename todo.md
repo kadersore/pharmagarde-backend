@@ -377,3 +377,10 @@
 
 - [x] Corriger le calcul des distances avec une referenceLocation basée sur la ville manuelle ou le GPS, coordonnées des villes burkinabè et fallback "Distance indisponible".
 - [x] Valider la correction des distances par tests TypeScript/Vitest, checkpoint et push GitHub.
+
+- [x] Ne plus pousser les corrections PharmaGarde vers `kadersore/Pharmagarde` et utiliser uniquement `kadersore/pharmagarde-backend` comme dépôt cible demandé.
+- [x] Reporter la dernière correction `referenceLocation` / distances dans `kadersore/pharmagarde-backend`, valider, committer et pousser uniquement sur ce dépôt.
+
+- [x] Corriger définitivement la séparation `selectedCity` / `userLocation` : ville uniquement pour filtrer, GPS prioritaire pour calculer les distances, fallback centre-ville seulement si GPS indisponible.
+- [x] Maintenir la géolocalisation active après changement de ville et valider les scénarios changement de ville / activation GPS / désactivation GPS.
+- [ ] Sauvegarder la correction locale et la déposer sur GitHub selon la règle active sans pousser vers `kadersore/Pharmagarde`.

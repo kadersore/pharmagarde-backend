@@ -150,15 +150,16 @@ describe("cartes pharmacies et cliniques", () => {
     expect(appState).toContain("const referenceLocation = useMemo(() => resolveReferenceLocation");
     expect(appState).toContain("fetchPharmacies(apiBaseUrl, referenceLocation, activeCity)");
     expect(appState).toContain("fetchClinics(apiBaseUrl, referenceLocation, activeCity)");
+    expect(appState).toContain("resolveReferenceLocation({ selectedCity, userLocation })");
     expect(appState).toContain("withLocalDistances(filterPlacesByCity(pharmacyResult.value, activeCity), referenceLocation)");
     expect(appState).toContain("distanceKm(origin");
     expect(appState).toContain("distanceLabel: `${roundedDistanceKm.toFixed(1)} km`");
     expect(appState).toContain("DISTANCE_UNAVAILABLE_LABEL");
     expect(appState).not.toContain("getDefaultLocationFallback(activeCity).location");
     expect(referenceLocation).toContain("export function resolveReferenceLocation");
-    expect(referenceLocation).toContain("isManualCitySelection");
+    expect(referenceLocation).not.toContain("isManualCitySelection");
+    expect(referenceLocation).toContain("if (hasValidReferenceCoordinates(userLocation))");
     expect(referenceLocation).toContain("getKnownCityCoordinates(selectedCity)");
-    expect(referenceLocation).toContain("hasValidReferenceCoordinates(userLocation)");
     expect(referenceLocation).toContain("DISTANCE_UNAVAILABLE_LABEL = \"Distance indisponible\"");
     expect(cityCoordinates).toContain("Ouagadougou");
     expect(cityCoordinates).toContain("Bobo-Dioulasso");
