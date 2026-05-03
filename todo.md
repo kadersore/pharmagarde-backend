@@ -303,3 +303,11 @@
 - [x] Ajouter des logs frontend affichant la ville envoyée et la réponse reçue pour les pharmacies.
 - [x] Rafraîchir automatiquement la liste des pharmacies après chaque changement de ville.
 - [x] Ajouter ou mettre à jour les tests pour empêcher tout appel frontend à `/pharmacies` sans paramètre `city`.
+
+- [x] Diagnostiquer le mélange backend entre pharmacies et structures de santé dans les résultats Google Places.
+- [x] Filtrer les pharmacies backend uniquement avec `place.types.includes("pharmacy")`.
+- [x] Filtrer les structures de santé backend en excluant toute place dont `types` contient `pharmacy`.
+- [x] Ajouter un champ `category` explicite avec les valeurs `pharmacy` et `healthcare` dans les données servies.
+- [x] Nettoyer les données existantes et forcer la reconstruction du cache backend.
+- [x] Valider que `/pharmacies` retourne uniquement des pharmacies et que `/healthcare` ne retourne aucune pharmacie.
+- [x] Pousser la correction source vers `https://github.com/kadersore/pharmagarde-backend`.
