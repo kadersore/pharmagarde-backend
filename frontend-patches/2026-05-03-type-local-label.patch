@@ -1,0 +1,104 @@
+diff --git a/app/(tabs)/carte.tsx b/app/(tabs)/carte.tsx
+index 081e7c1..ac90284 100644
+--- a/app/(tabs)/carte.tsx
++++ b/app/(tabs)/carte.tsx
+@@ -3,7 +3,7 @@ import * as WebBrowser from "expo-web-browser";
+ import { useCallback, useMemo, useRef, useState } from "react";
+ import { Animated, FlatList, Linking, PanResponder, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+ 
+-import { AppChrome, googlePlaceTypeLabel } from "@/components/pharmagarde/app-ui";
++import { AppChrome, localPlaceTypeLabel } from "@/components/pharmagarde/app-ui";
+ import { PharmaMap } from "@/components/pharmagarde/PharmaMap";
+ import { haptic, usePremiumPalette } from "@/lib/pharmagarde/premium-ui";
+ import { sortPlacesByOpenThenDistance } from "@/lib/pharmagarde/place-ordering";
+@@ -62,7 +62,7 @@ function MapPlaceCard({ place, active, favorite, isExpanded, onSelect, onToggle,
+   const canNavigate = place.latitude !== undefined && place.longitude !== undefined;
+   const ratingLabel = place.rating !== undefined ? `${place.rating.toFixed(1)}/5` : "Note inconnue";
+   const phoneLabel = place.phone ?? "Téléphone indisponible";
+-  const typeLabel = googlePlaceTypeLabel(place);
++  const typeLabel = localPlaceTypeLabel(place);
+ 
+   return (
+     <Pressable
+diff --git a/components/pharmagarde/app-ui.tsx b/components/pharmagarde/app-ui.tsx
+index e35e789..e64973f 100644
+--- a/components/pharmagarde/app-ui.tsx
++++ b/components/pharmagarde/app-ui.tsx
+@@ -14,23 +14,8 @@ function entityLabel(type: FavoriteItem["entityType"]) {
+   return "Médicament";
+ }
+ 
+-const GOOGLE_PLACE_TYPE_LABELS: Record<string, string> = {
+-  pharmacy: "Pharmacie",
+-  drugstore: "Parapharmacie",
+-  hospital: "Hôpital",
+-  doctor: "Médecin",
+-  health: "Santé",
+-  physiotherapist: "Kinésithérapie",
+-  dentist: "Dentiste",
+-  veterinary_care: "Vétérinaire",
+-  establishment: "Établissement",
+-  point_of_interest: "Lieu référencé",
+-};
+-
+-export function googlePlaceTypeLabel(place: HealthPlace) {
+-  const primaryType = place.googlePrimaryType ?? place.googlePlaceTypes?.find((type) => !["establishment", "point_of_interest", "health"].includes(type));
+-  if (!primaryType) return "Type Google indisponible";
+-  return GOOGLE_PLACE_TYPE_LABELS[primaryType] ?? primaryType.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
++export function localPlaceTypeLabel(_place: HealthPlace) {
++  return "Type local";
+ }
+ 
+ async function openDirections(item: { latitude?: number; longitude?: number; title: string }) {
+@@ -119,7 +104,7 @@ export function PlaceCard({ place, isExpanded, onToggle }: { place: HealthPlace;
+   const accent = place.type === "pharmacy" ? palette.brand : palette.clinic;
+   const ratingLabel = place.rating !== undefined ? `${place.rating.toFixed(1)}/5` : "Note inconnue";
+   const phoneLabel = place.phone ?? "Téléphone indisponible";
+-  const typeLabel = googlePlaceTypeLabel(place);
++  const typeLabel = localPlaceTypeLabel(place);
+   const canNavigate = place.latitude !== undefined && place.longitude !== undefined;
+ 
+   return (
+diff --git a/tests/pharmagarde-premium-ui-contract.test.ts b/tests/pharmagarde-premium-ui-contract.test.ts
+index ef7ce7b..b537891 100644
+--- a/tests/pharmagarde-premium-ui-contract.test.ts
++++ b/tests/pharmagarde-premium-ui-contract.test.ts
+@@ -87,8 +87,9 @@ describe("cartes pharmacies et cliniques", () => {
+     expect(placeCard).toContain("local-pharmacy");
+     expect(placeCard).toContain("local-hospital");
+     expect(placeCard.indexOf("favorite-border")).toBeGreaterThan(placeCard.indexOf("{isExpanded ? ("));
+-    expect(placeCard).toContain("googlePlaceTypeLabel(place)");
+-    expect(placeCard).toContain("const typeLabel = googlePlaceTypeLabel(place)");
++    expect(placeCard).toContain("localPlaceTypeLabel(place)");
++    expect(placeCard).toContain("const typeLabel = localPlaceTypeLabel(place)");
++    expect(appUi).toContain('return "Type local";');
+     expect(placeCard.indexOf("{typeLabel}")).toBeGreaterThan(placeCard.indexOf("favorite-border"));
+     expect(placeCard.indexOf("{typeLabel}")).toBeLessThan(placeCard.indexOf('name="star"'));
+     expect(mapPlaceCard).toContain("styles.placeHeaderMeta");
+@@ -108,13 +109,13 @@ describe("cartes pharmacies et cliniques", () => {
+     expect(mapPlaceCard).toContain("styles.placeInfoRow");
+     expect(mapPlaceCard).toContain("ratingLabel");
+     expect(mapPlaceCard).toContain("phoneLabel");
+-    expect(mapPlaceCard).toContain("googlePlaceTypeLabel(place)");
+-    expect(mapPlaceCard).toContain("const typeLabel = googlePlaceTypeLabel(place)");
++    expect(mapPlaceCard).toContain("localPlaceTypeLabel(place)");
++    expect(mapPlaceCard).toContain("const typeLabel = localPlaceTypeLabel(place)");
+     expect(mapPlaceCard).toContain("local-pharmacy");
+     expect(mapPlaceCard).toContain("local-hospital");
+     expect(mapPlaceCard.indexOf("{typeLabel}")).toBeGreaterThan(mapPlaceCard.indexOf("favorite-border"));
+     expect(mapPlaceCard.indexOf("{typeLabel}")).toBeLessThan(mapPlaceCard.indexOf('name="star"'));
+-    expect(appUi).toContain("googlePlaceTypeLabel(place: HealthPlace)");
++    expect(appUi).toContain("localPlaceTypeLabel(_place: HealthPlace)");
+     expect(appUi).toContain("compactInfoText: { fontSize: 10, lineHeight: 12");
+     expect(appUi).toContain("typeInfoPill: { flexShrink: 1, maxWidth: 108 }");
+     expect(carte).toContain("compactInfoText: { fontSize: 10, lineHeight: 12");
+diff --git a/todo.md b/todo.md
+index d0d02bc..22c5f46 100644
+--- a/todo.md
++++ b/todo.md
+@@ -384,3 +384,5 @@
+ - [x] Corriger définitivement la séparation `selectedCity` / `userLocation` : ville uniquement pour filtrer, GPS prioritaire pour calculer les distances, fallback centre-ville seulement si GPS indisponible.
+ - [x] Maintenir la géolocalisation active après changement de ville et valider les scénarios changement de ville / activation GPS / désactivation GPS.
+ - [x] Sauvegarder la correction locale et la déposer sur GitHub selon la règle active sans pousser vers `kadersore/Pharmagarde`.
++
++- [x] Remplacer le libellé « Type fourni par Google » par « Type local » dans toutes les listes d’éléments concernées.
