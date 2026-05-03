@@ -16,6 +16,8 @@ export type PlaceResource = "pharmacies" | "clinics";
 export type GoogleBackedPlace = {
   id: string;
   googlePlaceId: string;
+  type: "pharmacy" | "clinic";
+  category: "pharmacy" | "healthcare";
   name: string;
   latitude: number;
   longitude: number;
@@ -65,6 +67,7 @@ type GoogleNearbyPlace = {
   };
   rating?: number;
   user_ratings_total?: number;
+  types?: string[];
 };
 
 type GoogleNearbyPayload = {
@@ -256,7 +259,7 @@ async function fetchPlacesForResource(resourceName: PlaceResource) {
     for (const place of nearbyResults) {
       if (!place.place_id || byPlaceId.has(place.place_id)) continue;
 
-      const normalized = normalizeNearbyPlace(place, location.city);
+      const normalized = normalizeNearbyPlace(place, location.city, resourceName);
       if (normalized) {
         byPlaceId.set(place.place_id, normalized);
       }
@@ -367,7 +370,11 @@ async function fetchGoogleJson<T>(url: URL): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-function normalizeNearbyPlace(place: GoogleNearbyPlace, city: string): GoogleBackedPlace | null {
+function hasGoogleType(place: GoogleNearbyPlace, googleType: string) {
+  return Array.isArray(place.types) && place.types.some((type) => type === googleType);
+}
+
+function normalizeNearbyPlace(place: GoogleNearbyPlace, city: string, resourceName: PlaceResource): GoogleBackedPlace | null {
   const latitude = place.geometry?.location?.lat;
   const longitude = place.geometry?.location?.lng;
 
@@ -375,9 +382,21 @@ function normalizeNearbyPlace(place: GoogleNearbyPlace, city: string): GoogleBac
     return null;
   }
 
+  if (resourceName === "pharmacies" && !hasGoogleType(place, "pharmacy")) {
+    return null;
+  }
+
+  if (resourceName === "clinics" && hasGoogleType(place, "pharmacy")) {
+    return null;
+  }
+
+  const type = resourceName === "pharmacies" ? "pharmacy" : "clinic";
+
   return {
     id: place.place_id,
     googlePlaceId: place.place_id,
+    type,
+    category: resourceName === "pharmacies" ? "pharmacy" : "healthcare",
     name: place.name || "Nom indisponible",
     latitude: Number(latitude),
     longitude: Number(longitude),

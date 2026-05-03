@@ -55,6 +55,20 @@ function expectDataset(payload, key, path) {
   }
 }
 
+function expectOnlyPharmacies(payload, key, path) {
+  const invalid = payload[key].filter((item) => item?.type !== "pharmacy" || item?.category !== "pharmacy");
+  if (invalid.length > 0) {
+    throw new Error(`${path} mixed non-pharmacy results into pharmacies: ${invalid.map((item) => item?.name || item?.id || "unknown").join(", ")}`);
+  }
+}
+
+function expectNoPharmacies(payload, key, path) {
+  const invalid = payload[key].filter((item) => item?.type === "pharmacy" || item?.category === "pharmacy");
+  if (invalid.length > 0) {
+    throw new Error(`${path} mixed pharmacy results into healthcare: ${invalid.map((item) => item?.name || item?.id || "unknown").join(", ")}`);
+  }
+}
+
 try {
   await waitForServer();
 
@@ -66,15 +80,19 @@ try {
 
   const pharmacies = await requestJson("/pharmacies");
   expectDataset(pharmacies, "pharmacies", "/pharmacies");
+  expectOnlyPharmacies(pharmacies, "pharmacies", "/pharmacies");
 
   const pharmaciesByCity = await requestJson("/pharmacies?city=Koudougou");
   expectDataset(pharmaciesByCity, "pharmacies", "/pharmacies?city=Koudougou");
+  expectOnlyPharmacies(pharmaciesByCity, "pharmacies", "/pharmacies?city=Koudougou");
 
   const nearbyPharmacies = await requestJson("/pharmacies/nearby?lat=12.37&lng=-1.52");
   expectDataset(nearbyPharmacies, "pharmacies", "/pharmacies/nearby");
+  expectOnlyPharmacies(nearbyPharmacies, "pharmacies", "/pharmacies/nearby");
 
   const healthcare = await requestJson("/healthcare?city=Koudougou");
   expectDataset(healthcare, "healthcare", "/healthcare?city=Koudougou");
+  expectNoPharmacies(healthcare, "healthcare", "/healthcare?city=Koudougou");
 
   console.log(JSON.stringify({
     ok: true,

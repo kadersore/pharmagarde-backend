@@ -3,10 +3,12 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export type CachedPlaceType = "pharmacy" | "clinic";
+export type CachedPlaceCategory = "pharmacy" | "healthcare";
 
 export type CachedHealthPlace = {
   id: string;
   type: CachedPlaceType;
+  category: CachedPlaceCategory;
   name: string;
   address?: string;
   city?: string;
@@ -24,7 +26,7 @@ export type CachedHealthPlace = {
 type CacheKind = "pharmacies" | "healthcare";
 type CacheBuckets = Record<string, CachedHealthPlace[]>;
 
-const CACHE_VERSION = 3;
+const CACHE_VERSION = 4;
 
 type CacheState = {
   version: typeof CACHE_VERSION;
@@ -173,6 +175,14 @@ function getRequestedCityFilter(req: Request): RequestedCityFilter {
   };
 }
 
+function hasGoogleType(raw: Record<string, unknown>, googleType: string) {
+  return Array.isArray(raw.types) && raw.types.some((type) => type === googleType);
+}
+
+function categoryForType(type: CachedPlaceType): CachedPlaceCategory {
+  return type === "pharmacy" ? "pharmacy" : "healthcare";
+}
+
 function normalizeGooglePlace(raw: Record<string, unknown>, type: CachedPlaceType, city: SupportedCity, index: number): CachedHealthPlace | null {
   const geometry = isRecord(raw.geometry) ? raw.geometry : undefined;
   const location = geometry && isRecord(geometry.location) ? geometry.location : undefined;
@@ -184,6 +194,7 @@ function normalizeGooglePlace(raw: Record<string, unknown>, type: CachedPlaceTyp
   return {
     id: placeId ?? `${slug}-${type}-${name.toLowerCase().replace(/[^a-z0-9]+/gi, "-")}-${index}`,
     type,
+    category: categoryForType(type),
     name,
     address: getString(raw, ["vicinity", "formatted_address", "address", "adresse"]),
     city: city.name,
@@ -219,7 +230,7 @@ function normalizeBuckets(input: Record<string, unknown>): CacheBuckets {
     buckets[normalizedKey] = value.filter(isRecord).map((item) => {
       const cachedItem = item as Partial<CachedHealthPlace>;
       const itemCity = typeof cachedItem.city === "string" && cachedItem.city.trim() ? cachedItem.city : findSupportedCity(rawKey)?.name ?? rawKey;
-      return { ...cachedItem, city: itemCity } as CachedHealthPlace;
+      return { ...cachedItem, city: itemCity, category: cachedItem.category ?? categoryForType(cachedItem.type ?? "clinic") } as CachedHealthPlace;
     });
   }
   return buckets;
@@ -284,13 +295,15 @@ async function fetchGoogleItemsForCity(kind: CacheKind, city: SupportedCity) {
       callGoogleTextSearch(`pharmacie ${city.name} Burkina Faso`),
       callGoogleTextSearch(`pharmacy ${city.name} Burkina Faso`),
     ]);
+    const pharmacyOnly = batches.flat().filter((item) => hasGoogleType(item, "pharmacy"));
     return dedupePlaces(
-      batches.flat().map((item, index) => normalizeGooglePlace(item, "pharmacy", city, index)).filter((item): item is CachedHealthPlace => item !== null),
+      pharmacyOnly.map((item, index) => normalizeGooglePlace(item, "pharmacy", city, index)).filter((item): item is CachedHealthPlace => item !== null),
     );
   }
 
   const [hospitals, doctors] = await Promise.all([callGoogleNearby(city, "hospital"), callGoogleNearby(city, "doctor")]);
-  return [...hospitals, ...doctors].map((item, index) => normalizeGooglePlace(item, "clinic", city, index)).filter((item): item is CachedHealthPlace => item !== null);
+  const healthcareOnly = [...hospitals, ...doctors].filter((item) => !hasGoogleType(item, "pharmacy"));
+  return healthcareOnly.map((item, index) => normalizeGooglePlace(item, "clinic", city, index)).filter((item): item is CachedHealthPlace => item !== null);
 }
 
 async function fetchGoogleItemsByCity(kind: CacheKind) {

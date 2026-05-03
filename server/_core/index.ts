@@ -87,37 +87,6 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
-  app.get("/pharmacies", async (_req, res) => {
-    try {
-      const pharmacies = await getPlaces("pharmacies");
-      res.json(pharmacies);
-    } catch (error) {
-      console.error("[GET /pharmacies]", error);
-      res.status(503).json([]);
-    }
-  });
-
-  app.get("/pharmacies/nearby", async (req, res) => {
-    const coordinates = parseCoordinates(req.query);
-
-    if (!coordinates.ok) {
-      res.status(coordinates.status).json({ error: coordinates.message });
-      return;
-    }
-
-    try {
-      const pharmacies = await getNearbyPlaces(
-        "pharmacies",
-        coordinates.lat,
-        coordinates.lng,
-        parseLimit(req.query.limit),
-      );
-      res.json(pharmacies);
-    } catch (error) {
-      console.error("[GET /pharmacies/nearby]", error);
-      res.status(503).json([]);
-    }
-  });
 
   const registerClinicRoutes = (pathPrefix: string, resourceName: PlaceResource) => {
     app.get(pathPrefix, async (_req, res) => {
