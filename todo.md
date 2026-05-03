@@ -451,3 +451,6 @@
 - [ ] Configurer le remote Git local vers le dépôt GitHub `pharmagarde-backend` si nécessaire.
 - [ ] Pousser le correctif d’inscription et les migrations vers `pharmagarde-backend`.
 - [ ] Vérifier que la branche distante de `pharmagarde-backend` pointe sur le dernier commit local.
+
+- [ ] Synchroniser par force prudente la branche `main` locale vers `kadersore/pharmagarde-backend` après confirmation utilisateur de l’option 1.
+- [ ] Vérifier que `kadersore/pharmagarde-backend` pointe bien sur le commit local après le push forcé.
