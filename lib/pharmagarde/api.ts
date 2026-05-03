@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { Coordinates, HealthPlace, Medicine } from "./types";
+import { normalizeCityName } from "./city-utils";
 
 const DEFAULT_TIMEOUT_MS = 12000;
 const CLIENT_CACHE_PREFIX = "pharmagarde:api-cache:v2:";
@@ -125,6 +126,20 @@ function getDatasetKind(path: string): "pharmacies" | "clinics" | "medicines" | 
   return null;
 }
 
+function requireCityForDataset(path: string, city?: string) {
+  const datasetKind = getDatasetKind(path);
+  if ((datasetKind === "pharmacies" || datasetKind === "clinics") && !city?.trim()) {
+    throw new Error(`CITY_PARAM_REQUIRED:${path.startsWith("/") ? path : `/${path}`}`);
+  }
+  return city?.trim() ? normalizeCityName(city) : undefined;
+}
+
+function logApiExchange(datasetKind: "pharmacies" | "clinics" | "medicines" | null, stage: "request" | "response" | "cache" | "stale", details: Record<string, unknown>) {
+  if (datasetKind !== "pharmacies" && datasetKind !== "clinics") return;
+  const label = datasetKind === "pharmacies" ? "pharmacies" : "healthcare";
+  console.info(`[PharmaGarde API] ${label} ${stage}`, details);
+}
+
 function buildCacheKey(baseUrl: string, path: string, coordinates?: Coordinates, city?: string) {
   const locationSuffix = coordinates ? `:${coordinates.latitude.toFixed(3)},${coordinates.longitude.toFixed(3)}` : "";
   const citySuffix = city?.trim() ? `:city=${city.trim().toLowerCase()}` : "";
@@ -175,16 +190,20 @@ async function readStalePayload(cacheKey: string) {
 }
 
 async function requestJson(baseUrl: string, path: string, coordinates?: Coordinates, city?: string) {
+  const requiredCity = requireCityForDataset(path, city);
   const cleanBase = normalizeBaseUrl(baseUrl);
   if (!cleanBase) {
     throw new Error("API_BASE_URL_NON_CONFIGUREE");
   }
 
   const datasetKind = getDatasetKind(path);
-  const cacheKey = datasetKind ? buildCacheKey(cleanBase, path, coordinates, city) : null;
+  const cacheKey = datasetKind ? buildCacheKey(cleanBase, path, coordinates, requiredCity) : null;
   if (cacheKey) {
     const cached = await readCachedPayload(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      logApiExchange(datasetKind, "cache", { path, city: requiredCity, cacheKey });
+      return cached;
+    }
   }
 
   const url = new URL(`${cleanBase}${path.startsWith("/") ? path : `/${path}`}`);
@@ -194,9 +213,11 @@ async function requestJson(baseUrl: string, path: string, coordinates?: Coordina
     url.searchParams.set("latitude", String(coordinates.latitude));
     url.searchParams.set("longitude", String(coordinates.longitude));
   }
-  if (city?.trim()) {
-    url.searchParams.set("city", city.trim());
+  if (requiredCity) {
+    url.searchParams.set("city", requiredCity);
   }
+
+  logApiExchange(datasetKind, "request", { path: url.pathname, city: requiredCity, url: url.toString() });
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
@@ -209,6 +230,7 @@ async function requestJson(baseUrl: string, path: string, coordinates?: Coordina
       throw new Error(`Erreur API ${response.status}`);
     }
     const payload = await response.json();
+    logApiExchange(datasetKind, "response", { path: url.pathname, city: requiredCity, itemCount: asRecords(payload).length, payload });
     if (cacheKey && datasetKind) {
       await writeCachedPayload(cacheKey, payload, CLIENT_CACHE_TTL_MS[datasetKind]);
     }
@@ -216,7 +238,10 @@ async function requestJson(baseUrl: string, path: string, coordinates?: Coordina
   } catch (error) {
     if (cacheKey) {
       const stalePayload = await readStalePayload(cacheKey);
-      if (stalePayload) return stalePayload;
+      if (stalePayload) {
+        logApiExchange(datasetKind, "stale", { path, city: requiredCity, itemCount: asRecords(stalePayload).length });
+        return stalePayload;
+      }
     }
     throw error;
   } finally {
@@ -225,12 +250,14 @@ async function requestJson(baseUrl: string, path: string, coordinates?: Coordina
 }
 
 export async function fetchPharmacies(baseUrl: string, coordinates?: Coordinates, city?: string) {
-  const payload = await requestJson(baseUrl, "/pharmacies", coordinates, city);
+  const selectedCity = requireCityForDataset("/pharmacies", city);
+  const payload = await requestJson(baseUrl, "/pharmacies", coordinates, selectedCity);
   return asRecords(payload).map((item, index) => normalizePlace(item, "pharmacy", index)).filter((item): item is HealthPlace => item !== null);
 }
 
 export async function fetchClinics(baseUrl: string, coordinates?: Coordinates, city?: string) {
-  const payload = await requestJson(baseUrl, "/healthcare", coordinates, city);
+  const selectedCity = requireCityForDataset("/healthcare", city);
+  const payload = await requestJson(baseUrl, "/healthcare", coordinates, selectedCity);
   return asRecords(payload).map((item, index) => normalizePlace(item, "clinic", index)).filter((item): item is HealthPlace => item !== null);
 }
 

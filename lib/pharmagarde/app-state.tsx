@@ -85,11 +85,15 @@ function asSearchText(item: FavoriteItem) {
   return [item.title, item.subtitle, item.metadata, item.entityType].filter(Boolean).join(" ").toLowerCase();
 }
 
+function getSafeSelectedCity(value?: string | null) {
+  return typeof value === "string" && value.trim().length > 0 ? normalizeCityName(value) : DEFAULT_PREFERENCES.city;
+}
+
 function normalizePreferences(value: Partial<AppPreferences> | null | undefined): AppPreferences {
   const mode = value?.mode === "Sombre" ? "Sombre" : "Clair";
   const language = value?.language === "EN" ? "EN" : "FR";
   const mapType = value?.mapType === "Satellite" ? "Satellite" : "Standard";
-  const city = typeof value?.city === "string" && value.city.trim().length > 0 ? value.city.trim() : DEFAULT_PREFERENCES.city;
+  const city = getSafeSelectedCity(value?.city);
 
   return { mode, language, mapType, city };
 }
@@ -223,21 +227,28 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
 
     setLoading(true);
     const nextErrors: DataErrors = {};
-    const selectedCity = preferences.city;
+    const selectedCity = getSafeSelectedCity(preferences.city);
+    console.info("[PharmaGarde Frontend] Ville envoyée aux APIs", { selectedCity, pharmaciesEndpoint: `/pharmacies?city=${encodeURIComponent(selectedCity)}`, healthcareEndpoint: `/healthcare?city=${encodeURIComponent(selectedCity)}` });
     const [pharmacyResult, clinicResult, medicineResult] = await Promise.allSettled([
       fetchPharmacies(apiBaseUrl, userLocation, selectedCity),
       fetchClinics(apiBaseUrl, userLocation, selectedCity),
       fetchMedicines(apiBaseUrl),
     ]);
 
-    if (pharmacyResult.status === "fulfilled") setPharmacies(sortPlacesByOpenThenDistance(filterPlacesByCity(pharmacyResult.value, selectedCity)));
-    else {
+    if (pharmacyResult.status === "fulfilled") {
+      const nextPharmacies = sortPlacesByOpenThenDistance(filterPlacesByCity(pharmacyResult.value, selectedCity));
+      console.info("[PharmaGarde Frontend] Réponse pharmacies reçue", { selectedCity, receivedCount: pharmacyResult.value.length, displayedCount: nextPharmacies.length, pharmacies: nextPharmacies });
+      setPharmacies(nextPharmacies);
+    } else {
       setPharmacies([]);
       nextErrors.pharmacies = pharmacyResult.reason instanceof Error ? pharmacyResult.reason.message : "Erreur de chargement des pharmacies.";
     }
 
-    if (clinicResult.status === "fulfilled") setClinics(sortPlacesByOpenThenDistance(filterPlacesByCity(clinicResult.value, selectedCity)));
-    else {
+    if (clinicResult.status === "fulfilled") {
+      const nextClinics = sortPlacesByOpenThenDistance(filterPlacesByCity(clinicResult.value, selectedCity));
+      console.info("[PharmaGarde Frontend] Réponse healthcare reçue", { selectedCity, receivedCount: clinicResult.value.length, displayedCount: nextClinics.length });
+      setClinics(nextClinics);
+    } else {
       setClinics([]);
       nextErrors.clinics = clinicResult.reason instanceof Error ? clinicResult.reason.message : "Erreur de chargement des cliniques.";
     }
@@ -300,7 +311,7 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
 
   const updatePreference = useCallback(async <Key extends keyof AppPreferences>(key: Key, value: AppPreferences[Key]) => {
     persistNextPreferences((current) => {
-      const nextValue = key === "city" && typeof value === "string" ? normalizeCityName(value) : value;
+      const nextValue = key === "city" && typeof value === "string" ? getSafeSelectedCity(value) : value;
       return { ...current, [key]: nextValue };
     });
   }, [persistNextPreferences]);

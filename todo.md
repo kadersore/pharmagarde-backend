@@ -296,3 +296,10 @@
 - [x] Corriger la récupération ou le filtrage backend/mobile des pharmacies pour toutes les villes supportées.
 - [x] Valider que `/pharmacies?city=Koudougou` et d’autres villes hors Ouaga/Bobo retournent les pharmacies attendues si Google Places fournit des résultats.
 - [x] Pousser la correction vers `https://github.com/kadersore/pharmagarde-backend` si le bug est côté backend.
+
+- [x] Créer ou utiliser un état global pour conserver la ville sélectionnée dans PharmaGarde.
+- [x] Modifier l’appel frontend des pharmacies pour appeler systématiquement `/pharmacies?city={selectedCity}` avec une ville non vide.
+- [x] Aligner la logique de ville utilisée par les pharmacies et les centres de santé.
+- [x] Ajouter des logs frontend affichant la ville envoyée et la réponse reçue pour les pharmacies.
+- [x] Rafraîchir automatiquement la liste des pharmacies après chaque changement de ville.
+- [x] Ajouter ou mettre à jour les tests pour empêcher tout appel frontend à `/pharmacies` sans paramètre `city`.

@@ -90,6 +90,34 @@ describe("pharmagarde API helpers", () => {
     expect(pharmacies[0]).toMatchObject({ id: "ph-kdg-1", name: "Pharmacie Wend-Panga", city: "Koudougou" });
   });
 
+
+  it("refuse tout appel pharmacies sans paramètre city valide", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ pharmacies: [] }),
+    } as Response);
+
+    await expect(fetchPharmacies("https://api.pharmagarde.bf", undefined, "   ")).rejects.toThrow("CITY_PARAM_REQUIRED:/pharmacies");
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("normalise la ville avant d’appeler les pharmacies et healthcare", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ pharmacies: [] }) } as Response)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ healthcare: [] }) } as Response);
+
+    await fetchPharmacies("https://api.pharmagarde.bf", undefined, " Bobo Dioulasso ");
+    await fetchClinics("https://api.pharmagarde.bf", undefined, " Bobo Dioulasso ");
+
+    const pharmaciesUrl = new URL(String(fetchMock.mock.calls[0]?.[0]));
+    const healthcareUrl = new URL(String(fetchMock.mock.calls[1]?.[0]));
+    expect(pharmaciesUrl.pathname).toBe("/pharmacies");
+    expect(healthcareUrl.pathname).toBe("/healthcare");
+    expect(pharmaciesUrl.searchParams.get("city")).toBe("Bobo-Dioulasso");
+    expect(healthcareUrl.searchParams.get("city")).toBe("Bobo-Dioulasso");
+  });
+
   it("normalise les cliniques et les médicaments depuis des payloads imbriqués", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch")
       .mockResolvedValueOnce({
