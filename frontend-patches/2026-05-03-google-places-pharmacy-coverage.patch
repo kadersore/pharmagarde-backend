@@ -1,0 +1,355 @@
+From 822f1ea6cd65a8fe05fe22054003643a8142400a Mon Sep 17 00:00:00 2001
+From: Manus <dev-agent@manus.ai>
+Date: Sun, 3 May 2026 05:57:48 -0400
+Subject: [PATCH] =?UTF-8?q?Checkpoint:=20Am=C3=A9lioration=20de=20la=20r?=
+ =?UTF-8?q?=C3=A9cup=C3=A9ration=20Google=20Places=20des=20pharmacies=20:?=
+ =?UTF-8?q?=20multi-requ=C3=AAtes=20text=20search=20par=20ville,=20recherc?=
+ =?UTF-8?q?he=20multi-zones=20centre/nord/sud/est/ouest,=20Nearby=20Search?=
+ =?UTF-8?q?=20type=20pharmacy=20avec=20rayon=2015000=20m,=20pagination=20n?=
+ =?UTF-8?q?ext=5Fpage=5Ftoken=20jusqu=E2=80=99=C3=A0=203=20pages,=20filtra?=
+ =?UTF-8?q?ge=20souple=20pharmacie/pharmacy,=20conservation=20des=20lieux?=
+ =?UTF-8?q?=20sans=20rating/faibles=20avis,=20d=C3=A9duplication=20par=20p?=
+ =?UTF-8?q?lace=5Fid=20et=20tests=20Vitest=20adapt=C3=A9s.?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ server/pharmagarde-cache.ts     | 112 ++++++++++++++++++++++++--------
+ tests/pharmagarde-cache.test.ts |  54 +++++++++++----
+ todo.md                         |   9 +++
+ 3 files changed, 136 insertions(+), 39 deletions(-)
+
+diff --git a/server/pharmagarde-cache.ts b/server/pharmagarde-cache.ts
+index 1c68aa3..4f4c471 100644
+--- a/server/pharmagarde-cache.ts
++++ b/server/pharmagarde-cache.ts
+@@ -61,6 +61,8 @@ export type SupportedCity = {
+   longitude: number;
+ };
+ 
++type SearchPoint = SupportedCity & { zone: "centre" | "nord" | "sud" | "est" | "ouest" };
++
+ export const SUPPORTED_CITIES: SupportedCity[] = [
+   { name: "Ouagadougou", latitude: 12.3714, longitude: -1.5197 },
+   { name: "Bobo-Dioulasso", latitude: 11.1771, longitude: -4.2979 },
+@@ -85,7 +87,16 @@ const CACHE_DIR = process.env.PHARMAGARDE_CACHE_DIR ?? path.join(process.cwd(),
+ const GOOGLE_API_KEY = process.env.GOOGLE_PLACES_API_KEY ?? process.env.GOOGLE_MAPS_API_KEY ?? "";
+ 
+ const TEXT_SEARCH_TERMS = ["pharmacie", "hôpital", "clinique", "CSPS", "centre médical", "dispensaire"] as const;
++const PHARMACY_TEXT_SEARCH_TEMPLATES = [
++  "pharmacie à {ville}",
++  "pharmacy in {ville}",
++  "dépôt pharmaceutique à {ville}",
++  "médicament à {ville}",
++  "pharmacie de garde à {ville}",
++] as const;
+ const NEARBY_SEARCH_TYPES = ["pharmacy", "hospital", "doctor"] as const;
++const PHARMACY_NEARBY_SEARCH_TYPE = "pharmacy" as const;
++const PHARMACY_ZONE_OFFSET_KM = Number(process.env.PHARMAGARDE_PHARMACY_ZONE_OFFSET_KM ?? 7);
+ const MEDICAL_NAME_TERMS = ["pharmacie", "pharmacy", "hopital", "hospital", "clinique", "clinic", "csps", "chu", "chr", "cma", "centre medical", "centre de sante", "dispensaire", "medical", "sante", "health"];
+ const NON_MEDICAL_NAME_TERMS = ["veterinaire", "vétérinaire", "animal", "boutique", "supermarche", "supermarché", "hotel", "hôtel", "restaurant", "bar", "ecole", "école"];
+ 
+@@ -191,7 +202,7 @@ function selectGooglePrimaryType(types?: string[]) {
+ function classifyPlace(name: string, types: string[] = []): { category: CachedPlaceCategory; type: LocalEstablishmentType } {
+   const normalizedName = normalizeCityName(name);
+   const normalizedTypes = types.map((type) => type.toLowerCase());
+-  if (normalizedTypes.includes("pharmacy") || normalizedName.includes("pharmacie")) return { category: "pharmacy", type: "Pharmacie" };
++  if (normalizedTypes.includes("pharmacy") || normalizedName.includes("pharmacie") || normalizedName.includes("pharmacy")) return { category: "pharmacy", type: "Pharmacie" };
+   if (/\bchu\b/.test(normalizedName)) return { category: "healthcare", type: "CHU" };
+   if (/\bchr\b/.test(normalizedName)) return { category: "healthcare", type: "CHR" };
+   if (/\bcma\b/.test(normalizedName)) return { category: "healthcare", type: "CMA" };
+@@ -209,6 +220,12 @@ function hasQualitySignal(raw: Record<string, unknown>) {
+   return (rating !== undefined && rating >= 2) || (userRatingsTotal !== undefined && userRatingsTotal >= 1) || !!phone || businessStatus === "OPERATIONAL";
+ }
+ 
++function isPharmacyCandidate(name: string, types: string[] = []) {
++  const normalizedName = normalizeCityName(name);
++  const normalizedTypes = types.map((type) => type.toLowerCase());
++  return normalizedTypes.includes("pharmacy") || normalizedName.includes("pharmacie") || normalizedName.includes("pharmacy");
++}
++
+ function isClearlyMedical(name: string, types: string[] = []) {
+   const normalizedName = normalizeCityName(name);
+   if (NON_MEDICAL_NAME_TERMS.some((term) => normalizedName.includes(normalizeCityName(term)))) return false;
+@@ -217,6 +234,22 @@ function isClearlyMedical(name: string, types: string[] = []) {
+   return MEDICAL_NAME_TERMS.some((term) => normalizedName.includes(normalizeCityName(term)));
+ }
+ 
++function buildSearchPoints(city: SupportedCity): SearchPoint[] {
++  const latitudeDelta = PHARMACY_ZONE_OFFSET_KM / 111;
++  const longitudeDelta = PHARMACY_ZONE_OFFSET_KM / (111 * Math.max(Math.cos((city.latitude * Math.PI) / 180), 0.2));
++  return [
++    { ...city, zone: "centre" },
++    { ...city, latitude: city.latitude + latitudeDelta, zone: "nord" },
++    { ...city, latitude: city.latitude - latitudeDelta, zone: "sud" },
++    { ...city, longitude: city.longitude + longitudeDelta, zone: "est" },
++    { ...city, longitude: city.longitude - longitudeDelta, zone: "ouest" },
++  ];
++}
++
++function buildPharmacyTextSearchQueries(city: SupportedCity) {
++  return PHARMACY_TEXT_SEARCH_TEMPLATES.map((template) => template.replace("{ville}", city.name));
++}
++
+ function findSupportedCity(value?: string | null) {
+   const normalized = normalizeCityName(value);
+   if (!normalized) return undefined;
+@@ -246,7 +279,7 @@ function normalizeOpeningHours(raw: Record<string, unknown>) {
+   return isRecord(openingHours) ? openingHours : undefined;
+ }
+ 
+-function normalizeGooglePlace(rawBase: Record<string, unknown>, city: SupportedCity, index: number, options?: { collectionQuery?: string; collectionMethod?: "textsearch" | "nearbysearch" }): CachedHealthPlace | null {
++function normalizeGooglePlace(rawBase: Record<string, unknown>, city: SupportedCity, index: number, options?: { collectionQuery?: string; collectionMethod?: "textsearch" | "nearbysearch"; targetKind?: CacheKind }): CachedHealthPlace | null {
+   const raw = rawBase;
+   const geometry = isRecord(raw.geometry) ? raw.geometry : undefined;
+   const location = geometry && isRecord(geometry.location) ? geometry.location : undefined;
+@@ -255,8 +288,12 @@ function normalizeGooglePlace(rawBase: Record<string, unknown>, city: SupportedC
+   if (!name) return null;
+ 
+   const googlePlaceTypes = getStringArray(raw, ["types"]) ?? [];
+-  if (!isClearlyMedical(name, googlePlaceTypes)) return null;
+-  if (!hasQualitySignal(raw)) return null;
++  if (options?.targetKind === "pharmacies") {
++    if (!isPharmacyCandidate(name, googlePlaceTypes)) return null;
++  } else {
++    if (!isClearlyMedical(name, googlePlaceTypes)) return null;
++    if (!hasQualitySignal(raw)) return null;
++  }
+ 
+   const slug = cityKey(city.name);
+   const classification = classifyPlace(name, googlePlaceTypes);
+@@ -366,21 +403,21 @@ async function callGooglePaged(url: URL): Promise<Record<string, unknown>[]> {
+   return results;
+ }
+ 
+-async function callGoogleTextSearch(city: SupportedCity, query: string) {
++async function callGoogleTextSearch(point: Pick<SupportedCity, "latitude" | "longitude">, query: string) {
+   const url = new URL("https://maps.googleapis.com/maps/api/place/textsearch/json");
+   url.searchParams.set("key", GOOGLE_API_KEY);
+   url.searchParams.set("query", `${query} Burkina Faso`);
+-  url.searchParams.set("location", `${city.latitude},${city.longitude}`);
++  url.searchParams.set("location", `${point.latitude},${point.longitude}`);
+   url.searchParams.set("radius", String(Number(process.env.PHARMAGARDE_GOOGLE_RADIUS_METERS ?? DEFAULT_RADIUS_METERS)));
+   url.searchParams.set("language", "fr");
+   url.searchParams.set("region", "bf");
+   return callGooglePaged(url);
+ }
+ 
+-async function callGoogleNearby(city: SupportedCity, type: (typeof NEARBY_SEARCH_TYPES)[number]) {
++async function callGoogleNearby(point: Pick<SupportedCity, "latitude" | "longitude">, type: (typeof NEARBY_SEARCH_TYPES)[number] | typeof PHARMACY_NEARBY_SEARCH_TYPE) {
+   const url = new URL("https://maps.googleapis.com/maps/api/place/nearbysearch/json");
+   url.searchParams.set("key", GOOGLE_API_KEY);
+-  url.searchParams.set("location", `${city.latitude},${city.longitude}`);
++  url.searchParams.set("location", `${point.latitude},${point.longitude}`);
+   url.searchParams.set("radius", String(Number(process.env.PHARMAGARDE_GOOGLE_RADIUS_METERS ?? DEFAULT_RADIUS_METERS)));
+   url.searchParams.set("type", type);
+   url.searchParams.set("language", "fr");
+@@ -427,40 +464,61 @@ async function enrichPlacesWithDetails(items: Record<string, unknown>[]) {
+   return enriched;
+ }
+ 
+-async function fetchGoogleItemsForCity(city: SupportedCity) {
++async function fetchGoogleItemsForCity(city: SupportedCity, kind: CacheKind) {
+   const rawItems: Record<string, unknown>[] = [];
+-  const queryByPlaceId = new Map<string, { collectionQuery: string; collectionMethod: "textsearch" | "nearbysearch" }>();
+-
+-  for (const term of TEXT_SEARCH_TERMS) {
+-    const query = `${term} à ${city.name}`;
+-    const results = await callGoogleTextSearch(city, query);
+-    rawItems.push(...results);
+-    for (const result of results) {
+-      const placeId = getString(result, ["place_id", "id"]);
+-      if (placeId && !queryByPlaceId.has(placeId)) queryByPlaceId.set(placeId, { collectionQuery: query, collectionMethod: "textsearch" });
++  const queryByPlaceId = new Map<string, { collectionQuery: string; collectionMethod: "textsearch" | "nearbysearch"; targetKind: CacheKind }>();
++
++  if (kind === "pharmacies") {
++    const points = buildSearchPoints(city);
++    for (const point of points) {
++      for (const query of buildPharmacyTextSearchQueries(city)) {
++        const results = await callGoogleTextSearch(point, query);
++        rawItems.push(...results);
++        for (const result of results) {
++          const placeId = getString(result, ["place_id", "id"]);
++          if (placeId && !queryByPlaceId.has(placeId)) queryByPlaceId.set(placeId, { collectionQuery: `${point.zone}:${query}`, collectionMethod: "textsearch", targetKind: kind });
++        }
++      }
++
++      const nearbyResults = await callGoogleNearby(point, PHARMACY_NEARBY_SEARCH_TYPE);
++      rawItems.push(...nearbyResults);
++      for (const result of nearbyResults) {
++        const placeId = getString(result, ["place_id", "id"]);
++        if (placeId && !queryByPlaceId.has(placeId)) queryByPlaceId.set(placeId, { collectionQuery: `${point.zone}:nearby:${PHARMACY_NEARBY_SEARCH_TYPE}`, collectionMethod: "nearbysearch", targetKind: kind });
++      }
++    }
++  } else {
++    for (const term of TEXT_SEARCH_TERMS) {
++      const query = `${term} à ${city.name}`;
++      const results = await callGoogleTextSearch(city, query);
++      rawItems.push(...results);
++      for (const result of results) {
++        const placeId = getString(result, ["place_id", "id"]);
++        if (placeId && !queryByPlaceId.has(placeId)) queryByPlaceId.set(placeId, { collectionQuery: query, collectionMethod: "textsearch", targetKind: kind });
++      }
+     }
+-  }
+ 
+-  for (const nearbyType of NEARBY_SEARCH_TYPES) {
+-    const results = await callGoogleNearby(city, nearbyType);
+-    rawItems.push(...results);
+-    for (const result of results) {
+-      const placeId = getString(result, ["place_id", "id"]);
+-      if (placeId && !queryByPlaceId.has(placeId)) queryByPlaceId.set(placeId, { collectionQuery: `nearby:${nearbyType}`, collectionMethod: "nearbysearch" });
++    for (const nearbyType of NEARBY_SEARCH_TYPES) {
++      const results = await callGoogleNearby(city, nearbyType);
++      rawItems.push(...results);
++      for (const result of results) {
++        const placeId = getString(result, ["place_id", "id"]);
++        if (placeId && !queryByPlaceId.has(placeId)) queryByPlaceId.set(placeId, { collectionQuery: `nearby:${nearbyType}`, collectionMethod: "nearbysearch", targetKind: kind });
++      }
+     }
+   }
+ 
+   const enrichedItems = await enrichPlacesWithDetails(rawItems);
+   return enrichedItems.map((item, index) => {
+     const placeId = getString(item, ["place_id", "id"]);
+-    return normalizeGooglePlace(item, city, index, placeId ? queryByPlaceId.get(placeId) : undefined);
++    return normalizeGooglePlace(item, city, index, placeId ? queryByPlaceId.get(placeId) : { targetKind: kind });
+   }).filter((item): item is CachedHealthPlace => item !== null);
+ }
+ 
+ async function fetchGoogleItemsByCity(kind: CacheKind) {
+   const settled = await Promise.allSettled(
+     SUPPORTED_CITIES.map(async (city) => {
+-      const allItems = dedupePlaces(await fetchGoogleItemsForCity(city));
++      const allItems = dedupePlaces(await fetchGoogleItemsForCity(city, kind));
+       const category = kind === "pharmacies" ? "pharmacy" : "healthcare";
+       return { city, items: allItems.filter((item) => item.category === category) };
+     }),
+diff --git a/tests/pharmagarde-cache.test.ts b/tests/pharmagarde-cache.test.ts
+index af0a228..a351d00 100644
+--- a/tests/pharmagarde-cache.test.ts
++++ b/tests/pharmagarde-cache.test.ts
+@@ -260,7 +260,8 @@ describe("cache backend PharmaGarde", () => {
+ 
+       if (url.pathname.endsWith("/details/json")) {
+         const placeId = url.searchParams.get("place_id") ?? "unknown";
+-        const isPharmacy = placeId.includes("pharmacie") || placeId.includes("pharmacy");
++        const isPharmacy = placeId.includes("pharmacie") || placeId.includes("pharmacy") || placeId.includes("pharmaceutique") || placeId.includes("médicament") || placeId.includes("medicament");
++        const isLowSignalPharmacy = placeId.includes("médicament") || placeId.includes("medicament");
+         const isHospital = placeId.includes("hôpital") || placeId.includes("hospital");
+         const isDoctor = placeId.includes("doctor");
+         const types = isPharmacy
+@@ -280,11 +281,15 @@ describe("cache backend PharmaGarde", () => {
+               formatted_address: "Centre-ville, Burkina Faso",
+               geometry: { location: { lat: lat || 12.37, lng: lng || -1.52 } },
+               types,
+-              rating: 4.1,
+-              user_ratings_total: 3,
+-              international_phone_number: "+226 70 00 00 00",
+-              opening_hours: { open_now: true },
+-              business_status: "OPERATIONAL",
++              ...(isLowSignalPharmacy
++                ? {}
++                : {
++                    rating: 4.1,
++                    user_ratings_total: 3,
++                    international_phone_number: "+226 70 00 00 00",
++                    opening_hours: { open_now: true },
++                    business_status: "OPERATIONAL",
++                  }),
+             },
+           }),
+         } as Response;
+@@ -295,7 +300,8 @@ describe("cache backend PharmaGarde", () => {
+       const tokenSuffix = url.searchParams.get("pagetoken") ? "-page-2" : "";
+       const rawKind = nearbyType ?? query.toLowerCase().split(" à ")[0] ?? "centre";
+       const kind = rawKind.replace(/\s+/g, "-");
+-      const googleTypes = nearbyType === "pharmacy" || query.toLowerCase().includes("pharmacie")
++      const pharmacyQuery = query.toLowerCase().includes("pharmacie") || query.toLowerCase().includes("pharmacy") || query.toLowerCase().includes("dépôt pharmaceutique") || query.toLowerCase().includes("medicament") || query.toLowerCase().includes("médicament");
++      const googleTypes = nearbyType === "pharmacy" || pharmacyQuery
+         ? ["pharmacy", "health", "point_of_interest", "establishment"]
+         : nearbyType === "hospital" || query.toLowerCase().includes("hôpital")
+           ? ["hospital", "health", "point_of_interest", "establishment"]
+@@ -313,9 +319,13 @@ describe("cache backend PharmaGarde", () => {
+               formatted_address: "Centre-ville",
+               geometry: { location: { lat, lng } },
+               types: googleTypes,
+-              rating: 3.8,
+-              user_ratings_total: 2,
+-              business_status: "OPERATIONAL",
++              ...(query.toLowerCase().includes("médicament") || query.toLowerCase().includes("medicament")
++                ? {}
++                : {
++                    rating: 3.8,
++                    user_ratings_total: 2,
++                    business_status: "OPERATIONAL",
++                  }),
+             },
+           ],
+           next_page_token: url.searchParams.get("pagetoken") ? undefined : `token-${kind}-${location}`,
+@@ -328,7 +338,26 @@ describe("cache backend PharmaGarde", () => {
+ 
+     expect(pharmaciesResult.ok).toBe(true);
+     expect(healthcareResult.ok).toBe(true);
+-    expect(fetchMock).toHaveBeenCalledTimes(SUPPORTED_CITIES.length * 9 * 2 * 2 + SUPPORTED_CITIES.length * 18 * 2);
++    expect(fetchMock).toHaveBeenCalledTimes(SUPPORTED_CITIES.length * (60 * 2 + 18 * 2));
++
++    const requestedUrls = fetchMock.mock.calls.map(([input]) => new URL(String(input)));
++    const textQueries = requestedUrls
++      .filter((url) => url.pathname.endsWith("/textsearch/json"))
++      .map((url) => url.searchParams.get("query") ?? "");
++    const nearbyPharmacyLocations = new Set(
++      requestedUrls
++        .filter((url) => url.pathname.endsWith("/nearbysearch/json") && url.searchParams.get("type") === "pharmacy")
++        .map((url) => url.searchParams.get("location")),
++    );
++
++    expect(textQueries).toEqual(expect.arrayContaining([
++      "pharmacie à Ouagadougou Burkina Faso",
++      "pharmacy in Ouagadougou Burkina Faso",
++      "dépôt pharmaceutique à Ouagadougou Burkina Faso",
++      "médicament à Ouagadougou Burkina Faso",
++      "pharmacie de garde à Ouagadougou Burkina Faso",
++    ]));
++    expect(nearbyPharmacyLocations.size).toBeGreaterThanOrEqual(5);
+ 
+     for (const city of SUPPORTED_CITIES) {
+       const key = city.name
+@@ -339,7 +368,7 @@ describe("cache backend PharmaGarde", () => {
+         .replace(/\s+/g, " ")
+         .toLowerCase()
+         .replace(/\s+/g, "-");
+-      expect(getCacheState("pharmacies").byCity[key].length).toBeGreaterThanOrEqual(2);
++      expect(getCacheState("pharmacies").byCity[key].length).toBeGreaterThanOrEqual(50);
+       expect(getCacheState("pharmacies").byCity[key][0]?.city).toBe(city.name);
+       expect(getCacheState("pharmacies").byCity[key][0]?.category).toBe("pharmacy");
+       expect(getCacheState("pharmacies").byCity[key][0]?.type).toBe("Pharmacie");
+@@ -347,6 +376,7 @@ describe("cache backend PharmaGarde", () => {
+       expect(getCacheState("pharmacies").byCity[key][0]?.googlePrimaryType).toBe("pharmacy");
+       expect(getCacheState("pharmacies").byCity[key][0]?.phone).toBe("+226 70 00 00 00");
+       expect(getCacheState("pharmacies").byCity[key][0]?.openingHours).toMatchObject({ open_now: true });
++      expect(getCacheState("pharmacies").byCity[key].some((item) => item.collectionQuery?.includes("médicament") && item.rating === undefined && item.userRatingsTotal === undefined)).toBe(true);
+       expect(getCacheState("healthcare").byCity[key].length).toBeGreaterThanOrEqual(10);
+       expect(getCacheState("healthcare").byCity[key].every((item) => item.city === city.name)).toBe(true);
+       expect(getCacheState("healthcare").byCity[key].map((item) => item.type)).toEqual(expect.arrayContaining(["CHU", "Centre de santé"]));
+diff --git a/todo.md b/todo.md
+index 4abd026..56e45b9 100644
+--- a/todo.md
++++ b/todo.md
+@@ -388,3 +388,12 @@
+ - [x] Remplacer le libellé « Type fourni par Google » par « Type local » dans toutes les listes d’éléments concernées.
+ 
+ - [x] Corriger l’affichage du type dans les listes : utiliser le type d’établissement enregistré après récupération depuis Google (Pharmacie, CHU, CSPS, CMA, etc.) au lieu du texte fixe « Type local ».
++
++- [x] Améliorer la récupération Google Places des pharmacies avec multi-requêtes text search : pharmacie, pharmacy, dépôt pharmaceutique, médicament, pharmacie de garde par ville.
++- [x] Ajouter une stratégie multi-zones par ville : centre, nord, sud, est et ouest.
++- [x] Ajouter Nearby Search en complément avec type pharmacy et rayon 15000 mètres.
++- [x] Implémenter la pagination Google Places avec next_page_token jusqu’à 3 pages par requête.
++- [x] Assouplir le filtrage pharmacies : inclure les résultats dont les types contiennent pharmacy ou dont le nom contient pharmacie/pharmacy, sans exclure les lieux sans rating ou avec peu d’avis.
++- [x] Dédupliquer les résultats Google Places par place_id puis fusionner et sauvegarder localement.
++- [x] Ajouter ou adapter les tests couvrant la nouvelle stratégie de récupération pharmacies.
++- [x] Valider TypeScript/tests, sauvegarder un checkpoint et pousser les modifications sur GitHub.
+-- 
+2.34.1
+
