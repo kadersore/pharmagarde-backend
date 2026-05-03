@@ -18,6 +18,8 @@ export type CachedHealthPlace = {
   isOpen?: boolean;
   source?: "google" | "local";
   googlePlaceId?: string;
+  googlePlaceTypes?: string[];
+  googlePrimaryType?: string;
   updatedAt?: string;
 };
 
@@ -147,6 +149,26 @@ function getNumber(record: Record<string, unknown>, keys: string[]) {
   return undefined;
 }
 
+function getStringArray(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key];
+    if (Array.isArray(value)) {
+      const strings = value.filter((item): item is string => typeof item === "string" && item.trim().length > 0).map((item) => item.trim());
+      if (strings.length > 0) return strings;
+    }
+    if (typeof value === "string" && value.trim()) {
+      return value.split(",").map((item) => item.trim()).filter(Boolean);
+    }
+  }
+  return undefined;
+}
+
+function selectGooglePrimaryType(types?: string[]) {
+  if (!types?.length) return undefined;
+  const genericTypes = new Set(["establishment", "point_of_interest", "health"]);
+  return types.find((type) => !genericTypes.has(type)) ?? types[0];
+}
+
 function findSupportedCity(value?: string | null) {
   const normalized = normalizeCityName(value);
   if (!normalized) return undefined;
@@ -179,6 +201,7 @@ function normalizeGooglePlace(raw: Record<string, unknown>, type: CachedPlaceTyp
   if (!name) return null;
 
   const slug = cityKey(city.name);
+  const googlePlaceTypes = getStringArray(raw, ["types"]);
   return {
     id: placeId ?? `${slug}-${type}-${name.toLowerCase().replace(/[^a-z0-9]+/gi, "-")}-${index}`,
     type,
@@ -192,6 +215,8 @@ function normalizeGooglePlace(raw: Record<string, unknown>, type: CachedPlaceTyp
     isOpen: isRecord(raw.opening_hours) && typeof raw.opening_hours.open_now === "boolean" ? raw.opening_hours.open_now : undefined,
     source: "google",
     googlePlaceId: placeId,
+    googlePlaceTypes,
+    googlePrimaryType: selectGooglePrimaryType(googlePlaceTypes),
     updatedAt: nowIso(),
   };
 }

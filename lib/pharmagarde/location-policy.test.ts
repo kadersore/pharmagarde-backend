@@ -13,7 +13,7 @@ describe("politique de localisation PharmaGarde", () => {
   it("affiche le message utilisateur attendu pour un refus ou une indisponibilité GPS", () => {
     const fallback = getDefaultLocationFallback();
 
-    expect(fallback.message).toBe("Localisation refusée. Résultats basés sur Ouagadougou.");
+    expect(fallback.message).toBe("Localisation indisponible. Distances calculées depuis Ouagadougou.");
     expect(fallback.message).toBe(DEFAULT_LOCATION_MESSAGE);
   });
 

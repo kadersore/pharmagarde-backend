@@ -266,6 +266,7 @@ describe("cache backend PharmaGarde", () => {
               name: `${type} ${location}`,
               vicinity: "Centre-ville",
               geometry: { location: { lat: Number(location.split(",")[0]), lng: Number(location.split(",")[1]) } },
+              types: type === "hospital" ? ["hospital", "health", "point_of_interest", "establishment"] : [type, "health", "point_of_interest", "establishment"],
             },
           ],
         }),
@@ -290,8 +291,11 @@ describe("cache backend PharmaGarde", () => {
         .replace(/\s+/g, "-");
       expect(getCacheState("pharmacies").byCity[key]).toHaveLength(1);
       expect(getCacheState("pharmacies").byCity[key][0]?.city).toBe(city.name);
+      expect(getCacheState("pharmacies").byCity[key][0]?.googlePlaceTypes).toEqual(["pharmacy", "health", "point_of_interest", "establishment"]);
+      expect(getCacheState("pharmacies").byCity[key][0]?.googlePrimaryType).toBe("pharmacy");
       expect(getCacheState("healthcare").byCity[key]).toHaveLength(2);
       expect(getCacheState("healthcare").byCity[key].every((item) => item.city === city.name)).toBe(true);
+      expect(getCacheState("healthcare").byCity[key].map((item) => item.googlePrimaryType).sort()).toEqual(["doctor", "hospital"]);
     }
   });
 });

@@ -18,6 +18,8 @@ export type HealthPlace = {
   latitude?: number;
   longitude?: number;
   isOpen?: boolean;
+  googlePlaceTypes?: string[];
+  googlePrimaryType?: string;
 };
 
 export type MedicineAgeCategory = "Enfant" | "Adulte" | "Tous";

@@ -3,7 +3,7 @@ import * as WebBrowser from "expo-web-browser";
 import { useMemo, useRef, useState } from "react";
 import { Animated, FlatList, Linking, PanResponder, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
-import { AppChrome } from "@/components/pharmagarde/app-ui";
+import { AppChrome, googlePlaceTypeLabel } from "@/components/pharmagarde/app-ui";
 import { PharmaMap } from "@/components/pharmagarde/PharmaMap";
 import { haptic, usePremiumPalette } from "@/lib/pharmagarde/premium-ui";
 import { sortPlacesByOpenThenDistance } from "@/lib/pharmagarde/place-ordering";
@@ -62,6 +62,7 @@ function MapPlaceCard({ place, active, favorite, isExpanded, onSelect, onToggle,
   const canNavigate = place.latitude !== undefined && place.longitude !== undefined;
   const ratingLabel = place.rating !== undefined ? `${place.rating.toFixed(1)}/5` : "Note inconnue";
   const phoneLabel = place.phone ?? "Téléphone indisponible";
+  const typeLabel = googlePlaceTypeLabel(place);
 
   return (
     <Pressable
@@ -110,7 +111,7 @@ function MapPlaceCard({ place, active, favorite, isExpanded, onSelect, onToggle,
             </Pressable>
             <View style={[styles.compactInfoPill, styles.typeInfoPill, { backgroundColor: palette.cardMuted }]}> 
               <MaterialIcons name={place.type === "pharmacy" ? "local-pharmacy" : "local-hospital"} size={15} color={accent} />
-              <Text style={[styles.compactInfoText, { color: palette.text }]}>{place.type === "pharmacy" ? "Pharmacie" : "Clinique"}</Text>
+              <Text numberOfLines={1} style={[styles.compactInfoText, { color: palette.text }]}>{typeLabel}</Text>
             </View>
             <View style={[styles.compactInfoPill, { backgroundColor: palette.cardMuted }]}> 
               <MaterialIcons name="star" size={15} color={place.rating !== undefined ? "#F59E0B" : palette.muted} />
@@ -338,11 +339,11 @@ const styles = StyleSheet.create({
   metaPill: { minHeight: 30, borderRadius: 15, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", gap: 6 },
   metaText: { fontSize: 12, lineHeight: 15, fontWeight: "900" },
   placeExpandableContent: { marginTop: 2 },
-  placeInfoRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12 },
-  compactInfoPill: { minHeight: 34, borderRadius: 17, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5 },
-  typeInfoPill: { flexShrink: 0 },
-  phoneInfoPill: { flex: 1, justifyContent: "flex-start" },
-  compactInfoText: { fontSize: 12, lineHeight: 15, fontWeight: "900" },
+  placeInfoRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 9 },
+  compactInfoPill: { minHeight: 26, borderRadius: 13, paddingHorizontal: 6, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 3 },
+  typeInfoPill: { flexShrink: 1, maxWidth: 108 },
+  phoneInfoPill: { flex: 1, minWidth: 82, justifyContent: "flex-start" },
+  compactInfoText: { fontSize: 10, lineHeight: 12, fontWeight: "900" },
   actionRow: { flexDirection: "row", gap: 9, marginTop: 12 },
   actionButton: { flex: 1, minHeight: 42, borderRadius: 16, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 7 },
   actionText: { fontSize: 13, lineHeight: 16, fontWeight: "900" },

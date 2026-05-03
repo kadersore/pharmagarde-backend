@@ -14,6 +14,25 @@ function entityLabel(type: FavoriteItem["entityType"]) {
   return "Médicament";
 }
 
+const GOOGLE_PLACE_TYPE_LABELS: Record<string, string> = {
+  pharmacy: "Pharmacie",
+  drugstore: "Parapharmacie",
+  hospital: "Hôpital",
+  doctor: "Médecin",
+  health: "Santé",
+  physiotherapist: "Kinésithérapie",
+  dentist: "Dentiste",
+  veterinary_care: "Vétérinaire",
+  establishment: "Établissement",
+  point_of_interest: "Lieu référencé",
+};
+
+export function googlePlaceTypeLabel(place: HealthPlace) {
+  const primaryType = place.googlePrimaryType ?? place.googlePlaceTypes?.find((type) => !["establishment", "point_of_interest", "health"].includes(type));
+  if (!primaryType) return "Type Google indisponible";
+  return GOOGLE_PLACE_TYPE_LABELS[primaryType] ?? primaryType.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 async function openDirections(item: { latitude?: number; longitude?: number; title: string }) {
   if (item.latitude === undefined || item.longitude === undefined) return;
   const destination = `${item.latitude},${item.longitude}`;
@@ -100,6 +119,7 @@ export function PlaceCard({ place, isExpanded, onToggle }: { place: HealthPlace;
   const accent = place.type === "pharmacy" ? palette.brand : palette.clinic;
   const ratingLabel = place.rating !== undefined ? `${place.rating.toFixed(1)}/5` : "Note inconnue";
   const phoneLabel = place.phone ?? "Téléphone indisponible";
+  const typeLabel = googlePlaceTypeLabel(place);
   const canNavigate = place.latitude !== undefined && place.longitude !== undefined;
 
   return (
@@ -134,7 +154,7 @@ export function PlaceCard({ place, isExpanded, onToggle }: { place: HealthPlace;
             </Pressable>
             <View style={[styles.compactInfoPill, styles.typeInfoPill, { backgroundColor: palette.cardMuted }]}> 
               <MaterialIcons name={place.type === "pharmacy" ? "local-pharmacy" : "local-hospital"} size={15} color={accent} />
-              <Text style={[styles.compactInfoText, { color: palette.text }]}>{entityLabel(place.type)}</Text>
+              <Text numberOfLines={1} style={[styles.compactInfoText, { color: palette.text }]}>{typeLabel}</Text>
             </View>
             <View style={[styles.compactInfoPill, { backgroundColor: palette.cardMuted }]}> 
               <MaterialIcons name="star" size={15} color={place.rating !== undefined ? "#F59E0B" : palette.muted} />
@@ -287,11 +307,11 @@ const styles = StyleSheet.create({
   pricePill: { minHeight: 30, borderRadius: 15, paddingHorizontal: 10, alignItems: "center", justifyContent: "center", flexShrink: 0 },
   medicineDetails: { marginTop: 2 },
   placeExpandableContent: { marginTop: 2 },
-  placeInfoRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 13 },
-  compactInfoPill: { minHeight: 34, borderRadius: 17, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5 },
-  typeInfoPill: { flexShrink: 0 },
-  phoneInfoPill: { flex: 1, justifyContent: "flex-start" },
-  compactInfoText: { fontSize: 12, lineHeight: 15, fontWeight: "900" },
+  placeInfoRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 9 },
+  compactInfoPill: { minHeight: 26, borderRadius: 13, paddingHorizontal: 6, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 3 },
+  typeInfoPill: { flexShrink: 1, maxWidth: 108 },
+  phoneInfoPill: { flex: 1, minWidth: 82, justifyContent: "flex-start" },
+  compactInfoText: { fontSize: 10, lineHeight: 12, fontWeight: "900" },
   priceText: { fontSize: 12, lineHeight: 15, fontWeight: "900" },
   cardActions: { flexDirection: "row", gap: 9, marginTop: 13 },
   secondaryButton: { flex: 1, minHeight: 43, borderRadius: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },

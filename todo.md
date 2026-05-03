@@ -340,3 +340,11 @@
 - [x] Ajouter ou adapter les tests de non-régression pour le comportement et l’affichage de la page Recherche.
 - [x] Valider TypeScript, Vitest et l’état Expo après correction de la page Recherche.
 - [x] Sauvegarder un checkpoint de livraison après amélioration de la page Recherche.
+
+- [x] Remplacer le type d’établissement local affiché dans les cartes de liste par le type d’établissement fourni par l’API Google Places.
+- [x] Adapter les modèles ou transformations client pour conserver le type Google Places utile aux cartes pharmacies et cliniques.
+- [x] Réduire la taille de police de la ligne type d’établissement, note et téléphone sur les cartes de liste.
+- [x] Réduire les espacements et marges de la ligne type d’établissement, note et téléphone afin que tous les éléments soient visibles sur mobile.
+- [x] Ajouter ou adapter les tests de non-régression pour le type Google Places et la ligne d’informations compacte.
+- [x] Valider TypeScript, Vitest et l’état Expo après correction des cartes de liste.
+- [x] Sauvegarder un checkpoint de livraison après correction du type Google Places et de la ligne compacte.

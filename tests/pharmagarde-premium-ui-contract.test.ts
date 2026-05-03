@@ -84,12 +84,13 @@ describe("cartes pharmacies et cliniques", () => {
     expect(placeCard).toContain("styles.placeInfoRow");
     expect(placeCard).toContain("ratingLabel");
     expect(placeCard).toContain("phoneLabel");
-    expect(placeCard).toContain("entityLabel(place.type)");
     expect(placeCard).toContain("local-pharmacy");
     expect(placeCard).toContain("local-hospital");
     expect(placeCard.indexOf("favorite-border")).toBeGreaterThan(placeCard.indexOf("{isExpanded ? ("));
-    expect(placeCard.indexOf("entityLabel(place.type)")).toBeGreaterThan(placeCard.indexOf("favorite-border"));
-    expect(placeCard.indexOf("entityLabel(place.type)")).toBeLessThan(placeCard.indexOf('name="star"'));
+    expect(placeCard).toContain("googlePlaceTypeLabel(place)");
+    expect(placeCard).toContain("const typeLabel = googlePlaceTypeLabel(place)");
+    expect(placeCard.indexOf("{typeLabel}")).toBeGreaterThan(placeCard.indexOf("favorite-border"));
+    expect(placeCard.indexOf("{typeLabel}")).toBeLessThan(placeCard.indexOf('name="star"'));
     expect(mapPlaceCard).toContain("styles.placeHeaderMeta");
     expect(mapPlaceCard.indexOf("styles.placeHeaderMeta")).toBeLessThan(mapPlaceCard.indexOf("{isExpanded ? ("));
     expect(mapPlaceCard).toContain("place.distanceLabel");
@@ -104,13 +105,17 @@ describe("cartes pharmacies et cliniques", () => {
     expect(mapPlaceCard).toContain("styles.placeInfoRow");
     expect(mapPlaceCard).toContain("ratingLabel");
     expect(mapPlaceCard).toContain("phoneLabel");
-    expect(mapPlaceCard).toContain('place.type === "pharmacy" ? "Pharmacie" : "Clinique"');
+    expect(mapPlaceCard).toContain("googlePlaceTypeLabel(place)");
+    expect(mapPlaceCard).toContain("const typeLabel = googlePlaceTypeLabel(place)");
     expect(mapPlaceCard).toContain("local-pharmacy");
     expect(mapPlaceCard).toContain("local-hospital");
-    expect(mapPlaceCard.indexOf('place.type === "pharmacy" ? "Pharmacie" : "Clinique"')).toBeGreaterThan(mapPlaceCard.indexOf("favorite-border"));
-    expect(mapPlaceCard.indexOf('place.type === "pharmacy" ? "Pharmacie" : "Clinique"')).toBeLessThan(mapPlaceCard.indexOf('name="star"'));
-    expect(appUi).toContain("placeHeaderMeta: { alignItems: \"flex-end\", gap: 6, flexShrink: 0 }");
-    expect(carte).toContain("placeHeaderMeta: { alignItems: \"flex-end\", gap: 6, maxWidth: 132 }");
+    expect(mapPlaceCard.indexOf("{typeLabel}")).toBeGreaterThan(mapPlaceCard.indexOf("favorite-border"));
+    expect(mapPlaceCard.indexOf("{typeLabel}")).toBeLessThan(mapPlaceCard.indexOf('name="star"'));
+    expect(appUi).toContain("googlePlaceTypeLabel(place: HealthPlace)");
+    expect(appUi).toContain("compactInfoText: { fontSize: 10, lineHeight: 12");
+    expect(appUi).toContain("typeInfoPill: { flexShrink: 1, maxWidth: 108 }");
+    expect(carte).toContain("compactInfoText: { fontSize: 10, lineHeight: 12");
+    expect(carte).toContain("typeInfoPill: { flexShrink: 1, maxWidth: 108 }");
   });
 
   it("contrôle l’ouverture depuis le parent pour garantir un accordion exclusif", () => {
