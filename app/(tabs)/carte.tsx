@@ -108,6 +108,10 @@ function MapPlaceCard({ place, active, favorite, isExpanded, onSelect, onToggle,
             >
               <MaterialIcons name={favorite ? "favorite" : "favorite-border"} size={23} color={favorite ? palette.danger : palette.muted} />
             </Pressable>
+            <View style={[styles.compactInfoPill, styles.typeInfoPill, { backgroundColor: palette.cardMuted }]}> 
+              <MaterialIcons name={place.type === "pharmacy" ? "local-pharmacy" : "local-hospital"} size={15} color={accent} />
+              <Text style={[styles.compactInfoText, { color: palette.text }]}>{place.type === "pharmacy" ? "Pharmacie" : "Clinique"}</Text>
+            </View>
             <View style={[styles.compactInfoPill, { backgroundColor: palette.cardMuted }]}> 
               <MaterialIcons name="star" size={15} color={place.rating !== undefined ? "#F59E0B" : palette.muted} />
               <Text style={[styles.compactInfoText, { color: palette.text }]}>{ratingLabel}</Text>
@@ -336,6 +340,7 @@ const styles = StyleSheet.create({
   placeExpandableContent: { marginTop: 2 },
   placeInfoRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12 },
   compactInfoPill: { minHeight: 34, borderRadius: 17, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5 },
+  typeInfoPill: { flexShrink: 0 },
   phoneInfoPill: { flex: 1, justifyContent: "flex-start" },
   compactInfoText: { fontSize: 12, lineHeight: 15, fontWeight: "900" },
   actionRow: { flexDirection: "row", gap: 9, marginTop: 12 },

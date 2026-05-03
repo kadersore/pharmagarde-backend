@@ -326,3 +326,9 @@
 - [x] Ajouter ou adapter les tests de non-régression pour le calcul local des distances et le fallback hors connexion.
 - [x] Valider TypeScript, Vitest et l’état Expo après correction de l’affichage des distances.
 - [x] Sauvegarder un checkpoint de livraison après correction des distances locales.
+
+- [x] Afficher le type d’établissement entre Favoris et Note sur les cartes de pharmacies.
+- [x] Afficher le type d’établissement entre Favoris et Note sur les cartes de cliniques.
+- [x] Ajouter ou adapter les tests de non-régression pour vérifier la présence et la position du type d’établissement.
+- [x] Valider TypeScript, Vitest et l’état Expo après ajout du type d’établissement dans les listes.
+- [x] Sauvegarder un checkpoint de livraison après ajout du type d’établissement dans les listes.

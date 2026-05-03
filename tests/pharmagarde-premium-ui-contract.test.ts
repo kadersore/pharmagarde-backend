@@ -84,7 +84,12 @@ describe("cartes pharmacies et cliniques", () => {
     expect(placeCard).toContain("styles.placeInfoRow");
     expect(placeCard).toContain("ratingLabel");
     expect(placeCard).toContain("phoneLabel");
+    expect(placeCard).toContain("entityLabel(place.type)");
+    expect(placeCard).toContain("local-pharmacy");
+    expect(placeCard).toContain("local-hospital");
     expect(placeCard.indexOf("favorite-border")).toBeGreaterThan(placeCard.indexOf("{isExpanded ? ("));
+    expect(placeCard.indexOf("entityLabel(place.type)")).toBeGreaterThan(placeCard.indexOf("favorite-border"));
+    expect(placeCard.indexOf("entityLabel(place.type)")).toBeLessThan(placeCard.indexOf('name="star"'));
     expect(mapPlaceCard).toContain("styles.placeHeaderMeta");
     expect(mapPlaceCard.indexOf("styles.placeHeaderMeta")).toBeLessThan(mapPlaceCard.indexOf("{isExpanded ? ("));
     expect(mapPlaceCard).toContain("place.distanceLabel");
@@ -99,6 +104,11 @@ describe("cartes pharmacies et cliniques", () => {
     expect(mapPlaceCard).toContain("styles.placeInfoRow");
     expect(mapPlaceCard).toContain("ratingLabel");
     expect(mapPlaceCard).toContain("phoneLabel");
+    expect(mapPlaceCard).toContain('place.type === "pharmacy" ? "Pharmacie" : "Clinique"');
+    expect(mapPlaceCard).toContain("local-pharmacy");
+    expect(mapPlaceCard).toContain("local-hospital");
+    expect(mapPlaceCard.indexOf('place.type === "pharmacy" ? "Pharmacie" : "Clinique"')).toBeGreaterThan(mapPlaceCard.indexOf("favorite-border"));
+    expect(mapPlaceCard.indexOf('place.type === "pharmacy" ? "Pharmacie" : "Clinique"')).toBeLessThan(mapPlaceCard.indexOf('name="star"'));
     expect(appUi).toContain("placeHeaderMeta: { alignItems: \"flex-end\", gap: 6, flexShrink: 0 }");
     expect(carte).toContain("placeHeaderMeta: { alignItems: \"flex-end\", gap: 6, maxWidth: 132 }");
   });
