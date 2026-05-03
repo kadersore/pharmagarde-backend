@@ -52,6 +52,11 @@ export async function fetchPremiumStatus() {
 }
 
 export async function initPremiumPayment(planId: PremiumPlanId) {
+  const tokenAvailable = await hasSessionToken();
+  if (!tokenAvailable) {
+    throw new Error("Connexion requise avant d’initialiser le paiement premium.");
+  }
+
   return apiCall<PaymentInitResponse>("/payment/init", {
     method: "POST",
     body: JSON.stringify({ planId }),

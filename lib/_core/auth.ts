@@ -8,9 +8,12 @@ export type User = {
   openId: string;
   name: string | null;
   email: string | null;
+  phone?: string | null;
   loginMethod: string | null;
   lastSignedIn: Date;
 };
+
+export const REMEMBER_ME_KEY = "pharmagarde:remember-me:v1";
 
 type SessionTokenListener = (token: string | null) => void;
 
@@ -70,6 +73,16 @@ async function hydrateSessionTokenFromStorage(): Promise<string | null> {
   try {
     console.log("[Auth] Hydrating session token...");
 
+    const rememberMe = await AsyncStorage.getItem(REMEMBER_ME_KEY);
+    if (rememberMe === "false") {
+      console.log("[Auth] Remember me disabled; clearing persisted session token");
+      await AsyncStorage.removeItem(SESSION_TOKEN_KEY);
+    await AsyncStorage.removeItem(REMEMBER_ME_KEY);
+      await removeSecureStoreToken();
+      cachedSessionToken = null;
+      return null;
+    }
+
     const asyncStorageToken = await AsyncStorage.getItem(SESSION_TOKEN_KEY);
     if (asyncStorageToken) {
       console.log("[Auth] Session token retrieved from AsyncStorage");
@@ -113,13 +126,16 @@ export async function hasSessionToken(): Promise<boolean> {
   return Boolean(await getSessionToken());
 }
 
-export async function setSessionToken(token: string): Promise<void> {
+export async function setSessionToken(token: string, options: { rememberMe?: boolean } = {}): Promise<void> {
   try {
     const normalizedToken = token.trim();
     if (!normalizedToken) throw new Error("Session token is required");
 
     console.log("[Auth] Setting session token...");
     cachedSessionToken = normalizedToken;
+    if (typeof options.rememberMe === "boolean") {
+      await AsyncStorage.setItem(REMEMBER_ME_KEY, String(options.rememberMe));
+    }
     await AsyncStorage.setItem(SESSION_TOKEN_KEY, normalizedToken);
     await setSecureStoreToken(normalizedToken);
     notifySessionTokenListeners(normalizedToken);
@@ -135,6 +151,7 @@ export async function removeSessionToken(): Promise<void> {
     console.log("[Auth] Removing session token...");
     cachedSessionToken = null;
     await AsyncStorage.removeItem(SESSION_TOKEN_KEY);
+    await AsyncStorage.removeItem(REMEMBER_ME_KEY);
     await removeSecureStoreToken();
     notifySessionTokenListeners(null);
     console.log("[Auth] Session token removed successfully");

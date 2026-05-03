@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users } from "../drizzle/schema";
 import { ENV } from "./_core/env";
@@ -35,7 +35,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     };
     const updateSet: Record<string, unknown> = {};
 
-    const textFields = ["name", "email", "loginMethod"] as const;
+    const textFields = ["name", "email", "phone", "passwordHash", "loginMethod"] as const;
     type TextField = (typeof textFields)[number];
 
     const assignNullable = (field: TextField) => {
@@ -91,4 +91,55 @@ export async function getUserByOpenId(openId: string) {
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
 
   return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserByPhone(phone: string) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get user by phone: database not available");
+    return undefined;
+  }
+
+  const result = await db.select().from(users).where(eq(users.phone, phone)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get user by email: database not available");
+    return undefined;
+  }
+
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserByPhoneOrEmail(identifier: string) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get user by phone/email: database not available");
+    return undefined;
+  }
+
+  const result = await db
+    .select()
+    .from(users)
+    .where(or(eq(users.phone, identifier), eq(users.email, identifier)))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createLocalAuthUser(user: InsertUser) {
+  if (!user.openId || !user.phone || !user.passwordHash) {
+    throw new Error("Local auth user requires openId, phone and passwordHash");
+  }
+
+  const db = await getDb();
+  if (!db) {
+    throw new Error("DATABASE_UNAVAILABLE");
+  }
+
+  await db.insert(users).values(user);
+  return getUserByOpenId(user.openId);
 }

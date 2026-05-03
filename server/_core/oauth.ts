@@ -1,8 +1,9 @@
 import { COOKIE_NAME, ONE_YEAR_MS } from "../../shared/const.js";
 import type { Express, Request, Response } from "express";
-import { getUserByOpenId, upsertUser } from "../db";
+import { createLocalAuthUser, getUserByEmail, getUserByOpenId, getUserByPhone, getUserByPhoneOrEmail, upsertUser } from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
+import { buildLocalOpenId, hashPassword, validateLoginPayload, validateRegisterPayload, verifyPassword } from "./local-auth";
 
 function getQueryParam(req: Request, key: string): string | undefined {
   const value = req.query[key];
@@ -56,12 +57,92 @@ function buildUserResponse(
     openId: user?.openId ?? null,
     name: user?.name ?? null,
     email: user?.email ?? null,
+    phone: (user as any)?.phone ?? null,
     loginMethod: user?.loginMethod ?? null,
     lastSignedIn: (user?.lastSignedIn ?? new Date()).toISOString(),
   };
 }
 
 export function registerOAuthRoutes(app: Express) {
+
+  const registerLocalAuthRoutes = (path: string) => {
+    app.post(`${path}/register`, async (req: Request, res: Response) => {
+      const validation = validateRegisterPayload(req.body);
+      if (!validation.ok) {
+        res.status(400).json({ error: "Validation échouée", errors: validation.errors });
+        return;
+      }
+
+      try {
+        const existingPhone = await getUserByPhone(validation.phone);
+        if (existingPhone) {
+          res.status(409).json({ error: "Ce téléphone est déjà utilisé.", field: "phone" });
+          return;
+        }
+
+        if (validation.email) {
+          const existingEmail = await getUserByEmail(validation.email);
+          if (existingEmail) {
+            res.status(409).json({ error: "Cet email est déjà utilisé.", field: "email" });
+            return;
+          }
+        }
+
+        const openId = buildLocalOpenId(validation.phone);
+        const user = await createLocalAuthUser({
+          openId,
+          phone: validation.phone,
+          email: validation.email,
+          passwordHash: hashPassword(validation.password),
+          loginMethod: "phone_password",
+          lastSignedIn: new Date(),
+        });
+
+        if (!user) {
+          res.status(500).json({ error: "Compte créé mais utilisateur introuvable." });
+          return;
+        }
+
+        const token = await sdk.createSessionToken(openId, { name: validation.phone, expiresInMs: ONE_YEAR_MS });
+        const cookieOptions = getSessionCookieOptions(req);
+        res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        res.status(201).json({ token, user: buildUserResponse(user) });
+      } catch (error) {
+        console.error("[Auth] register failed", error);
+        const message = error instanceof Error && error.message === "DATABASE_UNAVAILABLE" ? "Base de données indisponible." : "Impossible de créer le compte.";
+        res.status(error instanceof Error && error.message === "DATABASE_UNAVAILABLE" ? 503 : 500).json({ error: message });
+      }
+    });
+
+    app.post(`${path}/login`, async (req: Request, res: Response) => {
+      const validation = validateLoginPayload(req.body);
+      if (!validation.ok) {
+        res.status(400).json({ error: "Validation échouée", errors: validation.errors });
+        return;
+      }
+
+      try {
+        const user = await getUserByPhoneOrEmail(validation.identifier);
+        if (!user || !verifyPassword(validation.password, (user as any).passwordHash)) {
+          res.status(401).json({ error: "Téléphone/email ou mot de passe incorrect." });
+          return;
+        }
+
+        await upsertUser({ openId: user.openId, lastSignedIn: new Date() });
+        const refreshedUser = (await getUserByOpenId(user.openId)) ?? user;
+        const token = await sdk.createSessionToken(user.openId, { name: user.phone ?? user.email ?? user.openId, expiresInMs: ONE_YEAR_MS });
+        const cookieOptions = getSessionCookieOptions(req);
+        res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        res.json({ token, user: buildUserResponse(refreshedUser) });
+      } catch (error) {
+        console.error("[Auth] login failed", error);
+        res.status(500).json({ error: "Impossible de connecter cet utilisateur." });
+      }
+    });
+  };
+
+  registerLocalAuthRoutes("/auth");
+  registerLocalAuthRoutes("/api/auth");
   app.get("/api/oauth/callback", async (req: Request, res: Response) => {
     const code = getQueryParam(req, "code");
     const state = getQueryParam(req, "state");

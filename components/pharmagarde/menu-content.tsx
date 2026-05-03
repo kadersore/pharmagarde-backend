@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ScrollView, StyleSheet } from "react-native";
 
 import { DrawerActionRow, DrawerFooter, DrawerHero, DrawerSection, DrawerSelectRow, DrawerSelectionModal, DrawerSwitchRow } from "@/components/pharmagarde/drawer-ui";
+import { useAuth } from "@/hooks/use-auth";
 import { useColors } from "@/hooks/use-colors";
 import { usePharmaGarde } from "@/lib/pharmagarde/app-state";
 import { PHARMAGARDE_CITIES } from "@/lib/pharmagarde/city-utils";
@@ -50,6 +51,7 @@ export function MenuContent({ onClose }: MenuContentProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { preferences, updatePreference } = usePharmaGarde();
+  const { user, isAuthenticated, logout } = useAuth();
   const colors = useColors();
   const [selector, setSelector] = useState<SelectorKey | null>(null);
 
@@ -59,6 +61,12 @@ export function MenuContent({ onClose }: MenuContentProps) {
   };
 
   const closeSelector = () => setSelector(null);
+
+  const handleLogout = async () => {
+    await logout();
+    onClose();
+    router.replace("/(tabs)" as never);
+  };
 
   return (
     <>
@@ -102,6 +110,40 @@ export function MenuContent({ onClose }: MenuContentProps) {
               onPress={() => navigate(`/pharmagarde/info/${item.id}`)}
             />
           ))}
+        </DrawerSection>
+
+        <DrawerSection title="Compte">
+          {isAuthenticated ? (
+            <>
+              <DrawerActionRow
+                icon="verified-user"
+                title={user?.phone ?? user?.email ?? "Compte connecté"}
+                active={false}
+                onPress={() => undefined}
+              />
+              <DrawerActionRow
+                icon="logout"
+                title="Se déconnecter"
+                active={false}
+                onPress={handleLogout}
+              />
+            </>
+          ) : (
+            <>
+              <DrawerActionRow
+                icon="login"
+                title="Connexion"
+                active={pathname.includes("/auth/login")}
+                onPress={() => navigate("/auth/login")}
+              />
+              <DrawerActionRow
+                icon="person-add"
+                title="Inscription"
+                active={pathname.includes("/auth/register")}
+                onPress={() => navigate("/auth/register")}
+              />
+            </>
+          )}
         </DrawerSection>
 
         <DrawerSection title="Services">

@@ -3,12 +3,14 @@ import { router } from "expo-router";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { AppChrome, EmptyState, MedicineCard } from "@/components/pharmagarde/app-ui";
+import { useAuth } from "@/hooks/use-auth";
 import { usePharmaGarde } from "@/lib/pharmagarde/app-state";
 import { Medicine } from "@/lib/pharmagarde/types";
 
 const BRAND_GREEN = "#03C04A";
 
 export default function MedicinesScreen() {
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const { isPremium, medicines, premiumLoading } = usePharmaGarde();
 
   if (!isPremium) {
@@ -19,12 +21,12 @@ export default function MedicinesScreen() {
             <View style={styles.lockBadge}>
               <MaterialIcons name="lock" size={30} color="#FFFFFF" />
             </View>
-            <Text style={styles.paywallKicker}>Réservé Premium</Text>
-            <Text style={styles.paywallTitle}>Accès réservé aux abonnés</Text>
-            <Text style={styles.paywallDescription}>Le catalogue des médicaments essentiels est protégé afin de garantir un accès contrôlé côté serveur. Passez à PharmaGarde Plus pour consulter les médicaments, formes, catégories et prix indicatifs.</Text>
-            <Pressable accessibilityRole="button" onPress={() => router.push("/pharmagarde/abonnement")} style={({ pressed }) => [styles.subscribeButton, pressed && styles.pressed]}>
-              <MaterialIcons name="workspace-premium" size={20} color="#FFFFFF" />
-              <Text style={styles.subscribeButtonText}>{premiumLoading ? "Vérification…" : "S’abonner"}</Text>
+            <Text style={styles.paywallKicker}>{isAuthenticated ? "Réservé Premium" : "Connexion requise"}</Text>
+            <Text style={styles.paywallTitle}>{isAuthenticated ? "Accès réservé aux abonnés" : "Connectez-vous pour continuer"}</Text>
+            <Text style={styles.paywallDescription}>Le catalogue des médicaments essentiels est protégé afin de garantir un accès contrôlé côté serveur. {isAuthenticated ? "Passez à PharmaGarde Plus pour consulter les médicaments, formes, catégories et prix indicatifs." : "Un compte est nécessaire avant de souscrire ou de consulter cette fonctionnalité premium."}</Text>
+            <Pressable accessibilityRole="button" onPress={() => router.push(isAuthenticated ? "/pharmagarde/abonnement" : "/auth/login")} style={({ pressed }) => [styles.subscribeButton, pressed && styles.pressed]}>
+              <MaterialIcons name={isAuthenticated ? "workspace-premium" : "login"} size={20} color="#FFFFFF" />
+              <Text style={styles.subscribeButtonText}>{authLoading || premiumLoading ? "Vérification…" : isAuthenticated ? "S’abonner" : "Se connecter"}</Text>
             </Pressable>
             <Text style={styles.securityNote}>Les données médicaments restent aussi protégées par le backend pour éviter tout contournement côté application.</Text>
           </View>

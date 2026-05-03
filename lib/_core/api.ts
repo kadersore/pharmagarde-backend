@@ -1,6 +1,21 @@
 import { getApiBaseUrl } from "@/constants/oauth";
 import * as Auth from "./auth";
 
+export type AuthApiUser = {
+  id: number;
+  openId: string;
+  name: string | null;
+  email: string | null;
+  phone?: string | null;
+  loginMethod: string | null;
+  lastSignedIn: string;
+};
+
+export type AuthApiResponse = {
+  token: string;
+  user: AuthApiUser;
+};
+
 type ApiResponse<T> = {
   data?: T;
   error?: string;
@@ -104,6 +119,20 @@ export async function exchangeOAuthCode(
   };
 }
 
+export async function register(payload: { phone: string; email?: string | null; password: string; confirmPassword: string }): Promise<AuthApiResponse> {
+  return apiCall<AuthApiResponse>("/api/auth/register", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function login(payload: { identifier: string; password: string }): Promise<AuthApiResponse> {
+  return apiCall<AuthApiResponse>("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 // Logout
 export async function logout(): Promise<void> {
   await apiCall<void>("/api/auth/logout", {
@@ -117,6 +146,7 @@ export async function getMe(): Promise<{
   openId: string;
   name: string | null;
   email: string | null;
+  phone?: string | null;
   loginMethod: string | null;
   lastSignedIn: string;
 } | null> {

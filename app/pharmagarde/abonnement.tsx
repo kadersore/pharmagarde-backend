@@ -1,9 +1,11 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as WebBrowser from "expo-web-browser";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { AppChrome } from "@/components/pharmagarde/app-ui";
+import { useAuth } from "@/hooks/use-auth";
 import { usePharmaGarde } from "@/lib/pharmagarde/app-state";
 import { PREMIUM_PLANS, type PremiumPlanId } from "@/lib/pharmagarde/premium";
 
@@ -29,12 +31,20 @@ function formatSubscriptionEnd(value: string | null) {
 }
 
 export default function SubscriptionScreen() {
+  const router = useRouter();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const { initSubscription, isPremium, premiumLoading, refreshPremiumStatus, subscriptionEnd } = usePharmaGarde();
   const [selectedPlan, setSelectedPlan] = useState<PremiumPlanId | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const formattedEnd = formatSubscriptionEnd(subscriptionEnd);
 
   const handleSubscribe = async (planId: PremiumPlanId) => {
+    if (!isAuthenticated) {
+      setErrorMessage("Connectez-vous avant de souscrire à PharmaGarde Plus.");
+      router.push("/auth/login");
+      return;
+    }
+
     setSelectedPlan(planId);
     setErrorMessage(null);
     try {
@@ -88,9 +98,9 @@ export default function SubscriptionScreen() {
                   </View>
                   <Text style={styles.planPrice}>{formatAmount(plan.amount)}</Text>
                 </View>
-                <Pressable accessibilityRole="button" disabled={loading || selectedPlan !== null} onPress={() => handleSubscribe(plan.id)} style={({ pressed }) => [styles.button, (pressed || loading) && styles.pressed, selectedPlan !== null && !loading && styles.disabledButton]}>
-                  <MaterialIcons name="payments" size={19} color="#FFFFFF" />
-                  <Text style={styles.buttonText}>{loading ? "Ouverture Ligdi Cash…" : "Souscrire"}</Text>
+                <Pressable accessibilityRole="button" disabled={authLoading || loading || selectedPlan !== null} onPress={() => handleSubscribe(plan.id)} style={({ pressed }) => [styles.button, (pressed || loading) && styles.pressed, selectedPlan !== null && !loading && styles.disabledButton]}>
+                  <MaterialIcons name={isAuthenticated ? "payments" : "login"} size={19} color="#FFFFFF" />
+                  <Text style={styles.buttonText}>{authLoading ? "Vérification du compte…" : loading ? "Ouverture Ligdi Cash…" : isAuthenticated ? "Souscrire" : "Se connecter pour souscrire"}</Text>
                 </Pressable>
               </View>
             );

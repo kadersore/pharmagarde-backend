@@ -1,5 +1,6 @@
 import * as Api from "@/lib/_core/api";
 import * as Auth from "@/lib/_core/auth";
+import { normalizeEmail, normalizeIdentifier, normalizePhone } from "@/lib/pharmagarde/auth-validation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
 
@@ -26,14 +27,7 @@ export function useAuth(options?: UseAuthOptions) {
         console.log("[useAuth] API user response:", apiUser);
 
         if (apiUser) {
-          const userInfo: Auth.User = {
-            id: apiUser.id,
-            openId: apiUser.openId,
-            name: apiUser.name,
-            email: apiUser.email,
-            loginMethod: apiUser.loginMethod,
-            lastSignedIn: new Date(apiUser.lastSignedIn),
-          };
+          const userInfo = normalizeAuthUser(apiUser);
           setUser(userInfo);
           // Cache user info in localStorage for faster subsequent loads
           await Auth.setUserInfo(userInfo);
@@ -77,6 +71,52 @@ export function useAuth(options?: UseAuthOptions) {
     } finally {
       setLoading(false);
       console.log("[useAuth] fetchUser completed, loading:", false);
+    }
+  }, []);
+
+  const login = useCallback(async (payload: { identifier: string; password: string; rememberMe?: boolean }) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await Api.login({
+        identifier: normalizeIdentifier(payload.identifier),
+        password: payload.password.trim(),
+      });
+      const userInfo = normalizeAuthUser(result.user);
+      await Auth.setSessionToken(result.token, { rememberMe: payload.rememberMe ?? true });
+      await Auth.setUserInfo(userInfo);
+      setUser(userInfo);
+      return userInfo;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error("Connexion impossible");
+      setError(error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const register = useCallback(async (payload: { phone: string; email?: string; password: string; confirmPassword: string; rememberMe?: boolean }) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await Api.register({
+        phone: normalizePhone(payload.phone),
+        email: payload.email ? normalizeEmail(payload.email) : null,
+        password: payload.password.trim(),
+        confirmPassword: payload.confirmPassword.trim(),
+      });
+      const userInfo = normalizeAuthUser(result.user);
+      await Auth.setSessionToken(result.token, { rememberMe: payload.rememberMe ?? true });
+      await Auth.setUserInfo(userInfo);
+      setUser(userInfo);
+      return userInfo;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error("Inscription impossible");
+      setError(error);
+      throw error;
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -138,6 +178,20 @@ export function useAuth(options?: UseAuthOptions) {
     error,
     isAuthenticated,
     refresh: fetchUser,
+    login,
+    register,
     logout,
+  };
+}
+
+function normalizeAuthUser(user: Api.AuthApiUser): Auth.User {
+  return {
+    id: user.id,
+    openId: user.openId,
+    name: user.name,
+    email: user.email,
+    phone: user.phone ?? null,
+    loginMethod: user.loginMethod,
+    lastSignedIn: new Date(user.lastSignedIn || Date.now()),
   };
 }

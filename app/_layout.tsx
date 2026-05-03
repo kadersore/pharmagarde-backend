@@ -113,6 +113,9 @@ export default function RootLayout() {
               <Stack.Screen name="pharmagarde/abonnement" options={{ presentation: "modal" }} />
               <Stack.Screen name="pharmagarde/search" options={{ presentation: "modal" }} />
               <Stack.Screen name="pharmagarde/favoris" options={{ presentation: "modal" }} />
+              <Stack.Screen name="auth/login" options={{ presentation: "fullScreenModal" }} />
+              <Stack.Screen name="auth/register" options={{ presentation: "fullScreenModal" }} />
+              <Stack.Screen name="auth/loading" options={{ presentation: "fullScreenModal" }} />
               <Stack.Screen name="oauth/callback" />
             </Stack>
             <AppStatusBar />

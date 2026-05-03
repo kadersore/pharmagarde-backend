@@ -420,3 +420,18 @@
 - [x] Confirmer que le client tRPC ajoute `Authorization: Bearer TOKEN` sur chaque requête protégée.
 - [x] Ajouter ou adapter les tests pour prouver que le Bearer token est envoyé systématiquement.
 - [x] Sauvegarder un checkpoint de livraison après validation de la correction 401 tRPC.
+
+- [x] Créer les routes backend `POST /auth/register` et `POST /auth/login` avec réponses `{ token, user }`.
+- [x] Ajouter la validation serveur téléphone obligatoire, email optionnel valide, mot de passe ≥ 6 caractères et identifiant login obligatoire.
+- [x] Sécuriser les entrées auth côté serveur avec trim, normalisation téléphone/email et rejet des champs vides ou dangereux.
+- [x] Créer la page mobile Inscription avec téléphone, email optionnel, mot de passe, confirmation, erreurs claires, mot de passe masqué et bouton désactivé si invalide.
+- [x] Créer la page mobile Connexion avec téléphone ou email, mot de passe, erreur d’identifiants incorrects, chargement et bouton désactivé si invalide.
+- [x] Ajouter la gestion du token : stockage AsyncStorage, restauration automatique au lancement, suppression au logout et option « Se souvenir de moi ».
+- [x] Ajouter un écran de chargement au démarrage pendant l’auto-login.
+- [x] Ajouter un bouton « Se déconnecter » dans l’interface utilisateur appropriée.
+- [x] Garantir `Authorization: Bearer TOKEN` dans les requêtes tRPC et REST protégées après login classique.
+- [x] Protéger les routes premium et rediriger vers Connexion si l’utilisateur n’est pas connecté.
+- [x] Vérifier avant paiement Ligdi Cash que l’utilisateur est connecté, sinon rediriger vers Connexion.
+- [x] Ajouter les tests Vitest couvrant validation auth, register/login, stockage token, headers Authorization, routes premium et paiement.
+- [x] Exécuter TypeScript et Vitest pour vérifier que les fonctionnalités actuelles ne sont pas cassées.
+- [ ] Sauvegarder un checkpoint après validation complète du système d’authentification.
