@@ -49,9 +49,25 @@ describe("abonnement premium backend", () => {
     const schema = read("drizzle/schema.ts");
     expect(schema).toContain("subscriptionEnd: timestamp(\"subscriptionEnd\")");
     expect(schema).toContain("export const transactions = mysqlTable(\"transactions\"");
+    expect(schema).toContain("userId: int(\"userId\")");
+    expect(schema).toContain("providerTransactionId: varchar(\"providerTransactionId\"");
+    expect(schema).toContain("planId: varchar(\"planId\"");
     expect(schema).toContain("provider: varchar(\"provider\"");
     expect(schema).toContain("merchantReference: varchar(\"merchantReference\"");
     expect(schema).toContain("status: mysqlEnum(\"status\", [\"pending\", \"success\", \"failed\", \"cancelled\"])");
+    expect(schema).not.toContain("userld");
+  });
+
+  it("migre transactions avec les mêmes noms de colonnes camelCase que le code d’insertion", () => {
+    const migration = read("drizzle/0003_last_nightcrawler.sql");
+    expect(migration).toContain("CREATE TABLE IF NOT EXISTS `transactions`");
+    expect(migration).toContain("`userId` int NOT NULL");
+    expect(migration).toContain("`planId` varchar(32) NOT NULL");
+    expect(migration).toContain("`providerTransactionId` varchar(128)");
+    expect(migration).not.toContain("`userld`");
+    expect(migration).not.toContain("ADD `phone`");
+    expect(migration).not.toContain("ADD `passwordHash`");
+    expect(migration).not.toContain("ADD `subscriptionEnd`");
   });
 
   it("valide /payment/init avec le header Authorization Bearer avant de refuser l’abonnement", () => {

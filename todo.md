@@ -463,3 +463,11 @@
 - [x] Autoriser l’initialisation d’abonnement Premium lorsque le token est valide.
 - [x] Ajouter ou adapter les tests de non-régression pour le header Authorization et la route Premium protégée.
 - [x] Valider TypeScript, Vitest, état serveur, checkpoint et push GitHub vers `kadersore/pharmagarde-backend`.
+
+- [x] Corriger l’erreur SQL lors de l’insertion dans la table `transactions`.
+- [x] Vérifier le schéma réel de la table `transactions` et le schéma Drizzle correspondant.
+- [x] Aligner exactement les noms de colonnes `userId`, `planId` et `providerTransactionId` entre Drizzle, backend et base de données.
+- [x] Mettre à jour le schéma Drizzle et le code d’insertion des transactions si nécessaire.
+- [x] Exécuter `pnpm db:push` après correction du schéma.
+- [x] Ajouter ou adapter un test de non-régression confirmant que l’insertion transaction utilise les bons noms de colonnes.
+- [x] Valider TypeScript, Vitest, état serveur, checkpoint et push GitHub vers `kadersore/pharmagarde-backend`.
