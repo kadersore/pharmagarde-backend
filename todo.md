@@ -419,4 +419,4 @@
 - [x] Confirmer que le token est récupéré après login et stocké dans AsyncStorage.
 - [x] Confirmer que le client tRPC ajoute `Authorization: Bearer TOKEN` sur chaque requête protégée.
 - [x] Ajouter ou adapter les tests pour prouver que le Bearer token est envoyé systématiquement.
-- [ ] Sauvegarder un checkpoint de livraison après validation de la correction 401 tRPC.
+- [x] Sauvegarder un checkpoint de livraison après validation de la correction 401 tRPC.
