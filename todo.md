@@ -364,3 +364,13 @@
 - [x] Sauvegarder un checkpoint de livraison après implémentation de la collecte Google Places enrichie.
 
 - [x] Synchroniser les 10 commits locaux manquants vers GitHub (`kadersore/Pharmagarde`) et vérifier que `github/main` pointe sur `816e55fa`.
+
+- [x] Corriger la règle de synchronisation GitHub : utiliser `kadersore/pharmagarde-backend` comme dépôt de référence pour le backend PharmaGarde, et ne plus traiter `kadersore/Pharmagarde` comme dépôt backend.
+- [x] Vérifier l’état du dépôt local backend et son alignement avec `https://github.com/kadersore/pharmagarde-backend` avant toute confirmation future.
+
+- [x] Corriger la réinitialisation automatique de la ville après sélection manuelle en donnant priorité au choix utilisateur.
+- [x] Ajouter un état global `selectedCity` et `isManualCitySelection` pour distinguer ville choisie et ville géolocalisée.
+- [x] Persister `selectedCity` et le mode manuel dans AsyncStorage puis les restaurer au démarrage.
+- [x] Empêcher la géolocalisation d’écraser la ville lorsque `isManualCitySelection` vaut `true`.
+- [x] Ajouter l’action optionnelle « Utiliser ma position actuelle » pour repasser en mode géolocalisation.
+- [x] Vérifier que le changement manuel de ville reste stable après navigation, rechargement et redémarrage de l’application.

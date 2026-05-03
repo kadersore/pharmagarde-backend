@@ -11,7 +11,7 @@ const BRAND_GREEN = "#03C04A";
 
 export default function CitySelectionScreen() {
   const router = useRouter();
-  const { preferences, updatePreference } = usePharmaGarde();
+  const { preferences, updatePreference, requestLocation, refreshingLocation, isManualCitySelection } = usePharmaGarde();
 
   const selectCity = async (city: string) => {
     await updatePreference("city", city);
@@ -23,6 +23,17 @@ export default function CitySelectionScreen() {
       <View style={styles.content}>
         <Text style={styles.title}>Changer de ville</Text>
         <Text style={styles.description}>Choisissez la ville qui servira de référence pour la carte, les recherches et les suggestions locales.</Text>
+        <Pressable
+          accessibilityRole="button"
+          disabled={refreshingLocation}
+          android_ripple={{ color: "rgba(3,192,74,0.12)", borderless: false }}
+          style={({ pressed }) => [styles.currentLocationButton, pressed && styles.pressed, refreshingLocation && styles.disabledButton]}
+          onPress={requestLocation}
+        >
+          <MaterialIcons name="my-location" size={20} color={BRAND_GREEN} />
+          <Text style={styles.currentLocationText}>{refreshingLocation ? "Recherche de la position…" : "Utiliser ma position actuelle"}</Text>
+          {!isManualCitySelection ? <MaterialIcons name="check-circle" size={20} color={BRAND_GREEN} /> : null}
+        </Pressable>
         <FlatList
           data={PHARMAGARDE_CITIES}
           keyExtractor={(item) => item}
@@ -56,6 +67,9 @@ const styles = StyleSheet.create({
   title: { color: "#102016", fontSize: 25, lineHeight: 32, fontWeight: "900", marginHorizontal: 16 },
   description: { color: "#667085", fontSize: 14, lineHeight: 21, marginHorizontal: 16, marginTop: 6, marginBottom: 14 },
   list: { paddingHorizontal: 16, paddingBottom: 28 },
+  currentLocationButton: { minHeight: 54, borderRadius: 14, borderWidth: 1, borderColor: "#BFEBD0", backgroundColor: "#F7FFF9", paddingHorizontal: 14, marginHorizontal: 16, marginBottom: 14, flexDirection: "row", alignItems: "center", gap: 10 },
+  currentLocationText: { flex: 1, color: "#102016", fontSize: 15, lineHeight: 21, fontWeight: "900" },
+  disabledButton: { opacity: 0.58 },
   cityRow: { minHeight: 66, borderRadius: 12, borderWidth: 1, borderColor: "#D6EBDD", backgroundColor: "#FFFFFF", paddingHorizontal: 14, marginBottom: 10, flexDirection: "row", alignItems: "center", gap: 12, shadowColor: "#092A13", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
   selectedRow: { backgroundColor: "#F0FFF5", borderColor: BRAND_GREEN },
   pressed: { opacity: 0.78, transform: [{ scale: 0.995 }] },

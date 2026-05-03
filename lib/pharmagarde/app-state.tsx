@@ -14,6 +14,8 @@ import { AppPreferences, CombinedSearchItem, Coordinates, FavoriteItem, HealthPl
 const FAVORITES_KEY = "pharmagarde:favorites:v1";
 const API_URL_KEY = "pharmagarde:api-url:v1";
 const PREFERENCES_KEY = "pharmagarde:preferences:v1";
+const SELECTED_CITY_KEY = "pharmagarde:selected-city:v1";
+const MANUAL_CITY_SELECTION_KEY = "pharmagarde:is-manual-city-selection:v1";
 const INITIAL_API_URL = getDefaultApiBaseUrl();
 
 const DEFAULT_PREFERENCES: AppPreferences = {
@@ -47,7 +49,10 @@ type PharmaGardeContextValue = {
   searchQuery: string;
   setSearchQuery: (value: string) => void;
   preferences: AppPreferences;
+  selectedCity: string;
+  isManualCitySelection: boolean;
   updatePreference: <Key extends keyof AppPreferences>(key: Key, value: AppPreferences[Key]) => Promise<void>;
+  selectCityManually: (city: string) => Promise<void>;
   requestLocation: () => Promise<void>;
   refreshData: () => Promise<void>;
   toggleFavorite: (item: FavoriteItem) => Promise<void>;
@@ -135,17 +140,24 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
   const [refreshingLocation, setRefreshingLocation] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [preferences, setPreferences] = useState<AppPreferences>(DEFAULT_PREFERENCES);
+  const [selectedCity, setSelectedCity] = useState(DEFAULT_PREFERENCES.city);
+  const [isManualCitySelection, setIsManualCitySelection] = useState(false);
+  const [hasHydratedCitySelection, setHasHydratedCitySelection] = useState(false);
   const lastAutoCityRef = useRef<string | undefined>(undefined);
+  const isManualCitySelectionRef = useRef(false);
+  const hasRequestedInitialLocationRef = useRef(false);
 
   const isApiConfigured = apiBaseUrl.length > 0;
 
   useEffect(() => {
     let mounted = true;
     async function hydrate() {
-      const [storedApiUrl, storedFavorites, storedPreferences] = await Promise.all([
+      const [storedApiUrl, storedFavorites, storedPreferences, storedSelectedCity, storedManualCitySelection] = await Promise.all([
         AsyncStorage.getItem(API_URL_KEY),
         AsyncStorage.getItem(FAVORITES_KEY),
         AsyncStorage.getItem(PREFERENCES_KEY),
+        AsyncStorage.getItem(SELECTED_CITY_KEY),
+        AsyncStorage.getItem(MANUAL_CITY_SELECTION_KEY),
       ]);
       if (!mounted) return;
       if (storedApiUrl) setApiBaseUrl(normalizeBaseUrl(storedApiUrl));
@@ -157,14 +169,23 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
           setFavorites([]);
         }
       }
+      let hydratedPreferences = DEFAULT_PREFERENCES;
       if (storedPreferences) {
         try {
           const parsed = JSON.parse(storedPreferences) as Partial<AppPreferences>;
-          setPreferences(normalizePreferences(parsed));
+          hydratedPreferences = normalizePreferences(parsed);
         } catch {
-          setPreferences(DEFAULT_PREFERENCES);
+          hydratedPreferences = DEFAULT_PREFERENCES;
         }
       }
+
+      const hydratedSelectedCity = getSafeSelectedCity(storedSelectedCity ?? hydratedPreferences.city);
+      const hydratedManualSelection = storedManualCitySelection === "true" || (storedManualCitySelection === null && Boolean(storedSelectedCity));
+      isManualCitySelectionRef.current = hydratedManualSelection;
+      setSelectedCity(hydratedSelectedCity);
+      setIsManualCitySelection(hydratedManualSelection);
+      setPreferences({ ...hydratedPreferences, city: hydratedSelectedCity });
+      setHasHydratedCitySelection(true);
     }
     hydrate();
     return () => {
@@ -180,7 +201,24 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
     });
   }, []);
 
-  const updateCityFromCoordinates = useCallback(async (coordinates: Coordinates, source: "manual" | "watch" | "fallback" = "manual") => {
+  const persistCitySelectionState = useCallback(async (city: string, manual: boolean) => {
+    const normalizedCity = getSafeSelectedCity(city);
+    isManualCitySelectionRef.current = manual;
+    setSelectedCity(normalizedCity);
+    setIsManualCitySelection(manual);
+    persistNextPreferences((current) => current.city === normalizedCity ? current : { ...current, city: normalizedCity });
+    await Promise.all([
+      AsyncStorage.setItem(SELECTED_CITY_KEY, normalizedCity),
+      AsyncStorage.setItem(MANUAL_CITY_SELECTION_KEY, manual ? "true" : "false"),
+    ]);
+  }, [persistNextPreferences]);
+
+  const updateCityFromCoordinates = useCallback(async (coordinates: Coordinates, source: "auto" | "current" | "watch" | "fallback" = "auto") => {
+    if (isManualCitySelectionRef.current && source !== "current") {
+      setLocationMessage(`Ville sélectionnée manuellement : ${selectedCity}. La géolocalisation ne la remplace pas.`);
+      return;
+    }
+
     const fallbackCity = inferNearestKnownCity(coordinates);
     let detectedCity = fallbackCity;
 
@@ -196,21 +234,28 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
     if (source === "watch" && lastAutoCityRef.current === normalizedCity) return;
     lastAutoCityRef.current = normalizedCity;
 
-    persistNextPreferences((current) => current.city === normalizedCity ? current : { ...current, city: normalizedCity });
+    await persistCitySelectionState(normalizedCity, false);
     setLocationMessage(source === "fallback" ? `Position de référence utilisée pour ${normalizedCity}.` : `Position détectée : affichage des lieux de ${normalizedCity}.`);
-  }, [persistNextPreferences]);
+  }, [persistCitySelectionState, selectedCity]);
 
-  const requestLocation = useCallback(async () => {
+  const detectLocation = useCallback(async (mode: "auto" | "current") => {
     setRefreshingLocation(true);
     setLocationMessage(undefined);
 
     const useDefaultLocation = async (reason: "denied" | "unavailable" | "unsupported") => {
-      const fallback = getDefaultLocationFallback(preferences.city, reason);
+      const fallback = getDefaultLocationFallback(selectedCity, reason);
       setUserLocation(fallback.location);
-      setLocationMessage(fallback.message);
+      if (!isManualCitySelectionRef.current && mode === "auto") {
+        await persistCitySelectionState(selectedCity, false);
+      }
+      setLocationMessage(isManualCitySelectionRef.current ? `Ville sélectionnée manuellement : ${selectedCity}. ${fallback.message}` : fallback.message);
     };
 
     try {
+      if (mode === "auto" && isManualCitySelectionRef.current) {
+        setLocationMessage(`Ville sélectionnée manuellement : ${selectedCity}. La géolocalisation ne la remplace pas.`);
+        return;
+      }
       if (Platform.OS === "web" && typeof navigator !== "undefined" && !navigator.geolocation) {
         await useDefaultLocation("unsupported");
         return;
@@ -227,14 +272,23 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
       }
       const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const coordinates = { latitude: current.coords.latitude, longitude: current.coords.longitude };
+      if (mode === "current") {
+        isManualCitySelectionRef.current = false;
+        setIsManualCitySelection(false);
+        await AsyncStorage.setItem(MANUAL_CITY_SELECTION_KEY, "false");
+      }
       setUserLocation(coordinates);
-      await updateCityFromCoordinates(coordinates, "manual");
+      await updateCityFromCoordinates(coordinates, mode === "current" ? "current" : "auto");
     } catch {
       await useDefaultLocation("unavailable");
     } finally {
       setRefreshingLocation(false);
     }
-  }, [preferences.city, updateCityFromCoordinates]);
+  }, [persistCitySelectionState, selectedCity, updateCityFromCoordinates]);
+
+  const requestLocation = useCallback(async () => {
+    await detectLocation("current");
+  }, [detectLocation]);
 
   const refreshData = useCallback(async () => {
     if (!isApiConfigured) {
@@ -250,18 +304,18 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
 
     setLoading(true);
     const nextErrors: DataErrors = {};
-    const selectedCity = getSafeSelectedCity(preferences.city);
-    const referenceLocation = userLocation ?? getDefaultLocationFallback(selectedCity).location;
-    console.info("[PharmaGarde Frontend] Ville envoyée aux APIs", { selectedCity, pharmaciesEndpoint: `/pharmacies?city=${encodeURIComponent(selectedCity)}`, healthcareEndpoint: `/healthcare?city=${encodeURIComponent(selectedCity)}` });
+    const activeCity = getSafeSelectedCity(selectedCity);
+    const referenceLocation = isManualCitySelection ? getDefaultLocationFallback(activeCity).location : userLocation ?? getDefaultLocationFallback(activeCity).location;
+    console.info("[PharmaGarde Frontend] Ville envoyée aux APIs", { selectedCity: activeCity, isManualCitySelection, pharmaciesEndpoint: `/pharmacies?city=${encodeURIComponent(activeCity)}`, healthcareEndpoint: `/healthcare?city=${encodeURIComponent(activeCity)}` });
     const [pharmacyResult, clinicResult, medicineResult] = await Promise.allSettled([
-      fetchPharmacies(apiBaseUrl, referenceLocation, selectedCity),
-      fetchClinics(apiBaseUrl, referenceLocation, selectedCity),
+      fetchPharmacies(apiBaseUrl, referenceLocation, activeCity),
+      fetchClinics(apiBaseUrl, referenceLocation, activeCity),
       fetchMedicines(apiBaseUrl),
     ]);
 
     if (pharmacyResult.status === "fulfilled") {
-      const nextPharmacies = sortPlacesByOpenThenDistance(withLocalDistances(filterPlacesByCity(pharmacyResult.value, selectedCity), referenceLocation));
-      console.info("[PharmaGarde Frontend] Réponse pharmacies reçue", { selectedCity, receivedCount: pharmacyResult.value.length, displayedCount: nextPharmacies.length, pharmacies: nextPharmacies });
+      const nextPharmacies = sortPlacesByOpenThenDistance(withLocalDistances(filterPlacesByCity(pharmacyResult.value, activeCity), referenceLocation));
+      console.info("[PharmaGarde Frontend] Réponse pharmacies reçue", { selectedCity: activeCity, receivedCount: pharmacyResult.value.length, displayedCount: nextPharmacies.length, pharmacies: nextPharmacies });
       setPharmacies(nextPharmacies);
     } else {
       setPharmacies([]);
@@ -269,8 +323,8 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
     }
 
     if (clinicResult.status === "fulfilled") {
-      const nextClinics = sortPlacesByOpenThenDistance(withLocalDistances(filterPlacesByCity(clinicResult.value, selectedCity), referenceLocation));
-      console.info("[PharmaGarde Frontend] Réponse healthcare reçue", { selectedCity, receivedCount: clinicResult.value.length, displayedCount: nextClinics.length });
+      const nextClinics = sortPlacesByOpenThenDistance(withLocalDistances(filterPlacesByCity(clinicResult.value, activeCity), referenceLocation));
+      console.info("[PharmaGarde Frontend] Réponse healthcare reçue", { selectedCity: activeCity, receivedCount: clinicResult.value.length, displayedCount: nextClinics.length });
       setClinics(nextClinics);
     } else {
       setClinics([]);
@@ -285,11 +339,14 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
 
     setErrors(nextErrors);
     setLoading(false);
-  }, [apiBaseUrl, isApiConfigured, preferences.city, userLocation]);
+  }, [apiBaseUrl, isApiConfigured, isManualCitySelection, selectedCity, userLocation]);
 
   useEffect(() => {
-    requestLocation();
-  }, [requestLocation]);
+    if (hasHydratedCitySelection && !hasRequestedInitialLocationRef.current && !isManualCitySelectionRef.current) {
+      hasRequestedInitialLocationRef.current = true;
+      detectLocation("auto");
+    }
+  }, [detectLocation, hasHydratedCitySelection]);
 
   useEffect(() => {
     let mounted = true;
@@ -307,7 +364,9 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
         (position) => {
           const coordinates = { latitude: position.coords.latitude, longitude: position.coords.longitude };
           setUserLocation(coordinates);
-          updateCityFromCoordinates(coordinates, "watch");
+          if (!isManualCitySelectionRef.current) {
+            updateCityFromCoordinates(coordinates, "watch");
+          }
         },
       );
     }
@@ -333,12 +392,20 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
     await AsyncStorage.setItem(API_URL_KEY, next);
   }, []);
 
+  const selectCityManually = useCallback(async (city: string) => {
+    const normalizedCity = getSafeSelectedCity(city);
+    lastAutoCityRef.current = undefined;
+    await persistCitySelectionState(normalizedCity, true);
+    setLocationMessage(`Ville sélectionnée manuellement : ${normalizedCity}.`);
+  }, [persistCitySelectionState]);
+
   const updatePreference = useCallback(async <Key extends keyof AppPreferences>(key: Key, value: AppPreferences[Key]) => {
-    persistNextPreferences((current) => {
-      const nextValue = key === "city" && typeof value === "string" ? getSafeSelectedCity(value) : value;
-      return { ...current, [key]: nextValue };
-    });
-  }, [persistNextPreferences]);
+    if (key === "city" && typeof value === "string") {
+      await selectCityManually(value);
+      return;
+    }
+    persistNextPreferences((current) => ({ ...current, [key]: value }));
+  }, [persistNextPreferences, selectCityManually]);
 
   const toggleFavorite = useCallback(async (item: FavoriteItem) => {
     const key = favoriteKey(item.entityType, item.id);
@@ -383,12 +450,15 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
     searchQuery,
     setSearchQuery,
     preferences,
+    selectedCity,
+    isManualCitySelection,
     updatePreference,
+    selectCityManually,
     requestLocation,
     refreshData,
     toggleFavorite,
     searchResults,
-  }), [apiBaseUrl, clinics, errors, favoriteKeys, favorites, isApiConfigured, loading, locationMessage, medicines, pharmacies, preferences, refreshingLocation, requestLocation, refreshData, searchQuery, searchResults, toggleFavorite, updateApiBaseUrl, updatePreference, userLocation]);
+  }), [apiBaseUrl, clinics, errors, favoriteKeys, favorites, isApiConfigured, isManualCitySelection, loading, locationMessage, medicines, pharmacies, preferences, refreshingLocation, requestLocation, refreshData, searchQuery, searchResults, selectedCity, selectCityManually, toggleFavorite, updateApiBaseUrl, updatePreference, userLocation]);
 
   return <PharmaGardeContext.Provider value={value}>{children}</PharmaGardeContext.Provider>;
 }

@@ -146,7 +146,7 @@ describe("cartes pharmacies et cliniques", () => {
     expect(appState).toContain("withLocalDistance");
     expect(appState).toContain("distanceKm(origin");
     expect(appState).toContain("distanceLabel: `${roundedDistanceKm.toFixed(1)} km`");
-    expect(appState).toContain("getDefaultLocationFallback(selectedCity).location");
+    expect(appState).toContain("getDefaultLocationFallback(activeCity).location");
     expect(appState).toContain("useDefaultLocation(\"denied\")");
     expect(locationPolicy).toContain("getDefaultLocationFallback(cityName");
     expect(locationPolicy).toContain("Fallback par ville");
