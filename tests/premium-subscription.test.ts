@@ -40,6 +40,7 @@ describe("abonnement premium backend", () => {
     const routers = read("server/routers.ts");
     expect(entry).toContain('app.post("/payment/init", initPremiumPayment)');
     expect(entry).toContain('app.get("/pharmagarde/abonnement", handlePremiumPaymentReturn)');
+    expect(entry).toContain('app.post("/payment/callback", handleLigdiCashWebhook)');
     expect(entry).toContain('app.post("/payment/webhook", handleLigdiCashWebhook)');
     expect(routers).toContain("premium: router");
     expect(routers).toContain("status: protectedProcedure");
@@ -73,7 +74,7 @@ describe("abonnement premium backend", () => {
 
   it("valide /payment/init avec le header Authorization Bearer avant de refuser l’abonnement", () => {
     const premium = read("server/premium.ts");
-    expect(premium).toContain("req.headers.authorization");
+    expect(premium).toContain("req.headers?.authorization");
     expect(premium).toContain("extractBearerToken(req)");
     expect(premium).toContain("sdk.authenticateRequest(req)");
     expect(premium).toContain("[PremiumAuth] Token reçu sur route protégée");
@@ -89,5 +90,36 @@ describe("abonnement premium backend", () => {
     expect(premium).toContain("[PremiumPaymentReturn] Retour paiement reçu");
     expect(premium).toContain("PHARMAGARDE_PAYMENT_RETURN_DEEP_LINK");
     expect(premium).toContain("Retour de paiement reçu");
+  });
+
+  it("supprime le mode mock et exige les variables Ligdi Cash réelles", () => {
+    const premium = read("server/premium.ts");
+    expect(premium).toContain("process.env.LIGDI_BASE_URL");
+    expect(premium).toContain("process.env.LIGDI_API_TOKEN");
+    expect(premium).toContain("Configuration Ligdi Cash incomplète");
+    expect(premium).not.toContain("mode: \"mock\"");
+    expect(premium).not.toContain("ligdicash-mock");
+    expect(premium).not.toContain("LIGDICASH_AUTH_TOKEN");
+    expect(premium).not.toContain("LIGDICASH_API_URL");
+  });
+
+  it("crée une facture Ligdi Cash réelle avec callback_url et return_url", () => {
+    const premium = read("server/premium.ts");
+    expect(premium).toContain("/checkout-invoice/create");
+    expect(premium).toContain("callback_url: input.callbackUrl");
+    expect(premium).toContain("return_url: input.returnUrl");
+    expect(premium).toContain("custom_data: { reference: input.reference, transaction_id: input.reference }");
+    expect(premium).toContain("const callbackUrl = `${callbackBaseUrl}/payment/callback`");
+  });
+
+  it("vérifie le statut auprès de Ligdi Cash avant toute activation d’abonnement", () => {
+    const premium = read("server/premium.ts");
+    expect(premium).toContain("async function verifyLigdiCashPayment");
+    expect(premium).toContain("/checkout-invoice/confirm/");
+    expect(premium).toContain("invoiceToken=${encodeURIComponent(input.invoiceToken)}");
+    expect(premium).toContain("const verification = await verifyLigdiCashPayment");
+    expect(premium).toContain('const status: TransactionStatus = verification.confirmed ? "success"');
+    expect(premium).toContain('if (status === "success" && transaction.status !== "success")');
+    expect(premium).not.toContain("isSuccessfulLigdiCashStatus(payload)");
   });
 });

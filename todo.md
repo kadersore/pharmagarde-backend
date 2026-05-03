@@ -478,3 +478,15 @@
 - [x] Rediriger le retour paiement vers un deep link mobile valide ou afficher une page de succès fallback.
 - [x] Ajouter une non-régression garantissant qu’aucune URL de retour paiement ne pointe vers une route inexistante.
 - [x] Valider TypeScript, Vitest, état serveur, checkpoint et push GitHub vers `kadersore/pharmagarde-backend`.
+
+## Paiement réel Ligdi Cash
+
+- [x] Supprimer le mode mock du flux de paiement Premium.
+- [x] Utiliser `LIGDI_API_TOKEN` et `LIGDI_BASE_URL` pour les appels serveur Ligdi Cash.
+- [x] Créer le paiement réel via l’API Ligdi Cash avec `callback_url` et `return_url`.
+- [x] Vérifier côté serveur le statut du paiement auprès de Ligdi Cash avant activation.
+- [x] Activer l’abonnement uniquement si Ligdi Cash confirme un paiement réussi.
+- [x] Ne rien activer et journaliser proprement en cas d’échec, d’annulation ou de statut non confirmé.
+- [x] Adapter les tests Vitest pour mocker l’API Ligdi Cash externe sans réintroduire de paiement mock applicatif.
+- [x] Valider TypeScript, Vitest, l’état serveur, puis pousser vers `kadersore/pharmagarde-backend`.
+

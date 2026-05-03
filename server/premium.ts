@@ -20,14 +20,29 @@ const paymentInitSchema = z.object({
 });
 
 const webhookSchema = z.object({
-  token: z.string().optional(),
+  token: z.union([z.string(), z.number()]).optional(),
   transaction_id: z.union([z.string(), z.number()]).optional(),
   transactionId: z.union([z.string(), z.number()]).optional(),
-  invoice: z.object({ token: z.string().optional(), status: z.string().optional() }).optional(),
-  status: z.string().optional(),
-  response_code: z.string().optional(),
+  reference: z.union([z.string(), z.number()]).optional(),
+  merchantReference: z.union([z.string(), z.number()]).optional(),
+  invoice: z.object({
+    token: z.union([z.string(), z.number()]).optional(),
+    status: z.union([z.string(), z.number()]).optional(),
+    response_code: z.union([z.string(), z.number()]).optional(),
+    amount: z.union([z.string(), z.number()]).optional(),
+  }).passthrough().optional(),
+  custom_data: z.object({
+    reference: z.union([z.string(), z.number()]).optional(),
+    transaction_id: z.union([z.string(), z.number()]).optional(),
+  }).passthrough().optional(),
+  status: z.union([z.string(), z.number()]).optional(),
+  response_code: z.union([z.string(), z.number()]).optional(),
   amount: z.union([z.string(), z.number()]).optional(),
 }).passthrough();
+
+type LigdiCashWebhookPayload = z.infer<typeof webhookSchema>;
+type LigdiCashRecord = Record<string, unknown>;
+type TransactionStatus = "pending" | "success" | "failed" | "cancelled";
 
 type PremiumStatus = {
   isPremium: boolean;
@@ -57,26 +72,119 @@ export function calculateSubscriptionEnd(currentEnd: Date | string | null | unde
   return new Date(startsAt.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
 }
 
-function extractReference(payload: z.infer<typeof webhookSchema>) {
-  return payload.token ?? payload.invoice?.token ?? undefined;
+function stringValue(value: unknown): string | undefined {
+  if (typeof value === "string") return value.trim() || undefined;
+  if (typeof value === "number") return String(value);
+  return undefined;
 }
 
-function extractProviderTransactionId(payload: z.infer<typeof webhookSchema>) {
-  const value = payload.transaction_id ?? payload.transactionId;
-  return value === undefined ? undefined : String(value);
+function numberValue(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
 }
 
-function isSuccessfulLigdiCashStatus(payload: z.infer<typeof webhookSchema>) {
-  const status = String(payload.status ?? payload.invoice?.status ?? "").toLowerCase();
-  const code = String(payload.response_code ?? "").toLowerCase();
-  return ["completed", "complete", "success", "successful", "paid", "approved"].includes(status) || ["00", "0", "success"].includes(code);
+function recordValue(value: unknown): LigdiCashRecord | undefined {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as LigdiCashRecord : undefined;
+}
+
+function nestedString(record: LigdiCashRecord, ...keys: string[]) {
+  let current: unknown = record;
+  for (const key of keys) {
+    const currentRecord = recordValue(current);
+    if (!currentRecord) return undefined;
+    current = currentRecord[key];
+  }
+  return stringValue(current);
+}
+
+function nestedNumber(record: LigdiCashRecord, ...keys: string[]) {
+  let current: unknown = record;
+  for (const key of keys) {
+    const currentRecord = recordValue(current);
+    if (!currentRecord) return undefined;
+    current = currentRecord[key];
+  }
+  return numberValue(current);
+}
+
+function firstDefinedString(...values: unknown[]) {
+  for (const value of values) {
+    const resolved = stringValue(value);
+    if (resolved) return resolved;
+  }
+  return undefined;
+}
+
+function parseProviderPayload(rawText: string): LigdiCashRecord {
+  try {
+    const parsed: unknown = JSON.parse(rawText);
+    return recordValue(parsed) ?? { raw: parsed };
+  } catch {
+    return { raw: rawText };
+  }
+}
+
+function extractReference(payload: LigdiCashWebhookPayload) {
+  return firstDefinedString(
+    payload.reference,
+    payload.merchantReference,
+    payload.custom_data?.reference,
+    payload.custom_data?.transaction_id,
+  );
+}
+
+function extractProviderTransactionId(payload: LigdiCashWebhookPayload) {
+  return firstDefinedString(payload.token, payload.invoice?.token, payload.transaction_id, payload.transactionId);
+}
+
+function extractStatusFromRecord(record: LigdiCashRecord) {
+  return firstDefinedString(
+    record.status,
+    record.response_status,
+    nestedString(record, "invoice", "status"),
+    nestedString(record, "transaction", "status"),
+    nestedString(record, "data", "status"),
+    nestedString(record, "data", "invoice", "status"),
+  )?.toLowerCase();
+}
+
+function extractResponseCodeFromRecord(record: LigdiCashRecord) {
+  return firstDefinedString(
+    record.response_code,
+    nestedString(record, "invoice", "response_code"),
+    nestedString(record, "data", "response_code"),
+    nestedString(record, "data", "invoice", "response_code"),
+  )?.toLowerCase();
+}
+
+function extractAmountFromRecord(record: LigdiCashRecord) {
+  return numberValue(record.amount)
+    ?? nestedNumber(record, "invoice", "amount")
+    ?? nestedNumber(record, "invoice", "total_amount")
+    ?? nestedNumber(record, "data", "amount")
+    ?? nestedNumber(record, "data", "invoice", "amount")
+    ?? nestedNumber(record, "data", "invoice", "total_amount");
+}
+
+function isFailureLigdiCashStatus(status?: string) {
+  return Boolean(status && ["cancelled", "canceled", "cancel", "failed", "failure", "error", "expired", "declined", "rejected"].includes(status));
+}
+
+function isSuccessfulLigdiCashStatus(status?: string, responseCode?: string) {
+  const successStatus = Boolean(status && ["completed", "complete", "success", "successful", "paid", "approved", "confirmed"].includes(status));
+  const successCode = Boolean(responseCode && ["00", "0", "success"].includes(responseCode));
+  return successStatus || (successCode && !status);
 }
 
 function readAuthorizationHeader(req: Request): string | undefined {
-  const rawHeader = req.headers.authorization;
+  const rawHeader = req.headers?.authorization;
   if (Array.isArray(rawHeader)) return rawHeader[0];
   if (typeof rawHeader === "string") return rawHeader;
-  return req.header("authorization") ?? undefined;
+  return typeof req.header === "function" ? req.header("authorization") ?? undefined : undefined;
 }
 
 function extractBearerToken(req: Request): string | undefined {
@@ -120,19 +228,37 @@ export async function getAuthenticatedDbUser(req: Request) {
   return result[0];
 }
 
-async function createLigdiCashPayment(input: { amount: number; reference: string; description: string; returnUrl: string; callbackUrl: string }) {
-  const apiUrl = process.env.LIGDICASH_API_URL ?? "https://app.ligdicash.com/pay/v01/redirect/checkout-invoice/create";
-  const authToken = process.env.LIGDICASH_AUTH_TOKEN;
-  const apiKey = process.env.LIGDICASH_API_KEY;
-  const commandName = process.env.LIGDICASH_COMMAND_NAME ?? "PharmaGarde BF";
+function getLigdiCashConfig() {
+  const baseUrl = process.env.LIGDI_BASE_URL?.trim().replace(/\/+$/, "");
+  const apiToken = process.env.LIGDI_API_TOKEN?.trim();
+  const apiKey = process.env.LIGDI_API_KEY?.trim() || apiToken;
+  const commandName = process.env.LIGDI_COMMAND_NAME?.trim() || "PharmaGarde BF";
 
-  if (!authToken || !apiKey) {
-    return {
-      providerTransactionId: `mock-${input.reference}`,
-      paymentUrl: `${input.returnUrl}${input.returnUrl.includes("?") ? "&" : "?"}reference=${encodeURIComponent(input.reference)}&mode=ligdicash-mock`,
-      rawPayload: JSON.stringify({ mode: "mock", reason: "Ligdi Cash credentials are not configured" }),
-    };
+  if (!baseUrl || !apiToken || !apiKey) {
+    throw new Error("Configuration Ligdi Cash incomplète : LIGDI_BASE_URL et LIGDI_API_TOKEN sont requis pour le paiement réel.");
   }
+
+  return { baseUrl, apiToken, apiKey, commandName };
+}
+
+function buildLigdiCashUrl(path: string) {
+  const { baseUrl } = getLigdiCashConfig();
+  return `${baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+function ligdiCashHeaders() {
+  const { apiToken, apiKey } = getLigdiCashConfig();
+  return {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${apiToken}`,
+    Apikey: apiKey,
+  };
+}
+
+async function createLigdiCashPayment(input: { amount: number; reference: string; description: string; returnUrl: string; callbackUrl: string }) {
+  const { commandName } = getLigdiCashConfig();
+  const apiUrl = buildLigdiCashUrl("/checkout-invoice/create");
 
   const payload = {
     commande: {
@@ -146,40 +272,74 @@ async function createLigdiCashPayment(input: { amount: number; reference: string
       },
       store: { name: commandName, website_url: input.returnUrl },
       actions: { cancel_url: input.returnUrl, return_url: input.returnUrl, callback_url: input.callbackUrl },
-      custom_data: { reference: input.reference },
+      custom_data: { reference: input.reference, transaction_id: input.reference },
     },
   };
 
   const response = await fetch(apiUrl, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${authToken}`,
-      Apikey: apiKey,
-    },
+    headers: ligdiCashHeaders(),
     body: JSON.stringify(payload),
   });
 
   const rawText = await response.text();
-  let rawPayload: unknown = rawText;
-  try { rawPayload = JSON.parse(rawText); } catch {}
-  if (!response.ok) {
-    throw new Error(`Ligdi Cash a refusé l'initialisation du paiement (${response.status}).`);
+  const record = parseProviderPayload(rawText);
+  const responseCode = extractResponseCodeFromRecord(record);
+  if (!response.ok || (responseCode && !["00", "0", "success"].includes(responseCode))) {
+    throw new Error(`Ligdi Cash a refusé l'initialisation du paiement (${response.status}, code ${responseCode ?? "inconnu"}).`);
   }
 
-  const record = rawPayload && typeof rawPayload === "object" ? rawPayload as Record<string, unknown> : {};
-  const responseText = JSON.stringify(record);
-  const paymentUrl =
-    (typeof record.response_text === "string" ? record.response_text : undefined) ??
-    (typeof record.payment_url === "string" ? record.payment_url : undefined) ??
-    (typeof record.url === "string" ? record.url : undefined);
-  const providerTransactionId =
-    (typeof record.token === "string" ? record.token : undefined) ??
-    (typeof record.transaction_id === "string" ? record.transaction_id : undefined) ??
-    input.reference;
+  const paymentUrl = firstDefinedString(
+    record.response_text,
+    record.payment_url,
+    record.url,
+    nestedString(record, "data", "response_text"),
+    nestedString(record, "data", "payment_url"),
+    nestedString(record, "data", "url"),
+  );
+  const providerTransactionId = firstDefinedString(record.token, record.invoiceToken, nestedString(record, "data", "token"), nestedString(record, "invoice", "token"));
 
   if (!paymentUrl) throw new Error("Ligdi Cash n’a pas renvoyé d’URL de paiement exploitable.");
-  return { providerTransactionId, paymentUrl, rawPayload: responseText };
+  if (!providerTransactionId) throw new Error("Ligdi Cash n’a pas renvoyé de token de facture vérifiable.");
+  return { providerTransactionId, paymentUrl, rawPayload: JSON.stringify(record) };
+}
+
+async function verifyLigdiCashPayment(input: { invoiceToken: string; expectedAmount: number }) {
+  const apiUrl = `${buildLigdiCashUrl("/checkout-invoice/confirm/")}?invoiceToken=${encodeURIComponent(input.invoiceToken)}`;
+  const response = await fetch(apiUrl, { method: "GET", headers: ligdiCashHeaders() });
+  const rawText = await response.text();
+  const record = parseProviderPayload(rawText);
+  const status = extractStatusFromRecord(record);
+  const responseCode = extractResponseCodeFromRecord(record);
+  const amount = extractAmountFromRecord(record);
+  const amountMatches = amount === undefined || amount === input.expectedAmount;
+  const failed = isFailureLigdiCashStatus(status) || amountMatches === false;
+  const confirmed = response.ok && amountMatches && !failed && isSuccessfulLigdiCashStatus(status, responseCode);
+
+  return {
+    confirmed,
+    failed,
+    status: status ?? responseCode ?? "unknown",
+    providerTransactionId: firstDefinedString(record.token, record.invoiceToken, nestedString(record, "data", "token"), nestedString(record, "invoice", "token")),
+    rawPayload: JSON.stringify(record),
+  };
+}
+
+async function findTransactionForLigdiPayload(db: Awaited<ReturnType<typeof getDb>>, payload: LigdiCashWebhookPayload) {
+  if (!db) return undefined;
+  const reference = extractReference(payload);
+  if (reference) {
+    const byReference = await db.select().from(transactions).where(eq(transactions.merchantReference, reference)).limit(1);
+    if (byReference[0]) return byReference[0];
+  }
+
+  const providerTransactionId = extractProviderTransactionId(payload);
+  if (providerTransactionId) {
+    const byProviderToken = await db.select().from(transactions).where(eq(transactions.providerTransactionId, providerTransactionId)).limit(1);
+    if (byProviderToken[0]) return byProviderToken[0];
+  }
+
+  return undefined;
 }
 
 export async function initPremiumPayment(req: Request, res: Response) {
@@ -195,7 +355,7 @@ export async function initPremiumPayment(req: Request, res: Response) {
     const publicBaseUrl = process.env.PUBLIC_APP_URL ?? `${req.protocol}://${req.get("host")}`;
     const callbackBaseUrl = process.env.PUBLIC_API_URL ?? `${req.protocol}://${req.get("host")}`;
     const returnUrl = `${publicBaseUrl}/pharmagarde/abonnement?paymentReference=${encodeURIComponent(reference)}`;
-    const callbackUrl = `${callbackBaseUrl}/payment/webhook`;
+    const callbackUrl = `${callbackBaseUrl}/payment/callback`;
 
     const payment = await createLigdiCashPayment({
       amount: plan.amount,
@@ -309,28 +469,31 @@ export async function handleLigdiCashWebhook(req: Request, res: Response) {
     const db = await getDb();
     if (!db) return res.status(503).json({ error: "Base de données indisponible." });
     const payload = webhookSchema.parse(req.body ?? {});
-    const reference = extractReference(payload);
-    if (!reference) return res.status(400).json({ error: "Référence de transaction manquante." });
-
-    const found = await db.select().from(transactions).where(eq(transactions.merchantReference, reference)).limit(1);
-    const transaction = found[0];
+    const transaction = await findTransactionForLigdiPayload(db, payload);
     if (!transaction) return res.status(404).json({ error: "Transaction inconnue." });
 
-    const status = isSuccessfulLigdiCashStatus(payload) ? "success" : "failed";
+    const invoiceToken = extractProviderTransactionId(payload) ?? transaction.providerTransactionId;
+    if (!invoiceToken) {
+      await db.update(transactions).set({ status: "failed", rawProviderPayload: JSON.stringify({ webhook: payload, error: "invoiceToken manquant" }) }).where(eq(transactions.id, transaction.id));
+      return res.status(400).json({ error: "Token de facture Ligdi Cash manquant : abonnement non activé." });
+    }
+
+    const verification = await verifyLigdiCashPayment({ invoiceToken, expectedAmount: transaction.amount });
+    const status: TransactionStatus = verification.confirmed ? "success" : verification.failed ? "failed" : "pending";
     await db.update(transactions).set({
       status,
-      providerTransactionId: extractProviderTransactionId(payload) ?? transaction.providerTransactionId,
-      rawProviderPayload: JSON.stringify(payload),
+      providerTransactionId: verification.providerTransactionId ?? invoiceToken,
+      rawProviderPayload: JSON.stringify({ webhook: payload, verification: JSON.parse(verification.rawPayload) }),
     }).where(eq(transactions.id, transaction.id));
 
-    if (status === "success") {
+    if (status === "success" && transaction.status !== "success") {
       const userRows = await db.select().from(users).where(eq(users.id, transaction.userId)).limit(1);
       const user = userRows[0];
       const nextEnd = calculateSubscriptionEnd(user?.subscriptionEnd, transaction.planId as PremiumPlanId);
       await db.update(users).set({ subscriptionEnd: nextEnd }).where(eq(users.id, transaction.userId));
     }
 
-    return res.json({ ok: true, status });
+    return res.json({ ok: true, status, verified: verification.confirmed, providerStatus: verification.status });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erreur webhook Ligdi Cash.";
     return res.status(400).json({ error: message });

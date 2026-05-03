@@ -65,6 +65,7 @@ async function startServer() {
   registerOAuthRoutes(app);
   app.post("/payment/init", initPremiumPayment);
   app.get("/pharmagarde/abonnement", handlePremiumPaymentReturn);
+  app.post("/payment/callback", handleLigdiCashWebhook);
   app.post("/payment/webhook", handleLigdiCashWebhook);
   startPharmaGardeSchedulers();
 
