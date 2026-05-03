@@ -260,7 +260,8 @@ describe("cache backend PharmaGarde", () => {
 
       if (url.pathname.endsWith("/details/json")) {
         const placeId = url.searchParams.get("place_id") ?? "unknown";
-        const isPharmacy = placeId.includes("pharmacie") || placeId.includes("pharmacy");
+        const isPharmacy = placeId.includes("pharmacie") || placeId.includes("pharmacy") || placeId.includes("pharmaceutique") || placeId.includes("médicament") || placeId.includes("medicament");
+        const isLowSignalPharmacy = placeId.includes("médicament") || placeId.includes("medicament");
         const isHospital = placeId.includes("hôpital") || placeId.includes("hospital");
         const isDoctor = placeId.includes("doctor");
         const types = isPharmacy
@@ -280,11 +281,15 @@ describe("cache backend PharmaGarde", () => {
               formatted_address: "Centre-ville, Burkina Faso",
               geometry: { location: { lat: lat || 12.37, lng: lng || -1.52 } },
               types,
-              rating: 4.1,
-              user_ratings_total: 3,
-              international_phone_number: "+226 70 00 00 00",
-              opening_hours: { open_now: true },
-              business_status: "OPERATIONAL",
+              ...(isLowSignalPharmacy
+                ? {}
+                : {
+                    rating: 4.1,
+                    user_ratings_total: 3,
+                    international_phone_number: "+226 70 00 00 00",
+                    opening_hours: { open_now: true },
+                    business_status: "OPERATIONAL",
+                  }),
             },
           }),
         } as Response;
@@ -295,7 +300,8 @@ describe("cache backend PharmaGarde", () => {
       const tokenSuffix = url.searchParams.get("pagetoken") ? "-page-2" : "";
       const rawKind = nearbyType ?? query.toLowerCase().split(" à ")[0] ?? "centre";
       const kind = rawKind.replace(/\s+/g, "-");
-      const googleTypes = nearbyType === "pharmacy" || query.toLowerCase().includes("pharmacie")
+      const pharmacyQuery = query.toLowerCase().includes("pharmacie") || query.toLowerCase().includes("pharmacy") || query.toLowerCase().includes("dépôt pharmaceutique") || query.toLowerCase().includes("medicament") || query.toLowerCase().includes("médicament");
+      const googleTypes = nearbyType === "pharmacy" || pharmacyQuery
         ? ["pharmacy", "health", "point_of_interest", "establishment"]
         : nearbyType === "hospital" || query.toLowerCase().includes("hôpital")
           ? ["hospital", "health", "point_of_interest", "establishment"]
@@ -313,9 +319,13 @@ describe("cache backend PharmaGarde", () => {
               formatted_address: "Centre-ville",
               geometry: { location: { lat, lng } },
               types: googleTypes,
-              rating: 3.8,
-              user_ratings_total: 2,
-              business_status: "OPERATIONAL",
+              ...(query.toLowerCase().includes("médicament") || query.toLowerCase().includes("medicament")
+                ? {}
+                : {
+                    rating: 3.8,
+                    user_ratings_total: 2,
+                    business_status: "OPERATIONAL",
+                  }),
             },
           ],
           next_page_token: url.searchParams.get("pagetoken") ? undefined : `token-${kind}-${location}`,
@@ -328,7 +338,26 @@ describe("cache backend PharmaGarde", () => {
 
     expect(pharmaciesResult.ok).toBe(true);
     expect(healthcareResult.ok).toBe(true);
-    expect(fetchMock).toHaveBeenCalledTimes(SUPPORTED_CITIES.length * 9 * 2 * 2 + SUPPORTED_CITIES.length * 18 * 2);
+    expect(fetchMock).toHaveBeenCalledTimes(SUPPORTED_CITIES.length * (60 * 2 + 18 * 2));
+
+    const requestedUrls = fetchMock.mock.calls.map(([input]) => new URL(String(input)));
+    const textQueries = requestedUrls
+      .filter((url) => url.pathname.endsWith("/textsearch/json"))
+      .map((url) => url.searchParams.get("query") ?? "");
+    const nearbyPharmacyLocations = new Set(
+      requestedUrls
+        .filter((url) => url.pathname.endsWith("/nearbysearch/json") && url.searchParams.get("type") === "pharmacy")
+        .map((url) => url.searchParams.get("location")),
+    );
+
+    expect(textQueries).toEqual(expect.arrayContaining([
+      "pharmacie à Ouagadougou Burkina Faso",
+      "pharmacy in Ouagadougou Burkina Faso",
+      "dépôt pharmaceutique à Ouagadougou Burkina Faso",
+      "médicament à Ouagadougou Burkina Faso",
+      "pharmacie de garde à Ouagadougou Burkina Faso",
+    ]));
+    expect(nearbyPharmacyLocations.size).toBeGreaterThanOrEqual(5);
 
     for (const city of SUPPORTED_CITIES) {
       const key = city.name
@@ -339,7 +368,7 @@ describe("cache backend PharmaGarde", () => {
         .replace(/\s+/g, " ")
         .toLowerCase()
         .replace(/\s+/g, "-");
-      expect(getCacheState("pharmacies").byCity[key].length).toBeGreaterThanOrEqual(2);
+      expect(getCacheState("pharmacies").byCity[key].length).toBeGreaterThanOrEqual(50);
       expect(getCacheState("pharmacies").byCity[key][0]?.city).toBe(city.name);
       expect(getCacheState("pharmacies").byCity[key][0]?.category).toBe("pharmacy");
       expect(getCacheState("pharmacies").byCity[key][0]?.type).toBe("Pharmacie");
@@ -347,6 +376,7 @@ describe("cache backend PharmaGarde", () => {
       expect(getCacheState("pharmacies").byCity[key][0]?.googlePrimaryType).toBe("pharmacy");
       expect(getCacheState("pharmacies").byCity[key][0]?.phone).toBe("+226 70 00 00 00");
       expect(getCacheState("pharmacies").byCity[key][0]?.openingHours).toMatchObject({ open_now: true });
+      expect(getCacheState("pharmacies").byCity[key].some((item) => item.collectionQuery?.includes("médicament") && item.rating === undefined && item.userRatingsTotal === undefined)).toBe(true);
       expect(getCacheState("healthcare").byCity[key].length).toBeGreaterThanOrEqual(10);
       expect(getCacheState("healthcare").byCity[key].every((item) => item.city === city.name)).toBe(true);
       expect(getCacheState("healthcare").byCity[key].map((item) => item.type)).toEqual(expect.arrayContaining(["CHU", "Centre de santé"]));

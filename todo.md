@@ -388,3 +388,12 @@
 - [x] Remplacer le libellé « Type fourni par Google » par « Type local » dans toutes les listes d’éléments concernées.
 
 - [x] Corriger l’affichage du type dans les listes : utiliser le type d’établissement enregistré après récupération depuis Google (Pharmacie, CHU, CSPS, CMA, etc.) au lieu du texte fixe « Type local ».
+
+- [x] Améliorer la récupération Google Places des pharmacies avec multi-requêtes text search : pharmacie, pharmacy, dépôt pharmaceutique, médicament, pharmacie de garde par ville.
+- [x] Ajouter une stratégie multi-zones par ville : centre, nord, sud, est et ouest.
+- [x] Ajouter Nearby Search en complément avec type pharmacy et rayon 15000 mètres.
+- [x] Implémenter la pagination Google Places avec next_page_token jusqu’à 3 pages par requête.
+- [x] Assouplir le filtrage pharmacies : inclure les résultats dont les types contiennent pharmacy ou dont le nom contient pharmacie/pharmacy, sans exclure les lieux sans rating ou avec peu d’avis.
+- [x] Dédupliquer les résultats Google Places par place_id puis fusionner et sauvegarder localement.
+- [x] Ajouter ou adapter les tests couvrant la nouvelle stratégie de récupération pharmacies.
+- [x] Valider TypeScript/tests, sauvegarder un checkpoint et pousser les modifications sur GitHub.
