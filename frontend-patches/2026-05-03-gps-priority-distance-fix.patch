@@ -1,0 +1,168 @@
+diff --git a/app/pharmagarde/ville.tsx b/app/pharmagarde/ville.tsx
+index c9b6d6f..5ab0dd3 100644
+--- a/app/pharmagarde/ville.tsx
++++ b/app/pharmagarde/ville.tsx
+@@ -22,7 +22,7 @@ export default function CitySelectionScreen() {
+     <AppChrome subtitle="Ville">
+       <View style={styles.content}>
+         <Text style={styles.title}>Changer de ville</Text>
+-        <Text style={styles.description}>Choisissez la ville qui servira de référence pour la carte, les recherches et les suggestions locales.</Text>
++        <Text style={styles.description}>Choisissez la ville pour filtrer les résultats locaux. Les distances restent calculées depuis votre position GPS quand elle est disponible.</Text>
+         <Pressable
+           accessibilityRole="button"
+           disabled={refreshingLocation}
+diff --git a/lib/pharmagarde/app-state.tsx b/lib/pharmagarde/app-state.tsx
+index 0908a1b..f1392ef 100644
+--- a/lib/pharmagarde/app-state.tsx
++++ b/lib/pharmagarde/app-state.tsx
+@@ -266,10 +266,6 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
+     };
+ 
+     try {
+-      if (mode === "auto" && isManualCitySelectionRef.current) {
+-        setLocationMessage(`Ville sélectionnée manuellement : ${selectedCity}. La géolocalisation ne la remplace pas.`);
+-        return;
+-      }
+       if (Platform.OS === "web" && typeof navigator !== "undefined" && !navigator.geolocation) {
+         await useDefaultLocation("unsupported");
+         return;
+@@ -304,7 +300,7 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
+     await detectLocation("current");
+   }, [detectLocation]);
+ 
+-  const referenceLocation = useMemo(() => resolveReferenceLocation({ selectedCity, isManualCitySelection, userLocation }), [isManualCitySelection, selectedCity, userLocation]);
++  const referenceLocation = useMemo(() => resolveReferenceLocation({ selectedCity, userLocation }), [selectedCity, userLocation]);
+ 
+   const refreshData = useCallback(async () => {
+     if (!isApiConfigured) {
+@@ -357,7 +353,7 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
+   }, [apiBaseUrl, isApiConfigured, isManualCitySelection, referenceLocation, selectedCity]);
+ 
+   useEffect(() => {
+-    if (hasHydratedCitySelection && !hasRequestedInitialLocationRef.current && !isManualCitySelectionRef.current) {
++    if (hasHydratedCitySelection && !hasRequestedInitialLocationRef.current) {
+       hasRequestedInitialLocationRef.current = true;
+       detectLocation("auto");
+     }
+@@ -411,7 +407,7 @@ export function PharmaGardeProvider({ children }: PropsWithChildren) {
+     const normalizedCity = getSafeSelectedCity(city);
+     lastAutoCityRef.current = undefined;
+     await persistCitySelectionState(normalizedCity, true);
+-    setLocationMessage(`Ville sélectionnée manuellement : ${normalizedCity}.`);
++    setLocationMessage(`Ville sélectionnée manuellement : ${normalizedCity}. Les résultats sont filtrés par ville, les distances restent basées sur votre GPS si disponible.`);
+   }, [persistCitySelectionState]);
+ 
+   const updatePreference = useCallback(async <Key extends keyof AppPreferences>(key: Key, value: AppPreferences[Key]) => {
+diff --git a/lib/pharmagarde/reference-location.ts b/lib/pharmagarde/reference-location.ts
+index 7e33c9d..c39578b 100644
+--- a/lib/pharmagarde/reference-location.ts
++++ b/lib/pharmagarde/reference-location.ts
+@@ -5,7 +5,6 @@ export const DISTANCE_UNAVAILABLE_LABEL = "Distance indisponible";
+ 
+ type ReferenceLocationInput = {
+   selectedCity?: string | null;
+-  isManualCitySelection: boolean;
+   userLocation?: Coordinates | null;
+ };
+ 
+@@ -17,12 +16,11 @@ export function hasValidReferenceCoordinates(coordinates?: Coordinates | null):
+   return !(latitude === 0 && longitude === 0);
+ }
+ 
+-export function resolveReferenceLocation({ selectedCity, isManualCitySelection, userLocation }: ReferenceLocationInput): Coordinates | undefined {
+-  if (isManualCitySelection) {
+-    const cityCoordinates = getKnownCityCoordinates(selectedCity);
+-    return hasValidReferenceCoordinates(cityCoordinates) ? cityCoordinates : undefined;
++export function resolveReferenceLocation({ selectedCity, userLocation }: ReferenceLocationInput): Coordinates | undefined {
++  if (hasValidReferenceCoordinates(userLocation)) {
++    return { latitude: userLocation.latitude, longitude: userLocation.longitude };
+   }
+ 
+-  if (!hasValidReferenceCoordinates(userLocation)) return undefined;
+-  return { latitude: userLocation.latitude, longitude: userLocation.longitude };
++  const cityCoordinates = getKnownCityCoordinates(selectedCity);
++  return hasValidReferenceCoordinates(cityCoordinates) ? cityCoordinates : undefined;
+ }
+diff --git a/tests/pharmagarde-premium-ui-contract.test.ts b/tests/pharmagarde-premium-ui-contract.test.ts
+index 739201c..ef7ce7b 100644
+--- a/tests/pharmagarde-premium-ui-contract.test.ts
++++ b/tests/pharmagarde-premium-ui-contract.test.ts
+@@ -150,15 +150,16 @@ describe("cartes pharmacies et cliniques", () => {
+     expect(appState).toContain("const referenceLocation = useMemo(() => resolveReferenceLocation");
+     expect(appState).toContain("fetchPharmacies(apiBaseUrl, referenceLocation, activeCity)");
+     expect(appState).toContain("fetchClinics(apiBaseUrl, referenceLocation, activeCity)");
++    expect(appState).toContain("resolveReferenceLocation({ selectedCity, userLocation })");
+     expect(appState).toContain("withLocalDistances(filterPlacesByCity(pharmacyResult.value, activeCity), referenceLocation)");
+     expect(appState).toContain("distanceKm(origin");
+     expect(appState).toContain("distanceLabel: `${roundedDistanceKm.toFixed(1)} km`");
+     expect(appState).toContain("DISTANCE_UNAVAILABLE_LABEL");
+     expect(appState).not.toContain("getDefaultLocationFallback(activeCity).location");
+     expect(referenceLocation).toContain("export function resolveReferenceLocation");
+-    expect(referenceLocation).toContain("isManualCitySelection");
++    expect(referenceLocation).not.toContain("isManualCitySelection");
++    expect(referenceLocation).toContain("if (hasValidReferenceCoordinates(userLocation))");
+     expect(referenceLocation).toContain("getKnownCityCoordinates(selectedCity)");
+-    expect(referenceLocation).toContain("hasValidReferenceCoordinates(userLocation)");
+     expect(referenceLocation).toContain("DISTANCE_UNAVAILABLE_LABEL = \"Distance indisponible\"");
+     expect(cityCoordinates).toContain("Ouagadougou");
+     expect(cityCoordinates).toContain("Bobo-Dioulasso");
+diff --git a/tests/reference-location.test.ts b/tests/reference-location.test.ts
+index 5ded2d7..2398f42 100644
+--- a/tests/reference-location.test.ts
++++ b/tests/reference-location.test.ts
+@@ -3,31 +3,27 @@ import { describe, expect, it } from "vitest";
+ import { DISTANCE_UNAVAILABLE_LABEL, hasValidReferenceCoordinates, resolveReferenceLocation } from "../lib/pharmagarde/reference-location";
+ 
+ describe("referenceLocation", () => {
+-  it("utilise les coordonnées de la ville sélectionnée quand la sélection manuelle est active", () => {
++  it("utilise toujours la position GPS utilisateur même quand une ville est sélectionnée", () => {
++    const gpsLocation = { latitude: 12.3714, longitude: -1.5197 };
+     const referenceLocation = resolveReferenceLocation({
+       selectedCity: "Bobo-Dioulasso",
+-      isManualCitySelection: true,
+-      userLocation: { latitude: 12.3714, longitude: -1.5197 },
++      userLocation: gpsLocation,
+     });
+ 
+-    expect(referenceLocation).toEqual({ latitude: 11.1784, longitude: -4.2979 });
++    expect(referenceLocation).toEqual(gpsLocation);
+   });
+ 
+-  it("utilise uniquement la position GPS utilisateur quand la sélection manuelle est inactive", () => {
+-    const gpsLocation = { latitude: 12.48, longitude: -1.56 };
++  it("garde la ville uniquement comme fallback si aucune position GPS valide n’est disponible", () => {
+     const referenceLocation = resolveReferenceLocation({
+       selectedCity: "Koudougou",
+-      isManualCitySelection: false,
+-      userLocation: gpsLocation,
+     });
+ 
+-    expect(referenceLocation).toEqual(gpsLocation);
++    expect(referenceLocation).toEqual({ latitude: 12.2526, longitude: -2.3627 });
+   });
+ 
+-  it("renvoie undefined sans position GPS valide quand la sélection manuelle est inactive", () => {
+-    expect(resolveReferenceLocation({ selectedCity: "Ouagadougou", isManualCitySelection: false })).toBeUndefined();
+-    expect(resolveReferenceLocation({ selectedCity: "Ouagadougou", isManualCitySelection: false, userLocation: { latitude: 0, longitude: 0 } })).toBeUndefined();
+-    expect(resolveReferenceLocation({ selectedCity: "Ouagadougou", isManualCitySelection: false, userLocation: { latitude: Number.NaN, longitude: -1.5 } })).toBeUndefined();
++  it("ignore les coordonnées GPS invalides et revient au centre de la ville sélectionnée", () => {
++    expect(resolveReferenceLocation({ selectedCity: "Ouagadougou", userLocation: { latitude: 0, longitude: 0 } })).toEqual({ latitude: 12.3714, longitude: -1.5197 });
++    expect(resolveReferenceLocation({ selectedCity: "Ouagadougou", userLocation: { latitude: Number.NaN, longitude: -1.5 } })).toEqual({ latitude: 12.3714, longitude: -1.5197 });
+   });
+ 
+   it("expose le libellé de fallback demandé lorsque la distance ne peut pas être calculée", () => {
+diff --git a/todo.md b/todo.md
+index 7d968d9..30580f0 100644
+--- a/todo.md
++++ b/todo.md
+@@ -377,3 +377,10 @@
+ 
+ - [x] Corriger le calcul des distances avec une referenceLocation basée sur la ville manuelle ou le GPS, coordonnées des villes burkinabè et fallback "Distance indisponible".
+ - [x] Valider la correction des distances par tests TypeScript/Vitest, checkpoint et push GitHub.
++
++- [x] Ne plus pousser les corrections PharmaGarde vers `kadersore/Pharmagarde` et utiliser uniquement `kadersore/pharmagarde-backend` comme dépôt cible demandé.
++- [x] Reporter la dernière correction `referenceLocation` / distances dans `kadersore/pharmagarde-backend`, valider, committer et pousser uniquement sur ce dépôt.
++
++- [x] Corriger définitivement la séparation `selectedCity` / `userLocation` : ville uniquement pour filtrer, GPS prioritaire pour calculer les distances, fallback centre-ville seulement si GPS indisponible.
++- [x] Maintenir la géolocalisation active après changement de ville et valider les scénarios changement de ville / activation GPS / désactivation GPS.
++- [ ] Sauvegarder la correction locale et la déposer sur GitHub selon la règle active sans pousser vers `kadersore/Pharmagarde`.
