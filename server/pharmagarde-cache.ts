@@ -2,28 +2,37 @@ import type { Express, Request, Response } from "express";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-export type CachedPlaceType = "pharmacy" | "clinic";
+export type CacheKind = "pharmacies" | "healthcare";
+export type CachedPlaceCategory = "pharmacy" | "healthcare";
+export type LocalEstablishmentType = "Pharmacie" | "CHU" | "CHR" | "CMA" | "CSPS" | "Clinique" | "Hôpital" | "Centre de santé";
 
 export type CachedHealthPlace = {
   id: string;
-  type: CachedPlaceType;
+  /** Type local déduit pour l’usage métier Burkina Faso. */
+  type: LocalEstablishmentType;
+  /** Catégorie applicative stable pour séparer pharmacies et structures de santé. */
+  category: CachedPlaceCategory;
   name: string;
   address?: string;
   city?: string;
   phone?: string;
   rating?: number;
+  userRatingsTotal?: number;
   distanceKm?: number;
   latitude?: number;
   longitude?: number;
   isOpen?: boolean;
+  openingHours?: Record<string, unknown>;
+  businessStatus?: string;
   source?: "google" | "local";
   googlePlaceId?: string;
   googlePlaceTypes?: string[];
   googlePrimaryType?: string;
+  collectionQuery?: string;
+  collectionMethod?: "textsearch" | "nearbysearch";
   updatedAt?: string;
 };
 
-type CacheKind = "pharmacies" | "healthcare";
 type CacheBuckets = Record<string, CachedHealthPlace[]>;
 
 type CacheState = {
@@ -71,8 +80,14 @@ export const SUPPORTED_CITIES: SupportedCity[] = [
 const PHARMACY_TTL_MS = 24 * 60 * 60 * 1000;
 const HEALTHCARE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const DEFAULT_RADIUS_METERS = 15000;
+const GOOGLE_PAGE_DELAY_MS = Number(process.env.PHARMAGARDE_GOOGLE_PAGE_DELAY_MS ?? 2000);
 const CACHE_DIR = process.env.PHARMAGARDE_CACHE_DIR ?? path.join(process.cwd(), "server", ".cache");
 const GOOGLE_API_KEY = process.env.GOOGLE_PLACES_API_KEY ?? process.env.GOOGLE_MAPS_API_KEY ?? "";
+
+const TEXT_SEARCH_TERMS = ["pharmacie", "hôpital", "clinique", "CSPS", "centre médical", "dispensaire"] as const;
+const NEARBY_SEARCH_TYPES = ["pharmacy", "hospital", "doctor"] as const;
+const MEDICAL_NAME_TERMS = ["pharmacie", "pharmacy", "hopital", "hospital", "clinique", "clinic", "csps", "chu", "chr", "cma", "centre medical", "centre de sante", "dispensaire", "medical", "sante", "health"];
+const NON_MEDICAL_NAME_TERMS = ["veterinaire", "vétérinaire", "animal", "boutique", "supermarche", "supermarché", "hotel", "hôtel", "restaurant", "bar", "ecole", "école"];
 
 const memoryCache: Record<CacheKind, CacheState> = {
   pharmacies: createEmptyState("pharmacies"),
@@ -163,10 +178,43 @@ function getStringArray(record: Record<string, unknown>, keys: string[]) {
   return undefined;
 }
 
+function mergeRecords(primary: Record<string, unknown>, secondary?: Record<string, unknown>) {
+  return secondary ? ({ ...primary, ...secondary } as Record<string, unknown>) : primary;
+}
+
 function selectGooglePrimaryType(types?: string[]) {
   if (!types?.length) return undefined;
   const genericTypes = new Set(["establishment", "point_of_interest", "health"]);
   return types.find((type) => !genericTypes.has(type)) ?? types[0];
+}
+
+function classifyPlace(name: string, types: string[] = []): { category: CachedPlaceCategory; type: LocalEstablishmentType } {
+  const normalizedName = normalizeCityName(name);
+  const normalizedTypes = types.map((type) => type.toLowerCase());
+  if (normalizedTypes.includes("pharmacy") || normalizedName.includes("pharmacie")) return { category: "pharmacy", type: "Pharmacie" };
+  if (/\bchu\b/.test(normalizedName)) return { category: "healthcare", type: "CHU" };
+  if (/\bchr\b/.test(normalizedName)) return { category: "healthcare", type: "CHR" };
+  if (/\bcma\b/.test(normalizedName)) return { category: "healthcare", type: "CMA" };
+  if (/\bcsps\b/.test(normalizedName)) return { category: "healthcare", type: "CSPS" };
+  if (normalizedName.includes("clinique") || normalizedName.includes("clinic")) return { category: "healthcare", type: "Clinique" };
+  if (normalizedTypes.includes("hospital") || normalizedName.includes("hopital") || normalizedName.includes("hospital")) return { category: "healthcare", type: "Hôpital" };
+  return { category: "healthcare", type: "Centre de santé" };
+}
+
+function hasQualitySignal(raw: Record<string, unknown>) {
+  const rating = getNumber(raw, ["rating"]);
+  const userRatingsTotal = getNumber(raw, ["user_ratings_total", "userRatingsTotal"]);
+  const phone = getString(raw, ["international_phone_number", "formatted_phone_number", "phone", "telephone"]);
+  const businessStatus = getString(raw, ["business_status", "businessStatus"]);
+  return (rating !== undefined && rating >= 2) || (userRatingsTotal !== undefined && userRatingsTotal >= 1) || !!phone || businessStatus === "OPERATIONAL";
+}
+
+function isClearlyMedical(name: string, types: string[] = []) {
+  const normalizedName = normalizeCityName(name);
+  if (NON_MEDICAL_NAME_TERMS.some((term) => normalizedName.includes(normalizeCityName(term)))) return false;
+  const normalizedTypes = types.map((type) => type.toLowerCase());
+  if (normalizedTypes.some((type) => ["pharmacy", "hospital", "doctor", "health"].includes(type))) return true;
+  return MEDICAL_NAME_TERMS.some((term) => normalizedName.includes(normalizeCityName(term)));
 }
 
 function findSupportedCity(value?: string | null) {
@@ -193,30 +241,47 @@ function getRequestedCityFilter(req: Request): RequestedCityFilter {
   };
 }
 
-function normalizeGooglePlace(raw: Record<string, unknown>, type: CachedPlaceType, city: SupportedCity, index: number): CachedHealthPlace | null {
+function normalizeOpeningHours(raw: Record<string, unknown>) {
+  const openingHours = raw.opening_hours;
+  return isRecord(openingHours) ? openingHours : undefined;
+}
+
+function normalizeGooglePlace(rawBase: Record<string, unknown>, city: SupportedCity, index: number, options?: { collectionQuery?: string; collectionMethod?: "textsearch" | "nearbysearch" }): CachedHealthPlace | null {
+  const raw = rawBase;
   const geometry = isRecord(raw.geometry) ? raw.geometry : undefined;
   const location = geometry && isRecord(geometry.location) ? geometry.location : undefined;
   const placeId = getString(raw, ["place_id", "id"]);
   const name = getString(raw, ["name", "nom", "title"]);
   if (!name) return null;
 
+  const googlePlaceTypes = getStringArray(raw, ["types"]) ?? [];
+  if (!isClearlyMedical(name, googlePlaceTypes)) return null;
+  if (!hasQualitySignal(raw)) return null;
+
   const slug = cityKey(city.name);
-  const googlePlaceTypes = getStringArray(raw, ["types"]);
+  const classification = classifyPlace(name, googlePlaceTypes);
+  const openingHours = normalizeOpeningHours(raw);
   return {
-    id: placeId ?? `${slug}-${type}-${name.toLowerCase().replace(/[^a-z0-9]+/gi, "-")}-${index}`,
-    type,
+    id: placeId ?? `${slug}-${classification.category}-${name.toLowerCase().replace(/[^a-z0-9]+/gi, "-")}-${index}`,
+    type: classification.type,
+    category: classification.category,
     name,
-    address: getString(raw, ["vicinity", "formatted_address", "address", "adresse"]),
+    address: getString(raw, ["formatted_address", "vicinity", "address", "adresse"]),
     city: city.name,
-    phone: getString(raw, ["formatted_phone_number", "international_phone_number", "phone", "telephone"]),
+    phone: getString(raw, ["international_phone_number", "formatted_phone_number", "phone", "telephone"]),
     rating: getNumber(raw, ["rating", "note", "googleRating", "google_rating", "noteGoogle", "stars"]),
+    userRatingsTotal: getNumber(raw, ["user_ratings_total", "userRatingsTotal"]),
     latitude: location ? getNumber(location, ["lat", "latitude"]) : getNumber(raw, ["lat", "latitude"]),
     longitude: location ? getNumber(location, ["lng", "lon", "longitude"]) : getNumber(raw, ["lng", "lon", "longitude"]),
-    isOpen: isRecord(raw.opening_hours) && typeof raw.opening_hours.open_now === "boolean" ? raw.opening_hours.open_now : undefined,
+    isOpen: openingHours && typeof openingHours.open_now === "boolean" ? openingHours.open_now : undefined,
+    openingHours,
+    businessStatus: getString(raw, ["business_status", "businessStatus"]),
     source: "google",
     googlePlaceId: placeId,
     googlePlaceTypes,
     googlePrimaryType: selectGooglePrimaryType(googlePlaceTypes),
+    collectionQuery: options?.collectionQuery,
+    collectionMethod: options?.collectionMethod,
     updatedAt: nowIso(),
   };
 }
@@ -225,7 +290,7 @@ function dedupePlaces(items: CachedHealthPlace[]) {
   const seen = new Set<string>();
   const unique: CachedHealthPlace[] = [];
   for (const item of items) {
-    const key = `${item.googlePlaceId ?? `${item.type}:${item.name}:${item.latitude ?? ""}:${item.longitude ?? ""}`}`.toLowerCase();
+    const key = `${item.googlePlaceId ?? `${item.category}:${item.name}:${item.latitude ?? ""}:${item.longitude ?? ""}`}`.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
     unique.push(item);
@@ -240,9 +305,12 @@ function normalizeBuckets(input: Record<string, unknown>): CacheBuckets {
     const normalizedKey = cityKey(rawKey);
     if (!normalizedKey) continue;
     buckets[normalizedKey] = value.filter(isRecord).map((item) => {
-      const cachedItem = item as Partial<CachedHealthPlace>;
+      const cachedItem = item as Partial<CachedHealthPlace> & { type?: unknown };
+      const rawType = cachedItem.type as unknown;
       const itemCity = typeof cachedItem.city === "string" && cachedItem.city.trim() ? cachedItem.city : findSupportedCity(rawKey)?.name ?? rawKey;
-      return { ...cachedItem, city: itemCity } as CachedHealthPlace;
+      const legacyType = rawType === "pharmacy" ? "Pharmacie" : rawType === "clinic" ? "Centre de santé" : rawType;
+      const category = cachedItem.category ?? (legacyType === "Pharmacie" ? "pharmacy" : "healthcare");
+      return { ...cachedItem, type: legacyType as LocalEstablishmentType, category, city: itemCity } as CachedHealthPlace;
     });
   }
   return buckets;
@@ -263,44 +331,139 @@ function countBuckets(byCity: CacheBuckets) {
   return flattenBuckets(byCity).length;
 }
 
-async function callGoogleNearby(city: SupportedCity, type: "pharmacy" | "hospital" | "doctor") {
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function callGooglePaged(url: URL): Promise<Record<string, unknown>[]> {
   if (!GOOGLE_API_KEY) {
     throw new Error("GOOGLE_PLACES_API_KEY ou GOOGLE_MAPS_API_KEY non configurée.");
   }
 
+  const results: Record<string, unknown>[] = [];
+  let pageToken: string | undefined;
+  for (let page = 0; page < 3; page += 1) {
+    if (pageToken) {
+      await sleep(GOOGLE_PAGE_DELAY_MS);
+      url.searchParams.set("pagetoken", pageToken);
+    }
+
+    const response = await fetch(url.toString(), { headers: { accept: "application/json" } });
+    if (!response.ok) {
+      throw new Error(`Google Places a répondu ${response.status} ${response.statusText}`);
+    }
+    const payload = await response.json();
+    if (!isRecord(payload)) break;
+    const status = getString(payload, ["status"]);
+    if (status && !["OK", "ZERO_RESULTS"].includes(status)) {
+      throw new Error(`Google Places status=${status}${getString(payload, ["error_message"]) ? `: ${getString(payload, ["error_message"])}` : ""}`);
+    }
+    if (Array.isArray(payload.results)) results.push(...payload.results.filter(isRecord));
+    const nextPageToken = getString(payload, ["next_page_token"]);
+    if (!nextPageToken || status === "ZERO_RESULTS") break;
+    pageToken = nextPageToken;
+  }
+  return results;
+}
+
+async function callGoogleTextSearch(city: SupportedCity, query: string) {
+  const url = new URL("https://maps.googleapis.com/maps/api/place/textsearch/json");
+  url.searchParams.set("key", GOOGLE_API_KEY);
+  url.searchParams.set("query", `${query} Burkina Faso`);
+  url.searchParams.set("location", `${city.latitude},${city.longitude}`);
+  url.searchParams.set("radius", String(Number(process.env.PHARMAGARDE_GOOGLE_RADIUS_METERS ?? DEFAULT_RADIUS_METERS)));
+  url.searchParams.set("language", "fr");
+  url.searchParams.set("region", "bf");
+  return callGooglePaged(url);
+}
+
+async function callGoogleNearby(city: SupportedCity, type: (typeof NEARBY_SEARCH_TYPES)[number]) {
   const url = new URL("https://maps.googleapis.com/maps/api/place/nearbysearch/json");
   url.searchParams.set("key", GOOGLE_API_KEY);
   url.searchParams.set("location", `${city.latitude},${city.longitude}`);
   url.searchParams.set("radius", String(Number(process.env.PHARMAGARDE_GOOGLE_RADIUS_METERS ?? DEFAULT_RADIUS_METERS)));
   url.searchParams.set("type", type);
   url.searchParams.set("language", "fr");
+  return callGooglePaged(url);
+}
+
+async function callGoogleDetails(placeId: string) {
+  const url = new URL("https://maps.googleapis.com/maps/api/place/details/json");
+  url.searchParams.set("key", GOOGLE_API_KEY);
+  url.searchParams.set("place_id", placeId);
+  url.searchParams.set("language", "fr");
+  url.searchParams.set("fields", "name,place_id,types,formatted_address,geometry,rating,user_ratings_total,international_phone_number,formatted_phone_number,opening_hours,business_status");
 
   const response = await fetch(url.toString(), { headers: { accept: "application/json" } });
   if (!response.ok) {
-    throw new Error(`Google Places a répondu ${response.status} ${response.statusText}`);
+    throw new Error(`Google Place Details a répondu ${response.status} ${response.statusText}`);
   }
   const payload = await response.json();
-  if (!isRecord(payload)) return [];
+  if (!isRecord(payload)) return undefined;
   const status = getString(payload, ["status"]);
-  if (status && !["OK", "ZERO_RESULTS"].includes(status)) {
-    throw new Error(`Google Places status=${status}${getString(payload, ["error_message"]) ? `: ${getString(payload, ["error_message"])}` : ""}`);
+  if (status && !["OK", "ZERO_RESULTS", "NOT_FOUND"].includes(status)) {
+    throw new Error(`Google Place Details status=${status}${getString(payload, ["error_message"]) ? `: ${getString(payload, ["error_message"])}` : ""}`);
   }
-  return Array.isArray(payload.results) ? payload.results.filter(isRecord) : [];
+  return isRecord(payload.result) ? payload.result : undefined;
 }
 
-async function fetchGoogleItemsForCity(kind: CacheKind, city: SupportedCity) {
-  if (kind === "pharmacies") {
-    const results = await callGoogleNearby(city, "pharmacy");
-    return results.map((item, index) => normalizeGooglePlace(item, "pharmacy", city, index)).filter((item): item is CachedHealthPlace => item !== null);
+async function enrichPlacesWithDetails(items: Record<string, unknown>[]) {
+  const byPlaceId = new Map<string, Record<string, unknown>>();
+  for (const item of items) {
+    const placeId = getString(item, ["place_id", "id"]);
+    if (placeId && !byPlaceId.has(placeId)) byPlaceId.set(placeId, item);
   }
 
-  const [hospitals, doctors] = await Promise.all([callGoogleNearby(city, "hospital"), callGoogleNearby(city, "doctor")]);
-  return [...hospitals, ...doctors].map((item, index) => normalizeGooglePlace(item, "clinic", city, index)).filter((item): item is CachedHealthPlace => item !== null);
+  const enriched: Record<string, unknown>[] = [];
+  for (const item of byPlaceId.values()) {
+    const placeId = getString(item, ["place_id", "id"]);
+    if (!placeId) {
+      enriched.push(item);
+      continue;
+    }
+    const details = await callGoogleDetails(placeId).catch(() => undefined);
+    enriched.push(mergeRecords(item, details));
+  }
+  return enriched;
+}
+
+async function fetchGoogleItemsForCity(city: SupportedCity) {
+  const rawItems: Record<string, unknown>[] = [];
+  const queryByPlaceId = new Map<string, { collectionQuery: string; collectionMethod: "textsearch" | "nearbysearch" }>();
+
+  for (const term of TEXT_SEARCH_TERMS) {
+    const query = `${term} à ${city.name}`;
+    const results = await callGoogleTextSearch(city, query);
+    rawItems.push(...results);
+    for (const result of results) {
+      const placeId = getString(result, ["place_id", "id"]);
+      if (placeId && !queryByPlaceId.has(placeId)) queryByPlaceId.set(placeId, { collectionQuery: query, collectionMethod: "textsearch" });
+    }
+  }
+
+  for (const nearbyType of NEARBY_SEARCH_TYPES) {
+    const results = await callGoogleNearby(city, nearbyType);
+    rawItems.push(...results);
+    for (const result of results) {
+      const placeId = getString(result, ["place_id", "id"]);
+      if (placeId && !queryByPlaceId.has(placeId)) queryByPlaceId.set(placeId, { collectionQuery: `nearby:${nearbyType}`, collectionMethod: "nearbysearch" });
+    }
+  }
+
+  const enrichedItems = await enrichPlacesWithDetails(rawItems);
+  return enrichedItems.map((item, index) => {
+    const placeId = getString(item, ["place_id", "id"]);
+    return normalizeGooglePlace(item, city, index, placeId ? queryByPlaceId.get(placeId) : undefined);
+  }).filter((item): item is CachedHealthPlace => item !== null);
 }
 
 async function fetchGoogleItemsByCity(kind: CacheKind) {
   const settled = await Promise.allSettled(
-    SUPPORTED_CITIES.map(async (city) => ({ city, items: dedupePlaces(await fetchGoogleItemsForCity(kind, city)) })),
+    SUPPORTED_CITIES.map(async (city) => {
+      const allItems = dedupePlaces(await fetchGoogleItemsForCity(city));
+      const category = kind === "pharmacies" ? "pharmacy" : "healthcare";
+      return { city, items: allItems.filter((item) => item.category === category) };
+    }),
   );
   const byCity = createEmptyBuckets();
   const errors: string[] = [];

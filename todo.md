@@ -348,3 +348,17 @@
 - [x] Ajouter ou adapter les tests de non-régression pour le type Google Places et la ligne d’informations compacte.
 - [x] Valider TypeScript, Vitest et l’état Expo après correction des cartes de liste.
 - [x] Sauvegarder un checkpoint de livraison après correction du type Google Places et de la ligne compacte.
+
+- [x] Implémenter une collecte Google Places prioritaire par Text Search pour les requêtes pharmacie, hôpital, clinique, CSPS, centre médical et dispensaire par ville.
+- [x] Couvrir les villes Ouagadougou, Bobo-Dioulasso, Koudougou, Ouahigouya, Kaya, Tenkodogo, Fada N'gourma, Dori, Gaoua, Banfora, Ziniaré, Dédougou et Manga.
+- [x] Gérer la pagination Google Places avec `next_page_token`, jusqu’à trois pages par recherche et attente de deux secondes entre pages.
+- [x] Prévoir un complément Nearby Search optionnel pour pharmacy, hospital et doctor lorsque la couverture Text Search est insuffisante.
+- [x] Extraire et conserver name, place_id, types, formatted_address, geometry, rating, user_ratings_total, international_phone_number et opening_hours.
+- [x] Filtrer les résultats selon rating ≥ 2.0, user_ratings_total ≥ 1, téléphone présent ou statut OPERATIONAL.
+- [x] Supprimer les doublons par place_id et filtrer les résultats non médicaux évidents.
+- [x] Ajouter une classification locale intelligente category/type selon les règles pharmacie, CHU, CHR, CMA, CSPS, clinique, hôpital et centre de santé.
+- [x] Associer chaque établissement à sa ville et sauvegarder les résultats dans le cache local pour éviter les appels répétés à Google.
+- [x] Adapter le client mobile pour consommer la base enrichie si les contrats de données changent.
+- [x] Ajouter ou adapter les tests de non-régression pour la collecte multi-requêtes, la pagination, la déduplication, le filtrage qualité et la classification.
+- [x] Valider TypeScript, Vitest et l’état Expo après implémentation de la base Google Places enrichie.
+- [x] Sauvegarder un checkpoint de livraison après implémentation de la collecte Google Places enrichie.

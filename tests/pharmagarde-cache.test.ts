@@ -246,29 +246,79 @@ describe("cache backend PharmaGarde", () => {
     });
   });
 
-  it("collecte Google Places avec les coordonnées de chaque ville et stocke par clé de ville", async () => {
+  it("collecte Google Places par Text Search et Nearby Search, enrichit, classe et stocke par clé de ville", async () => {
     const cacheDir = await mkdtemp(path.join(tmpdir(), "pharmagarde-google-cache-"));
     process.env.PHARMAGARDE_CACHE_DIR = cacheDir;
     process.env.GOOGLE_PLACES_API_KEY = "test-key";
+    process.env.PHARMAGARDE_GOOGLE_PAGE_DELAY_MS = "0";
 
     const { SUPPORTED_CITIES, getCacheState, updateCachedDataset } = await import("../server/pharmagarde-cache");
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = new URL(String(input));
       const location = url.searchParams.get("location") ?? "0,0";
-      const type = url.searchParams.get("type") ?? "unknown";
+      const [lat, lng] = location.split(",").map(Number);
+
+      if (url.pathname.endsWith("/details/json")) {
+        const placeId = url.searchParams.get("place_id") ?? "unknown";
+        const isPharmacy = placeId.includes("pharmacie") || placeId.includes("pharmacy");
+        const isHospital = placeId.includes("hôpital") || placeId.includes("hospital");
+        const isDoctor = placeId.includes("doctor");
+        const types = isPharmacy
+          ? ["pharmacy", "health", "point_of_interest", "establishment"]
+          : isHospital
+            ? ["hospital", "health", "point_of_interest", "establishment"]
+            : isDoctor
+              ? ["doctor", "health", "point_of_interest", "establishment"]
+              : ["health", "point_of_interest", "establishment"];
+        return {
+          ok: true,
+          json: async () => ({
+            status: "OK",
+            result: {
+              place_id: placeId,
+              name: isPharmacy ? "Pharmacie Centrale" : isHospital ? "CHU Régional" : isDoctor ? "Cabinet Docteur" : "CSPS Secteur",
+              formatted_address: "Centre-ville, Burkina Faso",
+              geometry: { location: { lat: lat || 12.37, lng: lng || -1.52 } },
+              types,
+              rating: 4.1,
+              user_ratings_total: 3,
+              international_phone_number: "+226 70 00 00 00",
+              opening_hours: { open_now: true },
+              business_status: "OPERATIONAL",
+            },
+          }),
+        } as Response;
+      }
+
+      const query = url.searchParams.get("query") ?? "";
+      const nearbyType = url.searchParams.get("type");
+      const tokenSuffix = url.searchParams.get("pagetoken") ? "-page-2" : "";
+      const rawKind = nearbyType ?? query.toLowerCase().split(" à ")[0] ?? "centre";
+      const kind = rawKind.replace(/\s+/g, "-");
+      const googleTypes = nearbyType === "pharmacy" || query.toLowerCase().includes("pharmacie")
+        ? ["pharmacy", "health", "point_of_interest", "establishment"]
+        : nearbyType === "hospital" || query.toLowerCase().includes("hôpital")
+          ? ["hospital", "health", "point_of_interest", "establishment"]
+          : nearbyType === "doctor"
+            ? ["doctor", "health", "point_of_interest", "establishment"]
+            : ["health", "point_of_interest", "establishment"];
       return {
         ok: true,
         json: async () => ({
           status: "OK",
           results: [
             {
-              place_id: `${type}-${location}`,
-              name: `${type} ${location}`,
-              vicinity: "Centre-ville",
-              geometry: { location: { lat: Number(location.split(",")[0]), lng: Number(location.split(",")[1]) } },
-              types: type === "hospital" ? ["hospital", "health", "point_of_interest", "establishment"] : [type, "health", "point_of_interest", "establishment"],
+              place_id: `${kind}-${location}${tokenSuffix}`,
+              name: query || nearbyType || "Centre médical",
+              formatted_address: "Centre-ville",
+              geometry: { location: { lat, lng } },
+              types: googleTypes,
+              rating: 3.8,
+              user_ratings_total: 2,
+              business_status: "OPERATIONAL",
             },
           ],
+          next_page_token: url.searchParams.get("pagetoken") ? undefined : `token-${kind}-${location}`,
         }),
       } as Response;
     });
@@ -278,7 +328,7 @@ describe("cache backend PharmaGarde", () => {
 
     expect(pharmaciesResult.ok).toBe(true);
     expect(healthcareResult.ok).toBe(true);
-    expect(fetchMock).toHaveBeenCalledTimes(SUPPORTED_CITIES.length * 3);
+    expect(fetchMock).toHaveBeenCalledTimes(SUPPORTED_CITIES.length * 9 * 2 * 2 + SUPPORTED_CITIES.length * 18 * 2);
 
     for (const city of SUPPORTED_CITIES) {
       const key = city.name
@@ -289,13 +339,18 @@ describe("cache backend PharmaGarde", () => {
         .replace(/\s+/g, " ")
         .toLowerCase()
         .replace(/\s+/g, "-");
-      expect(getCacheState("pharmacies").byCity[key]).toHaveLength(1);
+      expect(getCacheState("pharmacies").byCity[key].length).toBeGreaterThanOrEqual(2);
       expect(getCacheState("pharmacies").byCity[key][0]?.city).toBe(city.name);
-      expect(getCacheState("pharmacies").byCity[key][0]?.googlePlaceTypes).toEqual(["pharmacy", "health", "point_of_interest", "establishment"]);
+      expect(getCacheState("pharmacies").byCity[key][0]?.category).toBe("pharmacy");
+      expect(getCacheState("pharmacies").byCity[key][0]?.type).toBe("Pharmacie");
+      expect(getCacheState("pharmacies").byCity[key][0]?.googlePlaceTypes).toContain("pharmacy");
       expect(getCacheState("pharmacies").byCity[key][0]?.googlePrimaryType).toBe("pharmacy");
-      expect(getCacheState("healthcare").byCity[key]).toHaveLength(2);
+      expect(getCacheState("pharmacies").byCity[key][0]?.phone).toBe("+226 70 00 00 00");
+      expect(getCacheState("pharmacies").byCity[key][0]?.openingHours).toMatchObject({ open_now: true });
+      expect(getCacheState("healthcare").byCity[key].length).toBeGreaterThanOrEqual(10);
       expect(getCacheState("healthcare").byCity[key].every((item) => item.city === city.name)).toBe(true);
-      expect(getCacheState("healthcare").byCity[key].map((item) => item.googlePrimaryType).sort()).toEqual(["doctor", "hospital"]);
+      expect(getCacheState("healthcare").byCity[key].map((item) => item.type)).toEqual(expect.arrayContaining(["CHU", "Centre de santé"]));
+      expect(getCacheState("healthcare").byCity[key].map((item) => item.googlePrimaryType)).toEqual(expect.arrayContaining(["hospital", "doctor"]));
     }
   });
 });
