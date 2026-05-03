@@ -435,3 +435,7 @@
 - [x] Ajouter les tests Vitest couvrant validation auth, register/login, stockage token, headers Authorization, routes premium et paiement.
 - [x] Exécuter TypeScript et Vitest pour vérifier que les fonctionnalités actuelles ne sont pas cassées.
 - [x] Sauvegarder un checkpoint après validation complète du système d’authentification.
+
+- [ ] Vérifier si le dernier système d’authentification locale est déjà poussé sur GitHub.
+- [ ] Committer et pousser les changements d’authentification locale vers le dépôt GitHub approprié si nécessaire.
+- [ ] Vérifier que le commit distant contient bien les changements d’authentification et clôturer la demande.
